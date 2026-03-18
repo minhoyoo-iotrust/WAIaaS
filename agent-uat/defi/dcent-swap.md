@@ -38,22 +38,20 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=eth
 **Check**: ETH 잔액이 0.005 이상인지 확인
 
 ### Step 2: DCent 스왑 Simulate
-**Action**: DCent aggregator를 통해 ETH -> USDC 스왑을 simulate으로 실행하여 최적 경로와 예상 수령량을 확인한다.
+**Action**: DCent aggregator를 통해 ETH -> USDC 스왑을 dryRun으로 실행하여 최적 경로와 예상 수령량을 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=true' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "dcent-swap",
+    "network": "ethereum-mainnet",
     "params": {
       "fromAsset": "eip155:1/slip44:60",
       "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "amount": "0.001",
+      "amount": "1000000000000000",
       "slippageBps": 50
-    },
-    "network": "ethereum-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, DCent aggregator가 찾은 최적 경로, 예상 USDC 수령량, 가스비가 반환된다
@@ -71,20 +69,18 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
 ### Step 4: 실제 스왑 실행
 **Action**: 사용자 승인 후 실제 DCent 스왑을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/send \
+curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/dex_swap \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "dcent-swap",
+    "network": "ethereum-mainnet",
     "params": {
       "fromAsset": "eip155:1/slip44:60",
       "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "amount": "0.001",
+      "amount": "1000000000000000",
       "slippageBps": 50
-    },
-    "network": "ethereum-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, 트랜잭션 ID와 tx hash가 반환된다
@@ -110,7 +106,7 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=eth
 
 ## Verification
 - [ ] ETH 잔액 조회 성공 (200 응답)
-- [ ] DCent 스왑 simulate 성공 (최적 경로, 예상 수령량 반환)
+- [ ] DCent 스왑 dryRun 성공 (최적 경로, 예상 수령량 반환)
 - [ ] 사용자 승인 완료
 - [ ] 실제 스왑 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
@@ -123,7 +119,7 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=eth
 | DCent swap | ethereum-mainnet | ~200,000 | ~$3-5 |
 | **Total** | | | **~$5.00** |
 
-> **Note**: DCent aggregator는 여러 DEX의 유동성을 비교하여 최적 경로를 찾는다. 0x와 유사하지만 DCent 자체 라우팅 엔진을 사용한다.
+> **Note**: DCent aggregator는 여러 DEX의 유동성을 비교하여 최적 경로를 찾는다. 0x와 유사하지만 DCent 자체 라우팅 엔진을 사용한다. amount는 smallest unit(wei)으로 전달해야 한다.
 
 ---
 
@@ -139,39 +135,40 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=eth
 #### Step A1: 2-hop 경로 탐색
 **Action**: 직접 경로가 없는 토큰 쌍에 대해 2-hop 견적을 조회한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=true' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "dcent-swap",
+    "network": "ethereum-mainnet",
     "params": {
       "fromAsset": "eip155:1/erc20:0x6B175474E89094C44Da98b954EedeAC495271d0F",
       "toAsset": "eip155:1/erc20:0x514910771AF9Ca656af840dff83E8264EcF986CA",
-      "amount": "10",
+      "amount": "10000000000000000000",
       "slippageBps": 100
-    },
-    "network": "ethereum-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, 2-hop 경로(DAI→ETH→LINK 등)가 반환된다
 **Check**: `route`에 중간 토큰이 포함되는지 확인. 직접 경로가 있으면 직접 경로가 우선 선택될 수 있음
 
-#### Step A2: 견적 비교 (queryQuotes)
+#### Step A2: 견적 비교 (get_quotes)
 **Action**: MCP/SDK를 통해 복수 프로바이더 견적을 직접 조회한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/query_quotes \
+curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/get_quotes \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "fromAsset": "eip155:1/slip44:60",
-    "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    "amount": "0.001"
+    "network": "ethereum-mainnet",
+    "params": {
+      "fromAsset": "eip155:1/slip44:60",
+      "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "amount": "1000000000000000"
+    }
   }'
 ```
-**Expected**: 200 OK, 복수 프로바이더(0x, LiFi, ButterSwap 등) 견적이 반환된다
+**Expected**: 200 OK, 복수 프로바이더(1inch, Sushi, Uniswap, Rubic, ButterSwap 등) 견적이 반환된다
 **Check**: 각 프로바이더의 `outputAmount`, `status` 확인. bestOrder가 최적 경로로 정렬
 
 #### Verification (2-hop)
@@ -189,30 +186,28 @@ EVM ↔ Solana 크로스체인 스왑을 검증한다.
 - ETH + SOL 보유
 
 #### Step B1: EVM → Solana 크로스체인 Simulate
-**Action**: Ethereum ETH를 Solana USDC로 크로스체인 스왑을 simulate한다.
+**Action**: Ethereum ETH를 Solana USDC로 크로스체인 스왑을 dryRun한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=true' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<EVM_WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "dcent-swap",
+    "network": "ethereum-mainnet",
     "params": {
       "fromAsset": "eip155:1/slip44:60",
       "toAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      "amount": "0.001",
+      "amount": "1000000000000000",
       "slippageBps": 100,
       "toWalletAddress": "<SOLANA_WALLET_ADDRESS>"
-    },
-    "network": "ethereum-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, 크로스체인 경로(LiFi/ButterSwap 경유)와 예상 수령량이 반환된다
 **Check**: `outputAmount`(예상 USDC), 크로스체인 프로바이더 확인
 
 #### Verification (크로스체인)
-- [ ] EVM → Solana 크로스체인 simulate 성공 (경로 + 예상 수령량 반환)
+- [ ] EVM → Solana 크로스체인 dryRun 성공 (경로 + 예상 수령량 반환)
 
 ---
 
@@ -225,29 +220,27 @@ Solana 네트워크 내 SOL ↔ SPL 토큰 스왑을 검증한다.
 - SOL 보유 (최소 0.01 SOL)
 
 #### Step C1: SOL → USDC Simulate
-**Action**: Solana에서 SOL → USDC 스왑을 simulate한다.
+**Action**: Solana에서 SOL → USDC 스왑을 dryRun한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=true' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<SOLANA_WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "dcent-swap",
+    "network": "solana-mainnet",
     "params": {
       "fromAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
       "toAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      "amount": "0.01",
+      "amount": "10000000",
       "slippageBps": 50
-    },
-    "network": "solana-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, 예상 USDC 수령량과 Solana 트랜잭션 정보가 반환된다
 **Check**: `outputAmount`, 프로바이더(LiFi/ButterSwap) 확인
 
 #### Verification (Solana)
-- [ ] SOL → SPL USDC simulate 성공
+- [ ] SOL → SPL USDC dryRun 성공
 - [ ] Solana 네이티브 스왑 경로가 정상 반환됨
 
 ## Troubleshooting
@@ -260,3 +253,4 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
 | Slippage exceeded | 스왑 중 가격 변동 | `slippageBps`를 100 (1%)으로 증가 후 재시도 |
 | No 2-hop route | 중간 토큰 경유 경로 없음 | 유동성이 높은 토큰 쌍으로 변경 |
 | Cross-chain timeout | 브릿지 처리 지연 | 크로스체인 특성상 수 분 소요 가능, 트랜잭션 상태 확인 |
+| fail_no_available_provider | amount를 human-readable로 전달 | amount는 반드시 smallest unit(wei/lamports)으로 전달 |

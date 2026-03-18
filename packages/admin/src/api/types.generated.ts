@@ -7917,7 +7917,7 @@ export type components = {
         SetOwnerRequest: {
             owner_address: string;
             /** @enum {string|null} */
-            approval_method?: "sdk_ntfy" | "sdk_telegram" | "walletconnect" | "telegram_bot" | "rest" | null;
+            approval_method?: "sdk_push" | "sdk_telegram" | "walletconnect" | "telegram_bot" | "rest" | null;
             /** @enum {string} */
             wallet_type?: "dcent";
         };
@@ -8852,12 +8852,14 @@ export type components = {
             signing_enabled: boolean;
             /** @description Whether activity alerts are sent to this app */
             alerts_enabled: boolean;
-            /** @description ntfy topic for signing requests */
+            /** @description (legacy, unused) Signing topic identifier */
             sign_topic: string | null;
-            /** @description ntfy topic for activity notifications */
+            /** @description (legacy, unused) Notification topic identifier */
             notify_topic: string | null;
-            /** @description Subscription token for ntfy topic isolation */
+            /** @description Push Relay subscription token */
             subscription_token: string | null;
+            /** @description Push Relay server URL for sign requests and notifications */
+            push_relay_url: string | null;
             /** @description Wallets using this app (wallet_type match) */
             used_by: {
                 id: string;
@@ -8894,6 +8896,11 @@ export type components = {
             sign_topic?: string;
             /** @description Custom notification topic (auto-generated if omitted) */
             notify_topic?: string;
+            /**
+             * Format: uri
+             * @description Push Relay server URL
+             */
+            push_relay_url?: string;
         };
         WalletAppUpdateRequest: {
             /** @description Toggle signing requests */
@@ -8904,14 +8911,17 @@ export type components = {
             sign_topic?: string;
             /** @description Custom notification topic */
             notify_topic?: string;
-            /** @description Subscription token for ntfy topic isolation */
+            /** @description Push Relay subscription token */
             subscription_token?: string;
+            /**
+             * Format: uri
+             * @description Push Relay server URL
+             */
+            push_relay_url?: string;
         };
         WalletAppTestNotificationResponse: {
             /** @description Whether the test notification was sent successfully */
             success: boolean;
-            /** @description ntfy topic the notification was sent to */
-            topic?: string;
             /** @description Error message if notification failed */
             error?: string;
         };

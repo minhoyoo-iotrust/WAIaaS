@@ -63,12 +63,12 @@ const WALLET_PRESETS = [
 
 /** Maps preset value to the human-readable approval method it auto-configures. */
 const PRESET_APPROVAL_PREVIEW: Record<string, string> = {
-  dcent: 'Wallet App (ntfy)',
+  dcent: 'Wallet App (Push)',
 };
 
 /** Maps preset value to its default approval method value (for change warnings). */
 const PRESET_APPROVAL_DEFAULTS: Record<string, string> = {
-  dcent: 'sdk_ntfy',
+  dcent: 'sdk_push',
 };
 
 /** AA provider options for Smart Account wallet create/edit forms. */
@@ -164,12 +164,12 @@ const APPROVAL_OPTIONS: Array<{
   {
     value: null,
     label: 'Auto (Global Fallback)',
-    description: 'System decides based on configured channels: Wallet App (ntfy) > Wallet App (Telegram) > WalletConnect > Telegram Bot > REST',
+    description: 'System decides based on configured channels: Wallet App (Push) > Wallet App (Telegram) > WalletConnect > Telegram Bot > REST',
   },
   {
-    value: 'sdk_ntfy',
-    label: 'Wallet App (ntfy)',
-    description: 'Push sign request to wallet app via ntfy server',
+    value: 'sdk_push',
+    label: 'Wallet App (Push)',
+    description: 'Push sign request to wallet app via Push Relay server',
     warning: 'Signing SDK is not enabled. Go to Wallets > Human Wallet Apps settings.',
     warningCondition: (s) => !s?.signingEnabled,
   },
@@ -728,7 +728,7 @@ function WalletDetailView({ id }: { id: string }) {
         params: { path: { id } },
         body: {
           owner_address: wallet.value!.ownerAddress!,
-          approval_method: (method ?? null) as 'sdk_ntfy' | 'sdk_telegram' | 'walletconnect' | 'telegram_bot' | 'rest' | null,
+          approval_method: (method ?? null) as 'sdk_push' | 'sdk_telegram' | 'walletconnect' | 'telegram_bot' | 'rest' | null,
         },
       });
       await fetchWallet();
@@ -1381,7 +1381,7 @@ function WalletDetailView({ id }: { id: string }) {
                     checked={wallet.value?.approvalMethod === opt.value}
                     onChange={() => handleApprovalMethodChange(opt.value)}
                     style={{ marginTop: '2px' }}
-                    disabled={wallet.value?.ownerState === 'LOCKED'}
+                    disabled={wallet.value?.ownerState === 'LOCKED' || !!PRESET_APPROVAL_DEFAULTS[wallet.value?.walletType ?? '']}
                   />
                   <div>
                     <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{opt.label}</div>
@@ -1402,6 +1402,11 @@ function WalletDetailView({ id }: { id: string }) {
                   </div>
                 </label>
               ))}
+              {PRESET_APPROVAL_DEFAULTS[wallet.value?.walletType ?? ''] && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: 'var(--space-2)', fontStyle: 'italic' }}>
+                  This wallet uses a preset type. The approval method is automatically managed by the preset.
+                </p>
+              )}
             </div>
           </div>
         )}

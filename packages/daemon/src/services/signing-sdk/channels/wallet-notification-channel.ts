@@ -1,10 +1,10 @@
 /**
  * WalletNotificationChannel -- pushes all notification events to alert-enabled
- * wallet apps via dedicated ntfy side channel (waiaas-notify-{appName}).
+ * wallet apps via Push Relay HTTP POST side channel.
  *
  * Notifications are published to each app with alerts_enabled=1 in the
- * wallet_apps table. Apps with alerts_enabled=0 are skipped. When no
- * alert-enabled apps exist, publishing is skipped entirely.
+ * wallet_apps table. Apps with alerts_enabled=0 or without push_relay_url
+ * are skipped. When no eligible apps exist, publishing is skipped entirely.
  *
  * Independent from existing NotificationService channels[]. Runs in parallel,
  * isolated by try/catch to never affect existing channel delivery.
@@ -21,8 +21,6 @@ import type { SettingsService } from '../../../infrastructure/settings/settings-
 import type Database from 'better-sqlite3';
 import { SIGNING_CHANNEL_FETCH_TIMEOUT_MS } from '../../../constants.js';
 
-const DEFAULT_NTFY_SERVER = 'https://ntfy.sh';
-
 export interface WalletNotificationChannelDeps {
   sqlite: Database.Database;
   settingsService: SettingsService;
@@ -38,11 +36,11 @@ export class WalletNotificationChannel {
   }
 
   /**
-   * Send notification to alert-enabled wallet app side channels.
+   * Send notification to alert-enabled wallet app side channels via Push Relay.
    * - Checks signing_sdk.enabled + signing_sdk.notifications_enabled
    * - Checks notify_categories / notify_events filter
    * - Resolves alert-enabled apps from wallet_apps table
-   * - Publishes NotificationMessage as base64url to ntfy for each app
+   * - Publishes NotificationMessage as JSON to Push Relay POST /v1/push for each app
    *
    * NEVER throws -- all errors are caught and logged.
    */
@@ -59,7 +57,7 @@ export class WalletNotificationChannel {
       // Gate 2: signing_sdk.notifications_enabled
       if (this.settings.get('signing_sdk.notifications_enabled') !== 'true') return;
 
-      // Gate 3: event filter (per-event → fallback to legacy category)
+      // Gate 3: event filter (per-event -> fallback to legacy category)
       const category = EVENT_CATEGORY_MAP[eventType];
       if (!category) return;
       const eventsJson = this.settings.get('notifications.notify_events');
@@ -83,88 +81,71 @@ export class WalletNotificationChannel {
       }
 
       // Resolve alert-enabled apps (NOTI-01/02/03)
-      const appNames = this.resolveAlertApps();
-      if (appNames.length === 0) return; // NOTI-03: skip when no alert-enabled apps
+      const apps = this.resolveAlertApps();
+      if (apps.length === 0) return; // NOTI-03: skip when no alert-enabled apps
 
-      // Resolve ntfy server
-      const ntfyServer = this.getNtfyServer();
+      // Get API key for Push Relay
+      const apiKey = this.settings.get('signing_sdk.push_relay_api_key');
 
-      // Determine priority
-      const priority = category === 'security_alert' ? 5 : 3;
-
-      // Send to all alert-enabled apps in parallel
+      // Send to all alert-enabled apps with push_relay_url in parallel
       await Promise.allSettled(
-        appNames.map((app) => {
-          const fallbackPrefix = 'waiaas-notify';
-          const topic = app.notifyTopic || `${fallbackPrefix}-${app.name}`;
-          return this.publishNotification(ntfyServer, topic, {
-            version: '1',
-            eventType,
-            walletId,
-            walletName: app.name,
-            category,
-            title,
-            body,
-            details,
-            timestamp: Math.floor(Date.now() / 1000),
-          }, priority);
-        }),
+        apps
+          .filter((app) => app.pushRelayUrl) // Skip apps without push_relay_url
+          .map((app) =>
+            this.publishNotification(app.pushRelayUrl!, apiKey, app.name, {
+              version: '1',
+              eventType,
+              walletId,
+              walletName: app.name,
+              category,
+              title,
+              body,
+              details,
+              timestamp: Math.floor(Date.now() / 1000),
+            }),
+          ),
       );
     } catch (err) {
-      // DAEMON-06: never throw — but log for diagnostics
+      // DAEMON-06: never throw -- but log for diagnostics
       console.error('[WalletNotificationChannel] notify error:', err);
     }
   }
 
   /**
    * Query wallet_apps table for apps with alerts_enabled=1.
-   * Returns app names, wallet_type, and notify_topic for topic routing (CHAN-02).
+   * Returns app names and push_relay_url for Push Relay routing.
    */
-  private resolveAlertApps(): Array<{ name: string; walletType: string; notifyTopic: string | null }> {
+  private resolveAlertApps(): Array<{ name: string; walletType: string; pushRelayUrl: string | null }> {
     const rows = this.sqlite.prepare(
-      'SELECT name, wallet_type, notify_topic FROM wallet_apps WHERE alerts_enabled = 1',
-    ).all() as Array<{ name: string; wallet_type: string; notify_topic: string | null }>;
-    return rows.map((r) => ({ name: r.name, walletType: r.wallet_type || r.name, notifyTopic: r.notify_topic }));
+      'SELECT name, wallet_type, push_relay_url FROM wallet_apps WHERE alerts_enabled = 1',
+    ).all() as Array<{ name: string; wallet_type: string; push_relay_url: string | null }>;
+    return rows.map((r) => ({ name: r.name, walletType: r.wallet_type || r.name, pushRelayUrl: r.push_relay_url }));
   }
 
   private async publishNotification(
-    ntfyServer: string,
-    topic: string,
+    pushRelayUrl: string,
+    apiKey: string,
+    subscriptionToken: string,
     message: NotificationMessage,
-    priority: number,
   ): Promise<void> {
-    const json = JSON.stringify(message);
-    const encoded = Buffer.from(json, 'utf-8').toString('base64url');
-
-    const url = `${ntfyServer}/${topic}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SIGNING_CHANNEL_FETCH_TIMEOUT_MS);
     try {
-      // RFC 2047 encode non-ASCII title to avoid undici ByteString rejection
-      const safeTitle = /^[\x20-\x7E]*$/.test(message.title)
-        ? message.title
-        : `=?UTF-8?B?${Buffer.from(message.title, 'utf-8').toString('base64')}?=`;
-
-      await fetch(url, {
+      await fetch(`${pushRelayUrl}/v1/push`, {
         method: 'POST',
-        body: encoded,
-        signal: controller.signal,
         headers: {
-          'Priority': String(priority),
-          'Title': safeTitle,
-          'Tags': `waiaas,${message.category}`,
+          'Content-Type': 'application/json',
+          'X-Api-Key': apiKey,
         },
+        body: JSON.stringify({
+          subscriptionToken,
+          category: 'notification',
+          payload: message,
+        }),
+        signal: controller.signal,
       });
     } finally {
       clearTimeout(timeoutId);
-    }
-  }
-
-  private getNtfyServer(): string {
-    try {
-      return this.settings.get('notifications.ntfy_server') || DEFAULT_NTFY_SERVER;
-    } catch {
-      return DEFAULT_NTFY_SERVER;
     }
   }
 }

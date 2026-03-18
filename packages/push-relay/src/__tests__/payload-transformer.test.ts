@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ConfigurablePayloadTransformer } from '../transformer/payload-transformer.js';
-import type { PushPayload } from '../subscriber/message-parser.js';
+import type { PushPayload } from '../providers/push-provider.js';
 
 function makePayload(overrides: Partial<PushPayload> = {}): PushPayload {
   return {

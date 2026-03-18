@@ -5,23 +5,18 @@ import { debug } from './logger.js';
 import { createDeviceRoutes } from './registry/device-routes.js';
 import { createSignResponseRoutes } from './relay/sign-response-routes.js';
 import type { DeviceRegistry } from './registry/device-registry.js';
-import type { NtfySubscriber } from './subscriber/ntfy-subscriber.js';
 import type { IPushProvider } from './providers/push-provider.js';
 
 export interface ServerOpts {
   registry: DeviceRegistry;
-  subscriber: NtfySubscriber;
   provider: IPushProvider;
   apiKey: string;
-  ntfyServer: string;
-  signTopicPrefix: string;
-  notifyTopicPrefix: string;
   version?: string;
 }
 
 export function createServer(opts: ServerOpts): Hono {
   const app = new Hono();
-  const { registry, subscriber, provider, apiKey, ntfyServer, signTopicPrefix, notifyTopicPrefix, version } = opts;
+  const { registry, provider, apiKey, version } = opts;
 
   // Request logging (debug mode)
   app.use('/*', async (c, next) => {
@@ -37,10 +32,10 @@ export function createServer(opts: ServerOpts): Hono {
   }));
 
   // Health check is public
-  const deviceRoutes = createDeviceRoutes({ registry, subscriber, provider, signTopicPrefix, notifyTopicPrefix, version });
+  const deviceRoutes = createDeviceRoutes({ registry, provider, version });
 
-  // Sign response relay (public — wallet apps call this without API key)
-  const signResponseRoutes = createSignResponseRoutes({ ntfyServer });
+  // Sign response routes (POST /v1/sign-response is public, POST /v1/push requires API key)
+  const signResponseRoutes = createSignResponseRoutes({ registry, provider, apiKey });
 
   // Apply API key auth to device registration/deletion endpoints only
   app.use('/devices/*', apiKeyAuth(apiKey));

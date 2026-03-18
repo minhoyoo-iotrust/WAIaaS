@@ -7,7 +7,7 @@
  *
  * Intentionally does NOT go through ApprovalWorkflow -- SignRequestBuilder is
  * invoked *after* the pipeline has already set the transaction to PENDING_APPROVAL
- * state. It produces the data needed to notify the owner via ntfy/Telegram channels.
+ * state. It produces the data needed to notify the owner via Push Relay/Telegram channels.
  *
  * @see internal/design/73-signing-protocol-v1.md (Section 3, 5)
  * @see internal/design/74-wallet-sdk-daemon-components.md
@@ -80,7 +80,7 @@ export class SignRequestBuilder {
    * Build a SignRequest from a PENDING_APPROVAL transaction.
    *
    * @param params - Transaction metadata
-   * @returns The SignRequest, universal link URL, and ntfy request topic
+   * @returns The SignRequest, universal link URL, and request topic
    * @throws WAIaaSError('SIGNING_SDK_DISABLED') if signing SDK is disabled
    * @throws WAIaaSError('WALLET_NOT_REGISTERED') if no wallet is configured
    */
@@ -123,7 +123,6 @@ export class SignRequestBuilder {
 
     // 8. Determine response channel
     const preferredChannel = this.settings.get('signing_sdk.preferred_channel');
-    const responseTopicPrefix = this.settings.get('signing_sdk.ntfy_response_topic_prefix');
 
     let responseChannel: SignRequest['responseChannel'];
 
@@ -135,12 +134,21 @@ export class SignRequestBuilder {
         botUsername: botToken ? 'waiaas_bot' : 'waiaas_bot',
       };
     } else {
-      // Default: ntfy channel
-      const ntfyServer = this.settings.get('notifications.ntfy_server');
+      // Default: Push Relay channel
+      // push_relay_url is looked up from wallet_apps table
+      let pushRelayUrl = '';
+      if (this.sqlite) {
+        const appRow = this.sqlite.prepare(
+          'SELECT push_relay_url FROM wallet_apps WHERE name = ?',
+        ).get(walletName) as { push_relay_url: string | null } | undefined;
+        if (appRow?.push_relay_url) {
+          pushRelayUrl = appRow.push_relay_url;
+        }
+      }
       responseChannel = {
-        type: 'ntfy' as const,
-        responseTopic: `${responseTopicPrefix}-${requestId}`,
-        ...(ntfyServer !== 'https://ntfy.sh' ? { serverUrl: ntfyServer } : {}),
+        type: 'push_relay' as const,
+        pushRelayUrl,
+        requestId,
       };
     }
 
@@ -188,30 +196,13 @@ export class SignRequestBuilder {
     // 10. Build universal link URL
     const universalLinkUrl = this.walletLinkRegistry.buildSignUrl(walletName, request);
 
-    // 11. Build request topic for ntfy publish (CHAN-01: DB-based topic)
-    const requestTopicPrefix = this.settings.get('signing_sdk.ntfy_request_topic_prefix') || 'waiaas-sign';
-    let ntfyTopic = `${requestTopicPrefix}-${walletName}`; // fallback
-    if (this.sqlite) {
-      // Try exact name match first, then fallback to wallet_type match
-      const appRow = this.sqlite.prepare(
-        'SELECT sign_topic FROM wallet_apps WHERE name = ?',
-      ).get(walletName) as { sign_topic: string | null } | undefined;
-      if (appRow?.sign_topic) {
-        ntfyTopic = appRow.sign_topic;
-      } else {
-        const typeRow = this.sqlite.prepare(
-          'SELECT sign_topic FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1 LIMIT 1',
-        ).get(walletName) as { sign_topic: string | null } | undefined;
-        if (typeRow?.sign_topic) {
-          ntfyTopic = typeRow.sign_topic;
-        }
-      }
-    }
+    // 11. Request topic identifier (wallet name, no longer an ntfy topic)
+    const requestTopic = walletName;
 
     return {
       request,
       universalLinkUrl,
-      requestTopic: ntfyTopic,
+      requestTopic,
     };
   }
 

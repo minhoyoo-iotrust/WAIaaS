@@ -7,8 +7,6 @@
  * 3. GET /admin/notifications/status never exposes credentials
  * 4. GET /admin/notifications/status requires masterAuth
  * 5. GET /admin/notifications/status reflects dynamic SettingsService changes
- * 5b. GET /admin/notifications/status ntfy enabled when wallet_apps have topics
- * 5c. GET /admin/notifications/status ntfy disabled when no wallet_apps have topics
  * 6. POST /admin/notifications/test sends test to active channels
  * 6. POST /admin/notifications/test returns failure for broken channel
  * 7. POST /admin/notifications/test requires masterAuth
@@ -63,7 +61,7 @@ function fullConfig(overrides: Partial<DaemonConfig['notifications']> = {}): Dae
       enabled: true, min_channels: 2, health_check_interval: 300, log_retention_days: 30,
       dedup_ttl: 300, telegram_bot_token: '123:ABC', telegram_chat_id: '-100123',
       discord_webhook_url: 'https://discord.com/api/webhooks/123/abc',
-      ntfy_server: 'https://ntfy.sh', ntfy_topic: 'waiaas-test', slack_webhook_url: '',
+      slack_webhook_url: '',
       locale: 'en' as const, rate_limit_rpm: 20, ...overrides,
     },
     security: {
@@ -166,7 +164,7 @@ describe('GET /admin/notifications/status', () => {
     expect(body.enabled).toBe(true);
 
     const channels = body.channels as Array<{ name: string; enabled: boolean }>;
-    expect(channels).toHaveLength(4);
+    expect(channels).toHaveLength(3);
 
     const tg = channels.find((c) => c.name === 'telegram');
     expect(tg?.enabled).toBe(true);
@@ -174,74 +172,8 @@ describe('GET /admin/notifications/status', () => {
     const discord = channels.find((c) => c.name === 'discord');
     expect(discord?.enabled).toBe(true); // webhook_url + channel registered
 
-    const ntfy = channels.find((c) => c.name === 'ntfy') as { name: string; enabled: boolean; configuredWallets?: number };
-    expect(ntfy?.enabled).toBe(false); // no wallet_apps with topics
-    expect(ntfy?.configuredWallets).toBe(0);
-
     const slack = channels.find((c) => c.name === 'slack');
     expect(slack?.enabled).toBe(false); // slack_webhook_url empty
-  });
-
-  it('should show ntfy enabled when wallet_apps have topics configured', async () => {
-    // Insert wallet_apps with ntfy topics
-    sqlite
-      .prepare(
-        `INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at)
-         VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?)`,
-      )
-      .run('wa-1', 'dcent', 'D\'CENT', 'waiaas-sign-dcent', 'waiaas-notify-dcent', 1700000000, 1700000000);
-    sqlite
-      .prepare(
-        `INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at)
-         VALUES (?, ?, ?, 1, 1, ?, NULL, ?, ?)`,
-      )
-      .run('wa-2', 'test-app', 'Test App', 'waiaas-sign-test', 1700000000, 1700000000);
-
-    const config = fullConfig();
-    const app = createApp({
-      db,
-      masterPasswordHash: passwordHash,
-      config,
-    });
-
-    const res = await app.request('/v1/admin/notifications/status', {
-      headers: masterHeaders(),
-    });
-
-    expect(res.status).toBe(200);
-    const body = await json(res);
-    const channels = body.channels as Array<{ name: string; enabled: boolean; configuredWallets?: number }>;
-    const ntfy = channels.find((c) => c.name === 'ntfy');
-    expect(ntfy?.enabled).toBe(true);
-    expect(ntfy?.configuredWallets).toBe(2);
-  });
-
-  it('should show ntfy disabled with configuredWallets=0 when no topics set', async () => {
-    // Insert wallet_app without any topics
-    sqlite
-      .prepare(
-        `INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at)
-         VALUES (?, ?, ?, 1, 1, NULL, NULL, ?, ?)`,
-      )
-      .run('wa-3', 'no-topic', 'No Topic App', 1700000000, 1700000000);
-
-    const config = fullConfig();
-    const app = createApp({
-      db,
-      masterPasswordHash: passwordHash,
-      config,
-    });
-
-    const res = await app.request('/v1/admin/notifications/status', {
-      headers: masterHeaders(),
-    });
-
-    expect(res.status).toBe(200);
-    const body = await json(res);
-    const channels = body.channels as Array<{ name: string; enabled: boolean; configuredWallets?: number }>;
-    const ntfy = channels.find((c) => c.name === 'ntfy');
-    expect(ntfy?.enabled).toBe(false);
-    expect(ntfy?.configuredWallets).toBe(0);
   });
 
   it('should return all channels disabled when no service', async () => {
@@ -268,7 +200,6 @@ describe('GET /admin/notifications/status', () => {
     const svc = new NotificationService({ db });
     svc.addChannel(mockChannel('telegram'));
     svc.addChannel(mockChannel('discord'));
-    svc.addChannel(mockChannel('ntfy'));
 
     const config = fullConfig();
     const app = createApp({
@@ -289,10 +220,8 @@ describe('GET /admin/notifications/status', () => {
     expect(rawText).not.toContain('123:ABC'); // telegram_bot_token
     expect(rawText).not.toContain('-100123'); // telegram_chat_id
     expect(rawText).not.toContain('discord.com/api/webhooks'); // discord_webhook_url
-    expect(rawText).not.toContain('waiaas-test'); // ntfy_topic
     expect(rawText).not.toContain('bot_token');
     expect(rawText).not.toContain('webhook_url');
-    expect(rawText).not.toContain('ntfy_topic');
   });
 
   it('should require masterAuth (401 without credentials)', async () => {

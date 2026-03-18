@@ -35,12 +35,22 @@ export class DeviceRegistry {
       CREATE INDEX IF NOT EXISTS idx_devices_wallet_name ON devices(wallet_name)
     `);
     // Migration: add subscription_token column if missing (existing DBs)
-    // SQLite does not allow UNIQUE constraint in ALTER TABLE ADD COLUMN
     const cols = (this.db.prepare("PRAGMA table_info('devices')").all() as Array<{ name: string }>).map(c => c.name);
     if (!cols.includes('subscription_token')) {
       this.db.exec(`ALTER TABLE devices ADD COLUMN subscription_token TEXT`);
     }
     this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_subscription_token ON devices(subscription_token)`);
+
+    // sign_responses table for storing signing responses (v60 Push Relay)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS sign_responses (
+        request_id TEXT PRIMARY KEY,
+        response TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch())
+      )
+    `);
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_sign_responses_expires ON sign_responses(expires_at)');
   }
 
   register(walletName: string, pushToken: string, platform: 'ios' | 'android'): { subscriptionToken: string } {
@@ -143,6 +153,41 @@ export class DeviceRegistry {
 
   count(): number {
     const row = this.db.prepare('SELECT COUNT(*) as count FROM devices').get() as { count: number };
+    return row.count;
+  }
+
+  // ---------------------------------------------------------------------------
+  // sign_responses methods (Push Relay response store)
+  // ---------------------------------------------------------------------------
+
+  saveSignResponse(requestId: string, response: string, ttlSeconds: number = 300): void {
+    const now = Math.floor(Date.now() / 1000);
+    this.db.prepare(`
+      INSERT OR REPLACE INTO sign_responses (request_id, response, expires_at, created_at)
+      VALUES (?, ?, ?, ?)
+    `).run(requestId, response, now + ttlSeconds, now);
+  }
+
+  getSignResponse(requestId: string): string | null {
+    const now = Math.floor(Date.now() / 1000);
+    const row = this.db.prepare(
+      'SELECT response FROM sign_responses WHERE request_id = ? AND expires_at > ?',
+    ).get(requestId, now) as { response: string } | undefined;
+    return row?.response ?? null;
+  }
+
+  deleteSignResponse(requestId: string): void {
+    this.db.prepare('DELETE FROM sign_responses WHERE request_id = ?').run(requestId);
+  }
+
+  cleanupExpiredResponses(): number {
+    const now = Math.floor(Date.now() / 1000);
+    const result = this.db.prepare('DELETE FROM sign_responses WHERE expires_at <= ?').run(now);
+    return result.changes;
+  }
+
+  signResponseCount(): number {
+    const row = this.db.prepare('SELECT COUNT(*) as count FROM sign_responses').get() as { count: number };
     return row.count;
   }
 

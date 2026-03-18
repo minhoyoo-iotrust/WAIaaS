@@ -45,8 +45,9 @@ function makeValidRequest(overrides?: Partial<SignRequest>): SignRequest {
       policyTier: 'APPROVAL',
     },
     responseChannel: {
-      type: 'ntfy',
-      responseTopic: 'waiaas-resp-abc123',
+      type: 'push_relay',
+      pushRelayUrl: 'http://localhost:3200',
+      requestId: '550e8400-e29b-41d4-a716-446655440000',
     },
     expiresAt: new Date(Date.now() + 600_000).toISOString(), // 10 min from now
     ...overrides,

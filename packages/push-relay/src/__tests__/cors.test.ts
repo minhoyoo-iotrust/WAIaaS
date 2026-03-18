@@ -1,21 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createServer } from '../server.js';
 import type { DeviceRegistry } from '../registry/device-registry.js';
-import type { NtfySubscriber } from '../subscriber/ntfy-subscriber.js';
 import type { IPushProvider } from '../providers/push-provider.js';
 
 function makeServer() {
-  const registry = { count: vi.fn().mockReturnValue(0) } as unknown as DeviceRegistry;
-  const subscriber = { connected: true, topicCount: 2 } as unknown as NtfySubscriber;
+  const registry = { count: vi.fn().mockReturnValue(0), signResponseCount: vi.fn().mockReturnValue(0) } as unknown as DeviceRegistry;
   const provider = { name: 'test', validateConfig: vi.fn().mockResolvedValue(true) } as unknown as IPushProvider;
   return createServer({
     registry,
-    subscriber,
     provider,
     apiKey: 'test-key',
-    ntfyServer: 'http://ntfy.test',
-    signTopicPrefix: 'sign',
-    notifyTopicPrefix: 'notify',
     version: '1.0.0',
   });
 }

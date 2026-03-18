@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { createSign } from 'node:crypto';
-import type { PushPayload } from '../subscriber/message-parser.js';
-import type { IPushProvider, PushResult } from './push-provider.js';
+import type { PushPayload, IPushProvider, PushResult } from './push-provider.js';
 import { withRetry, isRetryableHttpError } from './push-provider.js';
 import type { FcmConfig } from '../config.js';
 

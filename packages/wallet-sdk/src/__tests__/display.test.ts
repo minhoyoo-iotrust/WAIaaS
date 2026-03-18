@@ -21,8 +21,9 @@ function makeRequest(overrides?: Partial<SignRequest>): SignRequest {
       policyTier: 'APPROVAL',
     },
     responseChannel: {
-      type: 'ntfy',
-      responseTopic: 'waiaas-resp-abc123',
+      type: 'push_relay',
+      pushRelayUrl: 'http://localhost:3200',
+      requestId: '550e8400-e29b-41d4-a716-446655440000',
     },
     expiresAt: '2026-12-31T23:59:59.000Z',
     ...overrides,

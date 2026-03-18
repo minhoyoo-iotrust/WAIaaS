@@ -4,15 +4,11 @@ import { serve } from '@hono/node-server';
 import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { loadConfig } from './config.js';
-import { NtfySubscriber } from './subscriber/ntfy-subscriber.js';
 import { DeviceRegistry } from './registry/device-registry.js';
 import { PushwooshProvider } from './providers/pushwoosh-provider.js';
 import { FcmProvider } from './providers/fcm-provider.js';
 import type { IPushProvider } from './providers/push-provider.js';
-import { ConfigurablePayloadTransformer } from './transformer/payload-transformer.js';
-import type { IPayloadTransformer } from './transformer/payload-transformer.js';
 import { createServer } from './server.js';
-import { routeByTopic } from './message-router.js';
 import { info, error, debug, setDebug, isDebug } from './logger.js';
 
 const require = createRequire(import.meta.url);
@@ -39,10 +35,6 @@ async function main(): Promise<void> {
 
   if (isDebug()) {
     debug('Config loaded:', JSON.stringify({
-      ntfy_server: config.relay.ntfy_server,
-      sign_topic_prefix: config.relay.sign_topic_prefix,
-      notify_topic_prefix: config.relay.notify_topic_prefix,
-      wallet_names: config.relay.wallet_names,
       server: { host: config.relay.server.host, port: config.relay.server.port },
       push_provider: config.relay.push.provider,
     }, null, 2));
@@ -69,102 +61,18 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Initialize payload transformer (optional)
-  let transformer: IPayloadTransformer | undefined;
-  if (config.relay.push.payload) {
-    transformer = new ConfigurablePayloadTransformer(config.relay.push.payload);
-    info('Payload transformer: enabled (static_fields + category_map)');
-  }
-
-  // Initialize ntfy subscriber
-  const subscriber = new NtfySubscriber({
-    ntfyServer: config.relay.ntfy_server,
-    signTopicPrefix: config.relay.sign_topic_prefix,
-    notifyTopicPrefix: config.relay.notify_topic_prefix,
-    walletNames: config.relay.wallet_names,
-    transformer,
-    onMessage: async (walletName, payload, topic) => {
-      info(
-        `Received ${payload.category} for wallet "${walletName}" on topic "${topic}" (title=${payload.title ?? 'none'})`,
-      );
-      debug('Message payload:', JSON.stringify(payload));
-
-      const route = routeByTopic(
-        walletName,
-        topic,
-        config.relay.sign_topic_prefix,
-        config.relay.notify_topic_prefix,
-        (token) => registry.getBySubscriptionToken(token),
-      );
-
-      if (route.action === 'skip_base') {
-        info(`Base topic "${topic}" — skipping push (no broadcast)`);
-        return;
-      }
-      if (route.action === 'skip_unknown') {
-        info(`Cannot extract subscriptionToken from topic "${topic}", skipping`);
-        return;
-      }
-      if (route.action === 'skip_no_device') {
-        info(`No device found for subscriptionToken "${route.subscriptionToken}", skipping`);
-        return;
-      }
-
-      try {
-        debug(`Sending push to device: pushToken=${route.device!.pushToken.slice(0, 8)}...`);
-        const result = await provider.send([route.device!.pushToken], payload);
-        if (result.invalidTokens.length > 0) {
-          registry.removeTokens(result.invalidTokens);
-          info(`Removed ${result.invalidTokens.length} invalid token(s)`);
-        }
-        info(
-          `${payload.category} → ${walletName} (device=${route.subscriptionToken}): sent=${result.sent}, failed=${result.failed}`,
-        );
-      } catch (sendErr) {
-        error(
-          `Failed to send push to ${walletName} (device=${route.subscriptionToken}):`,
-          (sendErr as Error).message,
-        );
-      }
-    },
-    onError: (err) => {
-      error('Error:', err.message);
-    },
-  });
-
-  // Start ntfy subscription
-  subscriber.start();
-  info(
-    `Subscribing to ${config.relay.wallet_names.length} wallet(s): ${config.relay.wallet_names.join(', ')}`,
-  );
-
-  // Restore subscription-token-based topics from DB
-  const devices = registry.listAll();
-  let restoredTopics = 0;
-  for (const device of devices) {
-    if (device.subscriptionToken) {
-      subscriber.addTopics(
-        device.walletName,
-        `${config.relay.sign_topic_prefix}-${device.walletName}-${device.subscriptionToken}`,
-        `${config.relay.notify_topic_prefix}-${device.walletName}-${device.subscriptionToken}`,
-      );
-      restoredTopics++;
-      debug(`Restored topics for device: wallet=${device.walletName}, token=${device.subscriptionToken}`);
-    }
-  }
-  if (restoredTopics > 0) {
-    info(`Restored ${restoredTopics} device topic(s) from DB`);
-  }
+  // Start sign_responses cleanup interval (every 60 seconds)
+  const cleanupInterval = setInterval(() => {
+    const cleaned = registry.cleanupExpiredResponses();
+    if (cleaned > 0) debug(`Cleaned ${cleaned} expired sign response(s)`);
+  }, 60_000);
+  cleanupInterval.unref();
 
   // Create and start HTTP server
   const app = createServer({
     registry,
-    subscriber,
     provider,
     apiKey: config.relay.server.api_key,
-    ntfyServer: config.relay.ntfy_server,
-    signTopicPrefix: config.relay.sign_topic_prefix,
-    notifyTopicPrefix: config.relay.notify_topic_prefix,
     version: VERSION,
   });
 
@@ -191,8 +99,8 @@ async function main(): Promise<void> {
     }, SHUTDOWN_TIMEOUT_MS);
     shutdownTimer.unref();
 
-    // 1. Stop accepting new SSE messages
-    await subscriber.stop();
+    // 1. Stop cleanup interval
+    clearInterval(cleanupInterval);
 
     // 2. Close HTTP server
     server.close();

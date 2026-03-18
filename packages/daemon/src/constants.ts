@@ -6,7 +6,7 @@
 /** Oracle HTTP request timeout (coingecko, pyth). */
 export const ORACLE_TIMEOUT_MS = 5_000;
 
-/** Signing channel (ntfy, wallet-notification) HTTP fetch timeout. */
+/** Signing channel (push-relay, wallet-notification) HTTP fetch timeout. */
 export const SIGNING_CHANNEL_FETCH_TIMEOUT_MS = 10_000;
 
 /** Default max retries for HTTP clients (nft-indexer, etc). */

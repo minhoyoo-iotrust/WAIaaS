@@ -130,13 +130,13 @@ describe('PresetAutoSetupService', () => {
     expect(registry.registerWallet).toHaveBeenCalledWith(BUILTIN_PRESETS.dcent.walletLinkConfig);
     // preferred_wallet set to 'dcent'
     expect(service.set).toHaveBeenCalledWith('signing_sdk.preferred_wallet', 'dcent');
-    // D'CENT uses sdk_ntfy — preferred_channel IS set to ntfy
+    // D'CENT uses sdk_push — preferred_channel IS set to push_relay
     expect(result.applied).toContain('signing_sdk_enabled');
     expect(result.applied).toContain('wallet_registered');
     expect(result.applied).toContain('preferred_wallet_set');
-    // sdk_ntfy sets preferred_channel to ntfy
+    // sdk_push sets preferred_channel to push_relay
     expect(result.applied).toContain('preferred_channel_set');
-    expect(service.set).toHaveBeenCalledWith('signing_sdk.preferred_channel', 'ntfy');
+    expect(service.set).toHaveBeenCalledWith('signing_sdk.preferred_channel', 'push_relay');
   });
 
   it('T-AUTO-02: idempotent — already registered wallet is skipped', () => {
@@ -340,12 +340,12 @@ describe('PUT /v1/wallets/:id/owner auto-setup integration', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.walletType).toBe('dcent');
-    expect(body.approvalMethod).toBe('sdk_ntfy');
+    expect(body.approvalMethod).toBe('sdk_push');
 
     // Verify DB state
     const row = sqlite.prepare('SELECT wallet_type, owner_approval_method FROM wallets WHERE id = ?').get(walletId) as any;
     expect(row.wallet_type).toBe('dcent');
-    expect(row.owner_approval_method).toBe('sdk_ntfy');
+    expect(row.owner_approval_method).toBe('sdk_push');
 
     // Verify Settings state after auto-setup
     expect(settingsService.get('signing_sdk.enabled')).toBe('true');

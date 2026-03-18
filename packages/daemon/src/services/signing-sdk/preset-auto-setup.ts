@@ -108,8 +108,8 @@ export class PresetAutoSetupService {
 
       // Step 4: Set preferred_channel based on approval method
       switch (preset.approvalMethod) {
-        case 'sdk_ntfy':
-          this.settingsService.set('signing_sdk.preferred_channel', 'ntfy');
+        case 'sdk_push':
+          this.settingsService.set('signing_sdk.preferred_channel', 'push_relay');
           applied.push(STEP_PREFERRED_CHANNEL);
           break;
         case 'sdk_telegram':

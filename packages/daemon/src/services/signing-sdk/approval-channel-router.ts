@@ -5,12 +5,12 @@
  * Routing logic:
  *   1. Read wallet's owner_approval_method from DB
  *   2. If set: route to that specific channel
- *      - sdk_ntfy  -> NtfySigningChannel.sendRequest()
+ *      - sdk_push  -> PushRelaySigningChannel.sendRequest()
  *      - sdk_telegram -> TelegramSigningChannel.sendRequest()
  *      - walletconnect / telegram_bot / rest -> return method (no channel call)
  *   3. If SDK method but signing_sdk.enabled=false: fall through to global fallback
  *   4. Global fallback priority (CHAN-06):
- *      Wallet App (ntfy) > Wallet App (Telegram) > WalletConnect > Telegram Bot > REST
+ *      Wallet App (Push) > Wallet App (Telegram) > WalletConnect > Telegram Bot > REST
  *
  * CHAN-07: When signing_sdk.enabled !== 'true', SDK channels are skipped entirely.
  *
@@ -21,9 +21,9 @@
 import type { ApprovalMethod } from '@waiaas/core';
 import type { Database } from 'better-sqlite3';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
-import type { NtfySigningChannel } from './channels/ntfy-signing-channel.js';
+import type { PushRelaySigningChannel } from './channels/push-relay-signing-channel.js';
 import type { TelegramSigningChannel } from './channels/telegram-signing-channel.js';
-import type { SendRequestParams } from './channels/ntfy-signing-channel.js';
+import type { SendRequestParams } from './channels/push-relay-signing-channel.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,14 +32,14 @@ import type { SendRequestParams } from './channels/ntfy-signing-channel.js';
 export interface ApprovalChannelRouterDeps {
   sqlite: Database;
   settingsService: SettingsService;
-  ntfyChannel?: NtfySigningChannel;
+  pushRelayChannel?: PushRelaySigningChannel;
   telegramChannel?: TelegramSigningChannel;
 }
 
 export interface RouteResult {
   /** The approval method selected */
   method: ApprovalMethod;
-  /** Non-null for SDK channels (ntfy/telegram), null for wc/telegram_bot/rest */
+  /** Non-null for SDK channels (push/telegram), null for wc/telegram_bot/rest */
   channelResult: { requestId: string } | null;
 }
 
@@ -50,13 +50,13 @@ export interface RouteResult {
 export class ApprovalChannelRouter {
   private readonly sqlite: Database;
   private readonly settings: SettingsService;
-  private readonly ntfyChannel?: NtfySigningChannel;
+  private readonly pushRelayChannel?: PushRelaySigningChannel;
   private readonly telegramChannel?: TelegramSigningChannel;
 
   constructor(deps: ApprovalChannelRouterDeps) {
     this.sqlite = deps.sqlite;
     this.settings = deps.settingsService;
-    this.ntfyChannel = deps.ntfyChannel;
+    this.pushRelayChannel = deps.pushRelayChannel;
     this.telegramChannel = deps.telegramChannel;
   }
 
@@ -110,7 +110,7 @@ export class ApprovalChannelRouter {
     // 1.5. EIP-712 constraint: only WC or REST can handle typed data signing
     if (params.approvalType === 'EIP712') {
       // EIP-712 requires WC (eth_signTypedData_v4) or REST (Admin UI).
-      // SDK channels (ntfy/telegram) cannot handle structured signing.
+      // SDK channels (push/telegram) cannot handle structured signing.
       if (this.isWalletConnectConfigured()) {
         return { method: 'walletconnect', channelResult: null };
       }
@@ -133,9 +133,9 @@ export class ApprovalChannelRouter {
       }
 
       // SDK methods: only use if SDK is enabled, otherwise fall through to global fallback
-      if (explicitMethod === 'sdk_ntfy' && sdkEnabled && this.ntfyChannel) {
-        const result = await this.ntfyChannel.sendRequest(enrichedParams);
-        return { method: 'sdk_ntfy', channelResult: { requestId: result.requestId } };
+      if (explicitMethod === 'sdk_push' && sdkEnabled && this.pushRelayChannel) {
+        const result = await this.pushRelayChannel.sendRequest(enrichedParams);
+        return { method: 'sdk_push', channelResult: { requestId: result.requestId } };
       }
       if (explicitMethod === 'sdk_telegram' && sdkEnabled && this.telegramChannel) {
         const result = await this.telegramChannel.sendRequest(enrichedParams);
@@ -157,7 +157,7 @@ export class ApprovalChannelRouter {
    * Shutdown all managed signing channels.
    */
   shutdown(): void {
-    this.ntfyChannel?.shutdown();
+    this.pushRelayChannel?.shutdown();
     this.telegramChannel?.shutdown();
   }
 
@@ -168,10 +168,10 @@ export class ApprovalChannelRouter {
   private async globalFallback(params: SendRequestParams): Promise<RouteResult> {
     const sdkEnabled = this.isSdkEnabled();
 
-    // Priority 1: SDK ntfy (if SDK enabled and channel available)
-    if (sdkEnabled && this.ntfyChannel) {
-      const result = await this.ntfyChannel.sendRequest(params);
-      return { method: 'sdk_ntfy', channelResult: { requestId: result.requestId } };
+    // Priority 1: SDK Push Relay (if SDK enabled and channel available)
+    if (sdkEnabled && this.pushRelayChannel) {
+      const result = await this.pushRelayChannel.sendRequest(params);
+      return { method: 'sdk_push', channelResult: { requestId: result.requestId } };
     }
 
     // Priority 2: SDK Telegram (if SDK enabled and channel available)

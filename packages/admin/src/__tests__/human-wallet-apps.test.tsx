@@ -87,6 +87,7 @@ const mockApps = {
       sign_topic: 'waiaas-sign-dcent',
       notify_topic: 'waiaas-notify-dcent',
       subscription_token: null,
+      push_relay_url: 'https://waiaas-push.dcentwallet.com',
       used_by: [{ id: 'w1', label: 'wallet-1' }],
       created_at: 1700000000,
       updated_at: 1700000000,
@@ -101,6 +102,7 @@ const mockApps = {
       sign_topic: null,
       notify_topic: null,
       subscription_token: null,
+      push_relay_url: null,
       used_by: [],
       created_at: 1700000100,
       updated_at: 1700000100,
@@ -265,49 +267,33 @@ describe('HumanWalletAppsPage', () => {
     expect(screen.getByText('Loading...')).toBeTruthy();
   });
 
-  it('T-HWUI-10: sign_topic and notify_topic displayed in app cards', async () => {
+  it('T-HWUI-10: Push Relay URL displayed in app cards', async () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
-    expect(screen.getByText('waiaas-sign-dcent')).toBeTruthy();
-    expect(screen.getByText('waiaas-notify-dcent')).toBeTruthy();
-    const defaults = screen.getAllByText('(default)');
-    expect(defaults.length).toBeGreaterThanOrEqual(2);
+    // D'CENT app has push_relay_url configured
+    expect(screen.getByText('https://waiaas-push.dcentwallet.com')).toBeTruthy();
+    // Custom app has no push_relay_url
+    expect(screen.getByText('Not configured')).toBeTruthy();
   });
 
-  it('T-HWUI-11: topic edit saves via PUT', async () => {
+  it('T-HWUI-11: Register dialog includes Push Relay URL field', async () => {
     mockApiCalls();
-    mockApiPut.mockResolvedValue({ data: {} });
-
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
 
-    const editButtons = screen.getAllByText('Edit');
-    fireEvent.click(editButtons[0]!);
-
+    fireEvent.click(screen.getByText('+ Register App'));
     await waitFor(() => {
-      const signInput = document.querySelector('input[name="sign-topic-app-1"]') as HTMLInputElement;
-      expect(signInput).toBeTruthy();
-      expect(signInput.value).toBe('waiaas-sign-dcent');
+      expect(screen.getByText('Register Wallet App')).toBeTruthy();
     });
 
-    const signInput = document.querySelector('input[name="sign-topic-app-1"]') as HTMLInputElement;
-    fireEvent.input(signInput, { target: { value: 'custom-sign-topic' } });
-    fireEvent.click(screen.getByText('Save Topics'));
-
-    await waitFor(() => {
-      expect(mockApiPut).toHaveBeenCalledWith(
-        '/v1/admin/wallet-apps/{id}',
-        expect.objectContaining({
-          params: { path: { id: 'app-1' } },
-          body: expect.objectContaining({ sign_topic: 'custom-sign-topic' }),
-        }),
-      );
-    });
+    // Push Relay URL field should be present
+    const pushRelayInput = document.querySelector('input[name="register-app-push-relay-url"]') as HTMLInputElement;
+    expect(pushRelayInput).toBeTruthy();
   });
 
   it('T-HWUI-12: global notification toggle displays and saves via PUT', async () => {
@@ -341,7 +327,7 @@ describe('HumanWalletAppsPage', () => {
       apps: [{
         id: 'app-1', name: 'dcent', display_name: "D'CENT Wallet", wallet_type: 'dcent',
         signing_enabled: true, alerts_enabled: true, sign_topic: null, notify_topic: null,
-        subscription_token: null, used_by: [], created_at: 1700000000, updated_at: 1700000000,
+        subscription_token: null, push_relay_url: null, used_by: [], created_at: 1700000000, updated_at: 1700000000,
       }],
     };
 
@@ -370,7 +356,7 @@ describe('HumanWalletAppsPage', () => {
 
   it('T-HWUI-15: Test button calls POST test-notification', async () => {
     mockApiCalls();
-    mockApiPost.mockResolvedValue({ data: { success: true, topic: 'waiaas-notify-dcent' } });
+    mockApiPost.mockResolvedValue({ data: { success: true } });
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
@@ -387,7 +373,7 @@ describe('HumanWalletAppsPage', () => {
     });
 
     expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-      'Test notification sent to waiaas-notify-dcent',
+      'Test notification sent successfully',
       'success',
     );
   });

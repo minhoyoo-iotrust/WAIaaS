@@ -14,10 +14,10 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
-import type { NtfySigningChannel } from '../services/signing-sdk/channels/ntfy-signing-channel.js';
+import type { PushRelaySigningChannel } from '../services/signing-sdk/channels/push-relay-signing-channel.js';
 import type { TelegramSigningChannel } from '../services/signing-sdk/channels/telegram-signing-channel.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
-import type { SendRequestParams } from '../services/signing-sdk/channels/ntfy-signing-channel.js';
+import type { SendRequestParams } from '../services/signing-sdk/channels/push-relay-signing-channel.js';
 import type { Database } from 'better-sqlite3';
 
 // ---------------------------------------------------------------------------
@@ -53,15 +53,15 @@ function createMockSettings(overrides: Record<string, string> = {}): SettingsSer
   } as unknown as SettingsService;
 }
 
-function createMockNtfyChannel(): NtfySigningChannel {
+function createMockPushRelayChannel(): PushRelaySigningChannel {
   return {
     sendRequest: vi.fn().mockResolvedValue({
-      requestId: 'ntfy-req-001',
-      requestTopic: 'waiaas-sign-test',
-      responseTopic: 'waiaas-response-ntfy-req-001',
+      requestId: 'push-req-001',
+      requestTopic: 'dcent',
+      responseTopic: '',
     }),
     shutdown: vi.fn(),
-  } as unknown as NtfySigningChannel;
+  } as unknown as PushRelaySigningChannel;
 }
 
 function createMockTelegramChannel(): TelegramSigningChannel {
@@ -93,17 +93,17 @@ const defaultParams: SendRequestParams = {
 // ---------------------------------------------------------------------------
 
 describe('ApprovalChannelRouter - Explicit method routing (CHAN-05)', () => {
-  it('routes to NtfySigningChannel when owner_approval_method = sdk_ntfy', async () => {
-    const sqlite = createMockSqlite('sdk_ntfy');
+  it('routes to PushRelaySigningChannel when owner_approval_method = sdk_push', async () => {
+    const sqlite = createMockSqlite('sdk_push');
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
-    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, pushRelayChannel });
     const result = await router.route('wallet-1', defaultParams);
 
-    expect(result.method).toBe('sdk_ntfy');
-    expect(result.channelResult).toEqual({ requestId: 'ntfy-req-001' });
-    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(defaultParams);
+    expect(result.method).toBe('sdk_push');
+    expect(result.channelResult).toEqual({ requestId: 'push-req-001' });
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalledWith(defaultParams);
   });
 
   it('routes to TelegramSigningChannel when owner_approval_method = sdk_telegram', async () => {
@@ -158,24 +158,24 @@ describe('ApprovalChannelRouter - Explicit method routing (CHAN-05)', () => {
 // ---------------------------------------------------------------------------
 
 describe('ApprovalChannelRouter - Global fallback (CHAN-06)', () => {
-  it('falls back to sdk_ntfy when method is null, SDK enabled, ntfy available', async () => {
+  it('falls back to sdk_push when method is null, SDK enabled, push relay available', async () => {
     const sqlite = createMockSqlite(null);
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
     const telegramChannel = createMockTelegramChannel();
 
     const router = new ApprovalChannelRouter({
-      sqlite, settingsService: settings, ntfyChannel, telegramChannel,
+      sqlite, settingsService: settings, pushRelayChannel, telegramChannel,
     });
     const result = await router.route('wallet-1', defaultParams);
 
-    expect(result.method).toBe('sdk_ntfy');
-    expect(result.channelResult).toEqual({ requestId: 'ntfy-req-001' });
-    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(defaultParams);
+    expect(result.method).toBe('sdk_push');
+    expect(result.channelResult).toEqual({ requestId: 'push-req-001' });
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalledWith(defaultParams);
     expect(telegramChannel.sendRequest).not.toHaveBeenCalled();
   });
 
-  it('falls back to sdk_telegram when method is null, SDK enabled, no ntfy, telegram available', async () => {
+  it('falls back to sdk_telegram when method is null, SDK enabled, no push relay, telegram available', async () => {
     const sqlite = createMockSqlite(null);
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
     const telegramChannel = createMockTelegramChannel();
@@ -234,19 +234,19 @@ describe('ApprovalChannelRouter - Global fallback (CHAN-06)', () => {
     expect(result.channelResult).toBeNull();
   });
 
-  it('respects priority: ntfy > telegram when both SDK channels available', async () => {
+  it('respects priority: push relay > telegram when both SDK channels available', async () => {
     const sqlite = createMockSqlite(null);
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
     const telegramChannel = createMockTelegramChannel();
 
     const router = new ApprovalChannelRouter({
-      sqlite, settingsService: settings, ntfyChannel, telegramChannel,
+      sqlite, settingsService: settings, pushRelayChannel, telegramChannel,
     });
     const result = await router.route('wallet-1', defaultParams);
 
-    expect(result.method).toBe('sdk_ntfy');
-    expect(ntfyChannel.sendRequest).toHaveBeenCalled();
+    expect(result.method).toBe('sdk_push');
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalled();
     expect(telegramChannel.sendRequest).not.toHaveBeenCalled();
   });
 });
@@ -256,23 +256,23 @@ describe('ApprovalChannelRouter - Global fallback (CHAN-06)', () => {
 // ---------------------------------------------------------------------------
 
 describe('ApprovalChannelRouter - SDK disabled fallback (CHAN-07)', () => {
-  it('falls through to global fallback when sdk_ntfy set but SDK disabled', async () => {
-    const sqlite = createMockSqlite('sdk_ntfy');
+  it('falls through to global fallback when sdk_push set but SDK disabled', async () => {
+    const sqlite = createMockSqlite('sdk_push');
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': 'wc-id',
     });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
     const router = new ApprovalChannelRouter({
-      sqlite, settingsService: settings, ntfyChannel,
+      sqlite, settingsService: settings, pushRelayChannel,
     });
     const result = await router.route('wallet-1', defaultParams);
 
-    // Should NOT use ntfy (SDK disabled), should fall through to walletconnect
+    // Should NOT use push relay (SDK disabled), should fall through to walletconnect
     expect(result.method).toBe('walletconnect');
     expect(result.channelResult).toBeNull();
-    expect(ntfyChannel.sendRequest).not.toHaveBeenCalled();
+    expect(pushRelayChannel.sendRequest).not.toHaveBeenCalled();
   });
 
   it('falls through to global fallback when sdk_telegram set but SDK disabled', async () => {
@@ -300,32 +300,32 @@ describe('ApprovalChannelRouter - SDK disabled fallback (CHAN-07)', () => {
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': '',
     });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
     const telegramChannel = createMockTelegramChannel();
 
     const router = new ApprovalChannelRouter({
-      sqlite, settingsService: settings, ntfyChannel, telegramChannel,
+      sqlite, settingsService: settings, pushRelayChannel, telegramChannel,
     });
     const result = await router.route('wallet-1', defaultParams);
 
-    // SDK disabled -> skip ntfy and telegram -> no WC -> no telegram_bot -> rest
+    // SDK disabled -> skip push relay and telegram -> no WC -> no telegram_bot -> rest
     expect(result.method).toBe('rest');
     expect(result.channelResult).toBeNull();
-    expect(ntfyChannel.sendRequest).not.toHaveBeenCalled();
+    expect(pushRelayChannel.sendRequest).not.toHaveBeenCalled();
     expect(telegramChannel.sendRequest).not.toHaveBeenCalled();
   });
 
   it('SDK disabled falls to rest when only SDK channels exist and nothing else configured', async () => {
-    const sqlite = createMockSqlite('sdk_ntfy');
+    const sqlite = createMockSqlite('sdk_push');
     const settings = createMockSettings({
       'signing_sdk.enabled': 'false',
       'walletconnect.project_id': '',
       'telegram.bot_token': '',
     });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
     const router = new ApprovalChannelRouter({
-      sqlite, settingsService: settings, ntfyChannel,
+      sqlite, settingsService: settings, pushRelayChannel,
     });
     const result = await router.route('wallet-1', defaultParams);
 
@@ -339,44 +339,44 @@ describe('ApprovalChannelRouter - SDK disabled fallback (CHAN-07)', () => {
 // ---------------------------------------------------------------------------
 
 describe('ApprovalChannelRouter - wallet_type topic routing (SIGN-03, SIGN-04, SIGN-05)', () => {
-  it('SIGN-03: enriches walletName from wallet_type when routing to sdk_ntfy channel', async () => {
-    const sqlite = createMockSqlite('sdk_ntfy', true, 'dcent');
+  it('SIGN-03: enriches walletName from wallet_type when routing to sdk_push channel', async () => {
+    const sqlite = createMockSqlite('sdk_push', true, 'dcent');
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
-    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, pushRelayChannel });
     const result = await router.route('wallet-1', defaultParams);
 
-    expect(result.method).toBe('sdk_ntfy');
-    // Verify ntfyChannel received enriched params with walletName from wallet_type
-    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+    expect(result.method).toBe('sdk_push');
+    // Verify pushRelayChannel received enriched params with walletName from wallet_type
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalledWith(
       expect.objectContaining({ walletName: 'dcent' }),
     );
   });
 
   it('SIGN-03: enriches walletName from wallet_type for non-dcent wallet types', async () => {
-    const sqlite = createMockSqlite('sdk_ntfy', true, 'other-wallet');
+    const sqlite = createMockSqlite('sdk_push', true, 'other-wallet');
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
-    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, pushRelayChannel });
     await router.route('wallet-1', defaultParams);
 
-    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalledWith(
       expect.objectContaining({ walletName: 'other-wallet' }),
     );
   });
 
   it('SIGN-04: does not set walletName when wallet_type is NULL (global fallback)', async () => {
-    const sqlite = createMockSqlite('sdk_ntfy', true, null);
+    const sqlite = createMockSqlite('sdk_push', true, null);
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
-    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, pushRelayChannel });
     await router.route('wallet-1', defaultParams);
 
     // walletName should be undefined (not enriched), letting SignRequestBuilder use preferred_wallet
-    const calledParams = (ntfyChannel.sendRequest as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SendRequestParams;
+    const calledParams = (pushRelayChannel.sendRequest as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SendRequestParams;
     expect(calledParams.walletName).toBeUndefined();
   });
 
@@ -384,12 +384,12 @@ describe('ApprovalChannelRouter - wallet_type topic routing (SIGN-03, SIGN-04, S
     // No explicit approval_method set, but wallet_type is set
     const sqlite = createMockSqlite(null, true, 'dcent');
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
-    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, pushRelayChannel });
     await router.route('wallet-1', defaultParams);
 
-    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalledWith(
       expect.objectContaining({ walletName: 'dcent' }),
     );
   });
@@ -410,47 +410,47 @@ describe('ApprovalChannelRouter - Edge cases', () => {
   });
 
   it('propagates error when SDK channel sendRequest throws (explicit method)', async () => {
-    const sqlite = createMockSqlite('sdk_ntfy');
+    const sqlite = createMockSqlite('sdk_push');
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
-    (ntfyChannel.sendRequest as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('ntfy publish failed'),
+    const pushRelayChannel = createMockPushRelayChannel();
+    (pushRelayChannel.sendRequest as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Push Relay unreachable'),
     );
 
     const router = new ApprovalChannelRouter({
-      sqlite, settingsService: settings, ntfyChannel,
+      sqlite, settingsService: settings, pushRelayChannel,
     });
     await expect(router.route('wallet-1', defaultParams))
-      .rejects.toThrow('ntfy publish failed');
+      .rejects.toThrow('Push Relay unreachable');
   });
 
   it('propagates error when SDK channel sendRequest throws (global fallback)', async () => {
     const sqlite = createMockSqlite(null);
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
-    (ntfyChannel.sendRequest as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error('ntfy server unreachable'),
+    const pushRelayChannel = createMockPushRelayChannel();
+    (pushRelayChannel.sendRequest as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('Push Relay server unreachable'),
     );
 
     const router = new ApprovalChannelRouter({
-      sqlite, settingsService: settings, ntfyChannel,
+      sqlite, settingsService: settings, pushRelayChannel,
     });
     await expect(router.route('wallet-1', defaultParams))
-      .rejects.toThrow('ntfy server unreachable');
+      .rejects.toThrow('Push Relay server unreachable');
   });
 
   it('shutdown() calls shutdown on both channels', () => {
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
     const telegramChannel = createMockTelegramChannel();
     const sqlite = createMockSqlite(null);
     const settings = createMockSettings();
 
     const router = new ApprovalChannelRouter({
-      sqlite, settingsService: settings, ntfyChannel, telegramChannel,
+      sqlite, settingsService: settings, pushRelayChannel, telegramChannel,
     });
     router.shutdown();
 
-    expect(ntfyChannel.shutdown).toHaveBeenCalledTimes(1);
+    expect(pushRelayChannel.shutdown).toHaveBeenCalledTimes(1);
     expect(telegramChannel.shutdown).toHaveBeenCalledTimes(1);
   });
 
@@ -500,51 +500,51 @@ describe('ApprovalChannelRouter - signing_enabled blocking (APP-08)', () => {
   it('T-APP-08: signing_enabled=0 blocks signing with SIGNING_DISABLED error', async () => {
     // Mock: wallet has wallet_type='dcent', wallet_apps has signing_enabled=0
     const stmtGet = vi.fn()
-      .mockReturnValueOnce({ owner_approval_method: 'sdk_ntfy', wallet_type: 'dcent' }) // wallet lookup
+      .mockReturnValueOnce({ owner_approval_method: 'sdk_push', wallet_type: 'dcent' }) // wallet lookup
       .mockReturnValueOnce(undefined) // wallet_apps lookup (no app with signing_enabled=1)
-      .mockReturnValueOnce({ id: 'app-dcent-001' }); // anyApp lookup (app exists → block)
+      .mockReturnValueOnce({ id: 'app-dcent-001' }); // anyApp lookup (app exists -> block)
     const sqlite = {
       prepare: vi.fn().mockReturnValue({ get: stmtGet }),
     } as unknown as Database;
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
-    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, pushRelayChannel });
     await expect(router.route('wallet-1', defaultParams))
       .rejects.toThrow('SIGNING_DISABLED');
   });
 
   it('T-APP-08b: signing_enabled=1 allows signing', async () => {
     const stmtGet = vi.fn()
-      .mockReturnValueOnce({ owner_approval_method: 'sdk_ntfy', wallet_type: 'dcent' })
+      .mockReturnValueOnce({ owner_approval_method: 'sdk_push', wallet_type: 'dcent' })
       .mockReturnValueOnce({ signing_enabled: 1 });
     const sqlite = {
       prepare: vi.fn().mockReturnValue({ get: stmtGet }),
     } as unknown as Database;
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
-    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, pushRelayChannel });
     const result = await router.route('wallet-1', defaultParams);
 
-    expect(result.method).toBe('sdk_ntfy');
-    expect(ntfyChannel.sendRequest).toHaveBeenCalled();
+    expect(result.method).toBe('sdk_push');
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalled();
   });
 
   it('T-APP-08c: no wallet_apps row allows signing (passthrough)', async () => {
     const stmtGet = vi.fn()
-      .mockReturnValueOnce({ owner_approval_method: 'sdk_ntfy', wallet_type: 'dcent' })
+      .mockReturnValueOnce({ owner_approval_method: 'sdk_push', wallet_type: 'dcent' })
       .mockReturnValueOnce(undefined); // no wallet_apps row
     const sqlite = {
       prepare: vi.fn().mockReturnValue({ get: stmtGet }),
     } as unknown as Database;
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
-    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, pushRelayChannel });
     const result = await router.route('wallet-1', defaultParams);
 
-    expect(result.method).toBe('sdk_ntfy');
-    expect(ntfyChannel.sendRequest).toHaveBeenCalled();
+    expect(result.method).toBe('sdk_push');
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalled();
   });
 });

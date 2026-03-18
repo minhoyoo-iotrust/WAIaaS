@@ -558,6 +558,7 @@ export const walletApps = sqliteTable('wallet_apps', {
   signTopic: text('sign_topic'),
   notifyTopic: text('notify_topic'),
   subscriptionToken: text('subscription_token'),
+  pushRelayUrl: text('push_relay_url'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

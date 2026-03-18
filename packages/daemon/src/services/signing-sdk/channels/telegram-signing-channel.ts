@@ -7,7 +7,7 @@
  *   3. Sends a Telegram message to the admin chat with an inline "Open in Wallet"
  *      button containing the universal link URL
  *
- * Unlike NtfySigningChannel, TelegramSigningChannel does NOT subscribe to a response
+ * Unlike PushRelaySigningChannel, TelegramSigningChannel does NOT subscribe to a response
  * topic. The response arrives via the /sign_response Telegram bot command, which
  * delegates to SignResponseHandler. This is a one-way push channel.
  *

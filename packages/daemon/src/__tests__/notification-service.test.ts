@@ -653,8 +653,7 @@ describe('Config integration', () => {
         telegram_bot_token: 'tok',
         telegram_chat_id: '123',
         discord_webhook_url: 'https://discord.com/api/webhooks/1/x',
-        ntfy_server: 'https://custom.ntfy.sh',
-        ntfy_topic: 'waiaas',
+        slack_webhook_url: 'https://hooks.slack.com/services/T00/B00/xxx',
       },
     });
     expect(config.notifications.enabled).toBe(true);
@@ -662,6 +661,6 @@ describe('Config integration', () => {
     expect(config.notifications.rate_limit_rpm).toBe(10);
     expect(config.notifications.telegram_bot_token).toBe('tok');
     expect(config.notifications.discord_webhook_url).toBe('https://discord.com/api/webhooks/1/x');
-    expect(config.notifications.ntfy_topic).toBe('waiaas');
+    expect(config.notifications.slack_webhook_url).toBe('https://hooks.slack.com/services/T00/B00/xxx');
   });
 });

@@ -5,7 +5,7 @@
  *   - SignRequestBuilder: builds SignRequest from PENDING_APPROVAL transactions
  *   - SignResponseHandler: processes wallet app SignResponse (approve/reject)
  *   - WalletLinkRegistry: manages registered wallet configurations
- *   - NtfySigningChannel: ntfy-based publish/subscribe signing channel
+ *   - PushRelaySigningChannel: Push Relay HTTP-based signing channel
  *   - TelegramSigningChannel: Telegram-based one-way push signing channel
  *   - ApprovalChannelRouter: routes to correct channel based on wallet's owner_approval_method
  *   - ISigningChannel: channel interface for future channel implementations
@@ -24,8 +24,8 @@ export type { SignResponseHandlerDeps, HandleResult } from './sign-response-hand
 export { WalletLinkRegistry } from './wallet-link-registry.js';
 
 // Channels
-export { NtfySigningChannel } from './channels/index.js';
-export type { NtfySigningChannelOpts, SendRequestParams, SendRequestResult } from './channels/index.js';
+export { PushRelaySigningChannel } from './channels/index.js';
+export type { PushRelaySigningChannelOpts, SendRequestParams, SendRequestResult } from './channels/index.js';
 
 export { TelegramSigningChannel } from './channels/index.js';
 export type { TelegramSigningChannelOpts } from './channels/index.js';
@@ -39,7 +39,7 @@ export { ApprovalChannelRouter } from './approval-channel-router.js';
 export type { ApprovalChannelRouterDeps, RouteResult } from './approval-channel-router.js';
 
 // ---------------------------------------------------------------------------
-// ISigningChannel interface (for future TelegramSigningChannel, etc.)
+// ISigningChannel interface (for future channel implementations)
 // ---------------------------------------------------------------------------
 
 import type { SendRequestParams as _SendRequestParams } from './channels/index.js';

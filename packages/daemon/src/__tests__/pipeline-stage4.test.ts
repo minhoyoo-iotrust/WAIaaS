@@ -618,7 +618,7 @@ describe('56-02 stage4Wait', () => {
   // =========================================================================
 
   describe('Test group 6: WcSigningBridge conditional on approvalChannelRouter (#245)', () => {
-    it('non-WC wallet (sdk_ntfy): wcSigningBridge NOT called when router selects sdk_ntfy', async () => {
+    it('non-WC wallet (sdk_push): wcSigningBridge NOT called when router selects sdk_push', async () => {
       const walletId = await insertTestAgent();
       const txId = await insertPendingTransaction(walletId);
 
@@ -631,7 +631,7 @@ describe('56-02 stage4Wait', () => {
 
       const mockWcBridge = { requestSignature: vi.fn() };
       const mockRouter = {
-        route: vi.fn().mockResolvedValue({ method: 'sdk_ntfy', channelResult: { requestId: 'r1' } }),
+        route: vi.fn().mockResolvedValue({ method: 'sdk_push', channelResult: { requestId: 'r1' } }),
       };
 
       const ctx = createPipelineContext(walletId, txId, {

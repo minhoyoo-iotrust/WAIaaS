@@ -13,7 +13,7 @@ export interface WalletPreset {
   /** Display name (human-readable). */
   displayName: string;
   /** Preferred approval method for this wallet type. */
-  approvalMethod: 'sdk_ntfy' | 'sdk_telegram' | 'walletconnect' | 'telegram_bot' | 'rest';
+  approvalMethod: 'sdk_push' | 'sdk_telegram' | 'walletconnect' | 'telegram_bot' | 'rest';
   /** Preferred wallet identifier for signing SDK registry. */
   preferredWallet: string;
   /** Whether signing SDK should be enabled for this preset. */
@@ -32,7 +32,7 @@ export interface WalletPreset {
 export const BUILTIN_PRESETS: Record<WalletPresetType, WalletPreset> = {
   dcent: {
     displayName: "D'CENT Wallet",
-    approvalMethod: 'sdk_ntfy',
+    approvalMethod: 'sdk_push',
     preferredWallet: 'dcent',
     signingEnabled: true,
     description: "D'CENT hardware wallet with push notification signing",

@@ -366,9 +366,10 @@ export const WalletAppSchema = z
     wallet_type: z.string().openapi({ description: 'Wallet type for grouping (multiple apps can share a type)', example: 'dcent' }),
     signing_enabled: z.boolean().openapi({ description: 'Whether signing requests are sent to this app' }),
     alerts_enabled: z.boolean().openapi({ description: 'Whether activity alerts are sent to this app' }),
-    sign_topic: z.string().nullable().openapi({ description: 'ntfy topic for signing requests' }),
-    notify_topic: z.string().nullable().openapi({ description: 'ntfy topic for activity notifications' }),
-    subscription_token: z.string().nullable().openapi({ description: 'Subscription token for ntfy topic isolation' }),
+    sign_topic: z.string().nullable().openapi({ description: '(legacy, unused) Signing topic identifier' }),
+    notify_topic: z.string().nullable().openapi({ description: '(legacy, unused) Notification topic identifier' }),
+    subscription_token: z.string().nullable().openapi({ description: 'Push Relay subscription token' }),
+    push_relay_url: z.string().nullable().openapi({ description: 'Push Relay server URL for sign requests and notifications' }),
     used_by: z.array(z.object({
       id: z.string(),
       label: z.string(),
@@ -391,6 +392,7 @@ export const WalletAppCreateRequestSchema = z
     wallet_type: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, 'Lowercase alphanumeric with hyphens').optional().openapi({ description: 'Wallet type for grouping (defaults to name)', example: 'dcent' }),
     sign_topic: z.string().max(256).optional().openapi({ description: 'Custom signing topic (auto-generated if omitted)' }),
     notify_topic: z.string().max(256).optional().openapi({ description: 'Custom notification topic (auto-generated if omitted)' }),
+    push_relay_url: z.string().url().max(512).optional().openapi({ description: 'Push Relay server URL' }),
   })
   .openapi('WalletAppCreateRequest');
 
@@ -400,7 +402,8 @@ export const WalletAppUpdateRequestSchema = z
     alerts_enabled: z.boolean().optional().openapi({ description: 'Toggle activity alerts' }),
     sign_topic: z.string().max(256).optional().openapi({ description: 'Custom signing topic' }),
     notify_topic: z.string().max(256).optional().openapi({ description: 'Custom notification topic' }),
-    subscription_token: z.string().max(64).optional().openapi({ description: 'Subscription token for ntfy topic isolation' }),
+    subscription_token: z.string().max(64).optional().openapi({ description: 'Push Relay subscription token' }),
+    push_relay_url: z.string().url().max(512).optional().openapi({ description: 'Push Relay server URL' }),
   })
   .openapi('WalletAppUpdateRequest');
 
@@ -413,7 +416,6 @@ export const WalletAppResponseSchema = z
 export const WalletAppTestNotificationResponseSchema = z
   .object({
     success: z.boolean().openapi({ description: 'Whether the test notification was sent successfully' }),
-    topic: z.string().optional().openapi({ description: 'ntfy topic the notification was sent to' }),
     error: z.string().optional().openapi({ description: 'Error message if notification failed' }),
   })
   .openapi('WalletAppTestNotificationResponse');

@@ -18,7 +18,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 // ---------------------------------------------------------------------------
 
 export const APPROVAL_METHODS = [
-  'sdk_ntfy',
+  'sdk_push',
   'sdk_telegram',
   'walletconnect',
   'telegram_bot',
@@ -32,10 +32,10 @@ export type ApprovalMethod = z.infer<typeof ApprovalMethodSchema>;
 // Response Channel (discriminatedUnion on 'type')
 // ---------------------------------------------------------------------------
 
-export const NtfyResponseChannelSchema = z.object({
-  type: z.literal('ntfy'),
-  responseTopic: z.string(),
-  serverUrl: z.string().url().optional(),
+export const PushRelayResponseChannelSchema = z.object({
+  type: z.literal('push_relay'),
+  pushRelayUrl: z.string(), // URL of the Push Relay server (empty when not configured)
+  requestId: z.string().uuid(),
 });
 
 export const TelegramResponseChannelSchema = z.object({
@@ -44,11 +44,11 @@ export const TelegramResponseChannelSchema = z.object({
 });
 
 export const ResponseChannelSchema = z.discriminatedUnion('type', [
-  NtfyResponseChannelSchema,
+  PushRelayResponseChannelSchema,
   TelegramResponseChannelSchema,
 ]);
 
-export type NtfyResponseChannel = z.infer<typeof NtfyResponseChannelSchema>;
+export type PushRelayResponseChannel = z.infer<typeof PushRelayResponseChannelSchema>;
 export type TelegramResponseChannel = z.infer<typeof TelegramResponseChannelSchema>;
 export type ResponseChannel = z.infer<typeof ResponseChannelSchema>;
 
@@ -117,11 +117,6 @@ export const WalletLinkConfigSchema = z.object({
     .object({
       scheme: z.string(),
       signPath: z.string(),
-    })
-    .optional(),
-  ntfy: z
-    .object({
-      requestTopic: z.string(),
     })
     .optional(),
 });

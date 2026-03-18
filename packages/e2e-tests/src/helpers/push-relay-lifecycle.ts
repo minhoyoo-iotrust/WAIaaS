@@ -45,13 +45,7 @@ export class PushRelayManager {
 
     // 2. Find free port and write config
     const port = await this.findFreePort();
-    const config = `[relay]
-ntfy_server = "https://ntfy.sh"
-sign_topic_prefix = "waiaas-e2e-sign"
-notify_topic_prefix = "waiaas-e2e-notify"
-wallet_names = ["e2e-test-wallet"]
-
-[relay.push]
+    const config = `[relay.push]
 provider = "pushwoosh"
 
 [relay.push.pushwoosh]

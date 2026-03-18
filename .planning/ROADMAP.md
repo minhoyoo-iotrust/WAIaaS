@@ -6,6 +6,7 @@
 - ✅ **v32.6 성능 + 구조 개선** — Phases 435-438 (shipped 2026-03-17)
 - ✅ **v32.7 SEO/AEO 최적화** — Phases 439-443 (shipped 2026-03-17)
 - ✅ **v32.8 테스트 커버리지 강화** — Phases 444-448.1 (shipped 2026-03-18)
+- ✅ **v32.9 Push Relay 직접 연동 (ntfy.sh 제거)** — Phases 449-451 (shipped 2026-03-18)
 
 <details>
 <summary>✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Phases 432-434) — SHIPPED 2026-03-16</summary>
@@ -56,3 +57,40 @@ See `.planning/milestones/v32.7-ROADMAP.md` for full details.
 </details>
 
 See `.planning/milestones/v32.8-ROADMAP.md` for full details.
+
+<details>
+<summary>✅ v32.9 Push Relay 직접 연동 (ntfy.sh 제거) (Phases 449-451) — SHIPPED 2026-03-18</summary>
+
+- [x] Phase 449: Foundation -- Core 타입 + DB 마이그레이션 + Push Relay 서버 (3/3 plans) — completed 2026-03-18
+- [x] Phase 450: Daemon 서명 채널 재작성 (2/2 plans) — completed 2026-03-18
+- [x] Phase 451: 클라이언트 업데이트 -- SDK deprecated + Admin UI (2/2 plans) — completed 2026-03-18
+
+</details>
+
+See `.planning/milestones/v32.9-ROADMAP.md` for full details.
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 432. Interface Extension | v32.5 | 2/2 | Complete | 2026-03-16 |
+| 433. Multichain Positions | v32.5 | 4/4 | Complete | 2026-03-16 |
+| 434. Testnet Toggle | v32.5 | 2/2 | Complete | 2026-03-16 |
+| 435. N+1 쿼리 해소 | v32.6 | 2/2 | Complete | 2026-03-17 |
+| 436. 페이지네이션 추가 | v32.6 | 2/2 | Complete | 2026-03-17 |
+| 437. 대형 파일 분할 | v32.6 | 3/3 | Complete | 2026-03-17 |
+| 438. 파이프라인 분할 + 추가 정리 | v32.6 | 2/2 | Complete | 2026-03-17 |
+| 439. Build Infrastructure | v32.7 | 1/1 | Complete | 2026-03-17 |
+| 440. Content Publishing | v32.7 | 1/1 | Complete | 2026-03-17 |
+| 441. Technical SEO & AEO | v32.7 | 2/2 | Complete | 2026-03-17 |
+| 442. CI Integration | v32.7 | 1/1 | Complete | 2026-03-17 |
+| 443. SEO Landing Pages | v32.7 | 2/2 | Complete | 2026-03-17 |
+| 444. DeFi Provider Tests | v32.8 | 3/3 | Complete | 2026-03-17 |
+| 445. Infra Tests | v32.8 | 3/3 | Complete | 2026-03-17 |
+| 446. EVM/SDK Branches | v32.8 | 2/2 | Complete | 2026-03-17 |
+| 447. Admin/CLI Tests | v32.8 | 3/3 | Complete | 2026-03-17 |
+| 448. SDK/Shared Tests | v32.8 | 3/3 | Complete | 2026-03-17 |
+| 448.1. 커버리지 갭 클로저 | v32.8 | 3/3 | Complete | 2026-03-18 |
+| 449. Foundation | v32.9 | 3/3 | Complete | 2026-03-18 |
+| 450. Daemon 서명 채널 재작성 | v32.9 | 2/2 | Complete | 2026-03-18 |
+| 451. 클라이언트 업데이트 | v32.9 | 2/2 | Complete | 2026-03-18 |

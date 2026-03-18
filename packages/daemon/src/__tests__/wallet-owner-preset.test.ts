@@ -162,13 +162,13 @@ describe('PUT /v1/wallets/:id/owner wallet_type preset', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.walletType).toBe('dcent');
-    expect(body.approvalMethod).toBe('sdk_ntfy');
+    expect(body.approvalMethod).toBe('sdk_push');
     expect(body.warning).toBeNull();
 
     // Verify DB state
     const row = sqlite.prepare('SELECT wallet_type, owner_approval_method FROM wallets WHERE id = ?').get(walletId) as any;
     expect(row.wallet_type).toBe('dcent');
-    expect(row.owner_approval_method).toBe('sdk_ntfy');
+    expect(row.owner_approval_method).toBe('sdk_push');
   });
 
   it('T-PRST-02: invalid wallet_type returns 400', async () => {
@@ -228,7 +228,7 @@ describe('PUT /v1/wallets/:id/owner wallet_type preset', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.approvalMethod).toBe('sdk_ntfy'); // preset value, not 'rest'
+    expect(body.approvalMethod).toBe('sdk_push'); // preset value, not 'rest'
     expect(body.walletType).toBe('dcent');
     expect(body.warning).toBeTruthy();
     expect(typeof body.warning).toBe('string');
@@ -237,7 +237,7 @@ describe('PUT /v1/wallets/:id/owner wallet_type preset', () => {
     // Verify DB: preset approval_method was saved
     const row = sqlite.prepare('SELECT wallet_type, owner_approval_method FROM wallets WHERE id = ?').get(walletId) as any;
     expect(row.wallet_type).toBe('dcent');
-    expect(row.owner_approval_method).toBe('sdk_ntfy');
+    expect(row.owner_approval_method).toBe('sdk_push');
   });
 
   it('T-PRST-05: no wallet_type with approval_method uses existing logic', async () => {

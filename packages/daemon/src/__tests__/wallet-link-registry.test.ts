@@ -83,8 +83,9 @@ const validSignRequest: SignRequest = {
     policyTier: 'APPROVAL',
   },
   responseChannel: {
-    type: 'ntfy',
-    responseTopic: 'waiaas-response-01935a3b-7c8d-7e00-b123-456789abcdef',
+    type: 'push_relay',
+    pushRelayUrl: 'http://localhost:3200',
+    requestId: '01935a3b-7c8d-7e00-b123-456789abcdef',
   },
   expiresAt: '2026-03-01T00:00:00Z',
 };

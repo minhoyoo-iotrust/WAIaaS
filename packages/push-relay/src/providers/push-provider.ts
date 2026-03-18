@@ -1,4 +1,10 @@
-import type { PushPayload } from '../subscriber/message-parser.js';
+export interface PushPayload {
+  title: string;
+  body: string;
+  data: Record<string, string>;
+  category: 'sign_request' | 'notification';
+  priority: 'high' | 'normal';
+}
 
 export interface PushResult {
   sent: number;

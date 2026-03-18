@@ -1,17 +1,17 @@
 /**
  * Signing SDK lifecycle integration tests.
  *
- * Verifies that the signing SDK classes from Plan 204-01/204-02 are properly
+ * Verifies that the signing SDK classes are properly
  * instantiated and connected. Tests class wiring (instantiation + method delegation),
- * NOT actual ntfy/Telegram network calls (covered by signing-sdk-e2e.test.ts).
+ * NOT actual Push Relay/Telegram network calls (covered by signing-sdk-e2e.test.ts).
  *
  * Test cases cover:
  *   1. SignRequestBuilder instantiation with SettingsService + WalletLinkRegistry
  *   2. SignResponseHandler instantiation with sqlite
- *   3. NtfySigningChannel instantiation with required deps
+ *   3. PushRelaySigningChannel instantiation with required deps
  *   4. TelegramSigningChannel instantiation with required deps
  *   5. ApprovalChannelRouter instantiation with sqlite, settingsService, channels
- *   6. ApprovalChannelRouter.route() dispatches to ntfy channel (sdk_ntfy)
+ *   6. ApprovalChannelRouter.route() dispatches to push relay channel (sdk_push)
  *   7. ApprovalChannelRouter.route() dispatches to telegram channel (sdk_telegram)
  *   8. ApprovalChannelRouter.shutdown() calls shutdown on both channels
  *   9. Conditional initialization: signing SDK not created when disabled
@@ -26,14 +26,14 @@ import type { Database } from 'better-sqlite3';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { TelegramApi } from '../infrastructure/telegram/telegram-api.js';
 import type { SignResponseHandler } from '../services/signing-sdk/sign-response-handler.js';
-import type { SendRequestParams } from '../services/signing-sdk/channels/ntfy-signing-channel.js';
+import type { SendRequestParams } from '../services/signing-sdk/channels/push-relay-signing-channel.js';
 
 // Module imports (verifies index exports work)
 import {
   SignRequestBuilder,
   SignResponseHandler as SignResponseHandlerImpl,
   WalletLinkRegistry,
-  NtfySigningChannel,
+  PushRelaySigningChannel,
   TelegramSigningChannel,
   ApprovalChannelRouter,
 } from '../services/signing-sdk/index.js';
@@ -48,11 +48,9 @@ function createMockSettings(overrides: Record<string, string> = {}): SettingsSer
     'signing_sdk.enabled': 'true',
     'signing_sdk.preferred_wallet': 'dcent',
     'signing_sdk.request_expiry_min': '30',
-    'signing_sdk.preferred_channel': 'ntfy',
-    'signing_sdk.ntfy_request_topic_prefix': 'waiaas-sign',
-    'signing_sdk.ntfy_response_topic_prefix': 'waiaas-response',
+    'signing_sdk.preferred_channel': 'push_relay',
+    'signing_sdk.push_relay_api_key': 'test-key',
     'signing_sdk.wallets': '[]',
-    'notifications.ntfy_server': 'https://ntfy.sh',
     'notifications.telegram_chat_id': '12345',
     'telegram.bot_token': 'bot123:token',
     'walletconnect.project_id': '',
@@ -97,15 +95,15 @@ function createMockSignResponseHandler(): SignResponseHandler {
   } as unknown as SignResponseHandler;
 }
 
-function createMockNtfyChannel() {
+function createMockPushRelayChannel() {
   return {
     sendRequest: vi.fn().mockResolvedValue({
-      requestId: 'ntfy-req-001',
-      requestTopic: 'waiaas-sign-test',
-      responseTopic: 'waiaas-response-ntfy-req-001',
+      requestId: 'push-req-001',
+      requestTopic: 'dcent',
+      responseTopic: '',
     }),
     shutdown: vi.fn(),
-  } as unknown as NtfySigningChannel;
+  } as unknown as PushRelaySigningChannel;
 }
 
 function createMockTelegramChannel() {
@@ -162,7 +160,7 @@ describe('signing-sdk lifecycle - class instantiation', () => {
     expect(typeof handler.registerRequest).toBe('function');
   });
 
-  it('NtfySigningChannel is instantiated with required dependencies', () => {
+  it('PushRelaySigningChannel is instantiated with required dependencies', () => {
     const settings = createMockSettings();
     const registry = new WalletLinkRegistry(settings);
     const builder = new SignRequestBuilder({
@@ -172,14 +170,14 @@ describe('signing-sdk lifecycle - class instantiation', () => {
     const sqlite = createMockSqlite();
     const responseHandler = new SignResponseHandlerImpl({ sqlite });
 
-    const channel = new NtfySigningChannel({
+    const channel = new PushRelaySigningChannel({
       signRequestBuilder: builder,
       signResponseHandler: responseHandler,
       settingsService: settings,
     });
 
     expect(channel).toBeDefined();
-    expect(channel).toBeInstanceOf(NtfySigningChannel);
+    expect(channel).toBeInstanceOf(PushRelaySigningChannel);
     expect(typeof channel.sendRequest).toBe('function');
     expect(typeof channel.shutdown).toBe('function');
   });
@@ -211,13 +209,13 @@ describe('signing-sdk lifecycle - class instantiation', () => {
   it('ApprovalChannelRouter is instantiated with sqlite, settingsService, and channels', () => {
     const sqlite = createMockSqlite();
     const settings = createMockSettings();
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
     const telegramChannel = createMockTelegramChannel();
 
     const router = new ApprovalChannelRouter({
       sqlite,
       settingsService: settings,
-      ntfyChannel,
+      pushRelayChannel,
       telegramChannel,
     });
 
@@ -233,22 +231,22 @@ describe('signing-sdk lifecycle - class instantiation', () => {
 // ---------------------------------------------------------------------------
 
 describe('signing-sdk lifecycle - channel routing dispatch', () => {
-  it('ApprovalChannelRouter.route() dispatches to ntfy channel when owner_approval_method is sdk_ntfy', async () => {
-    const sqlite = createMockSqlite('sdk_ntfy');
+  it('ApprovalChannelRouter.route() dispatches to push relay channel when owner_approval_method is sdk_push', async () => {
+    const sqlite = createMockSqlite('sdk_push');
     const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
 
     const router = new ApprovalChannelRouter({
       sqlite,
       settingsService: settings,
-      ntfyChannel,
+      pushRelayChannel,
     });
 
     const result = await router.route('wallet-1', defaultParams);
 
-    expect(result.method).toBe('sdk_ntfy');
-    expect(result.channelResult).toEqual({ requestId: 'ntfy-req-001' });
-    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(defaultParams);
+    expect(result.method).toBe('sdk_push');
+    expect(result.channelResult).toEqual({ requestId: 'push-req-001' });
+    expect(pushRelayChannel.sendRequest).toHaveBeenCalledWith(defaultParams);
   });
 
   it('ApprovalChannelRouter.route() dispatches to telegram channel when owner_approval_method is sdk_telegram', async () => {
@@ -278,19 +276,19 @@ describe('signing-sdk lifecycle - shutdown and cleanup', () => {
   it('ApprovalChannelRouter.shutdown() calls shutdown on both channels', () => {
     const sqlite = createMockSqlite();
     const settings = createMockSettings();
-    const ntfyChannel = createMockNtfyChannel();
+    const pushRelayChannel = createMockPushRelayChannel();
     const telegramChannel = createMockTelegramChannel();
 
     const router = new ApprovalChannelRouter({
       sqlite,
       settingsService: settings,
-      ntfyChannel,
+      pushRelayChannel,
       telegramChannel,
     });
 
     router.shutdown();
 
-    expect(ntfyChannel.shutdown).toHaveBeenCalledTimes(1);
+    expect(pushRelayChannel.shutdown).toHaveBeenCalledTimes(1);
     expect(telegramChannel.shutdown).toHaveBeenCalledTimes(1);
   });
 });
@@ -304,12 +302,8 @@ describe('signing-sdk lifecycle - conditional initialization', () => {
     const settings = createMockSettings({ 'signing_sdk.enabled': 'false' });
     const sdkEnabled = settings.get('signing_sdk.enabled') === 'true';
 
-    // Simulate the daemon.ts conditional pattern:
-    // if (this._settingsService?.get('signing_sdk.enabled') === 'true') { ... }
     expect(sdkEnabled).toBe(false);
 
-    // When disabled, no signing SDK classes should be created.
-    // This mirrors the daemon.ts Step 4c-8 guard clause.
     let router: ApprovalChannelRouter | null = null;
     if (sdkEnabled) {
       router = new ApprovalChannelRouter({
@@ -334,7 +328,6 @@ describe('signing-sdk lifecycle - TelegramBotService signResponseHandler injecti
     const sqlite = createMockSqlite();
     const api = createMockTelegramApi();
 
-    // Create TelegramBotService WITHOUT signResponseHandler (mimics daemon.ts Step 4c-5)
     const botService = new TelegramBotService({
       sqlite,
       api,
@@ -344,13 +337,9 @@ describe('signing-sdk lifecycle - TelegramBotService signResponseHandler injecti
     expect(botService).toBeDefined();
     expect(typeof botService.setSignResponseHandler).toBe('function');
 
-    // Late-bind the signResponseHandler (mimics daemon.ts Step 4c-8)
     const handler = createMockSignResponseHandler();
     botService.setSignResponseHandler(handler);
 
-    // Verify the handler was set by checking that the method exists and was callable
-    // (The actual behavior is tested by the /sign_response command handler
-    // which checks if this.signResponseHandler is set)
     expect(botService.setSignResponseHandler).toBeDefined();
   });
 
@@ -358,21 +347,12 @@ describe('signing-sdk lifecycle - TelegramBotService signResponseHandler injecti
     const sqlite = createMockSqlite();
     const api = createMockTelegramApi();
 
-    // Create WITHOUT signResponseHandler
     const botService = new TelegramBotService({
       sqlite,
       api,
       locale: 'en',
     });
 
-    // Simulate /sign_response by accessing the private handleSignResponse
-    // via the public handleUpdate path. The TelegramAuth will need a registered user.
-    // Instead, verify through the service structure that signResponseHandler is initially undefined.
-    // Direct private field access is not possible, but we can verify via the setter pattern:
-    // Before setSignResponseHandler, /sign_response would respond with "Signing SDK is not enabled"
-    // After setSignResponseHandler, it would process the response through the handler.
-
-    // Verify the setter method signature exists
     expect(typeof botService.setSignResponseHandler).toBe('function');
   });
 });

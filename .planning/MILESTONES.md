@@ -1,5 +1,24 @@
 # Project Milestones: WAIaaS
 
+## v32.9 Push Relay 직접 연동 (ntfy.sh 제거) (Shipped: 2026-03-18)
+
+**Phases completed:** 3 phases (449-451), 7 plans, 32 requirements
+
+**Key accomplishments:**
+- ntfy.sh SSE 의존성 완전 제거 — ResponseChannelSchema/APPROVAL_METHODS에서 ntfy 타입 삭제, NtfyChannel/ntfy config/hot-reload 코드 전량 삭제
+- Push Relay 서버 자체 응답 저장소(sign_responses DB) 전환 + long-polling API 구현
+- PushRelaySigningChannel HTTP POST + long-polling으로 데몬 서명/알림 채널 재작성
+- DB v60 마이그레이션 (push_relay_url 컬럼, DCent 프리셋 자동 설정)
+- Wallet SDK ntfy 함수 deprecated 처리 + Admin UI Push Relay URL 기반 워크플로우 전환
+
+**Stats:**
+- 36 commits, 118 files changed, +5,426/-4,411 lines
+- ~326,625 LOC TS
+- Timeline: ~2 hours (2026-03-18)
+- Audit: PASS (with advisories)
+
+---
+
 ## v32.8 테스트 커버리지 강화 (Shipped: 2026-03-18)
 
 **Phases completed:** 6 phases (444-448.1), 17 plans, 48 requirements

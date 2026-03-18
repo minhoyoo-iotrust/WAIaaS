@@ -51,7 +51,7 @@ const mockStatus = {
   channels: [
     { name: 'telegram', enabled: true },
     { name: 'discord', enabled: false },
-    { name: 'ntfy', enabled: true },
+    { name: 'slack', enabled: true },
   ],
 };
 
@@ -60,7 +60,7 @@ const mockStatusDisabled = {
   channels: [
     { name: 'telegram', enabled: false },
     { name: 'discord', enabled: false },
-    { name: 'ntfy', enabled: false },
+    { name: 'slack', enabled: false },
   ],
 };
 
@@ -130,7 +130,7 @@ describe('NotificationsPage', () => {
     // Channel names appear in both card and log table, so use getAllByText
     expect(screen.getAllByText('telegram').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('discord').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('ntfy').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('slack').length).toBeGreaterThanOrEqual(1);
   });
 
   it('should display disabled banner when notifications are disabled', async () => {
@@ -155,7 +155,7 @@ describe('NotificationsPage', () => {
     mockApiPost.mockResolvedValueOnce({ data: {
       results: [
         { channel: 'telegram', success: true },
-        { channel: 'ntfy', success: true },
+        { channel: 'slack', success: true },
       ],
     } });
 
@@ -218,7 +218,7 @@ describe('NotificationsPage', () => {
       if (url.includes('/notifications/status')) return Promise.resolve({ data: mockStatus });
       if (url.includes('/notifications/log') && opts?.params?.query?.page === '2') {
         return Promise.resolve({ data: {
-          logs: [{ id: '21', eventType: 'TX_SUBMITTED', walletId: 'wallet-20', channel: 'ntfy', status: 'sent', error: null, message: null, createdAt: 1707607600 }],
+          logs: [{ id: '21', eventType: 'TX_SUBMITTED', walletId: 'wallet-20', channel: 'slack', status: 'sent', error: null, message: null, createdAt: 1707607600 }],
           total: 25,
           page: 2,
           pageSize: 20,
@@ -267,7 +267,7 @@ describe('NotificationsPage', () => {
     mockApiPost.mockResolvedValueOnce({ data: {
       results: [
         { channel: 'telegram', success: true },
-        { channel: 'ntfy', success: false, error: 'Connection timeout' },
+        { channel: 'slack', success: false, error: 'Connection timeout' },
       ],
     } });
 
@@ -397,7 +397,7 @@ describe('NotificationsPage', () => {
     mockApiPost.mockResolvedValueOnce({ data: {
       results: [
         { channel: 'telegram', success: true },
-        { channel: 'ntfy', success: true },
+        { channel: 'slack', success: true },
       ],
     } });
 

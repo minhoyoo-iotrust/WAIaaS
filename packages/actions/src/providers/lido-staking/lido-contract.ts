@@ -77,8 +77,8 @@ export { encodeApproveCalldata };
 /** wstETH mainnet contract address. */
 export const WSTETH_MAINNET = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
 
-/** wstETH Holesky testnet contract address. */
-export const WSTETH_HOLESKY = '0x8d09a4502Cc8Cf1547aD300E066060D043f6982D';
+/** wstETH Sepolia testnet contract address (deprecated by Lido, but contracts still readable). */
+export const WSTETH_SEPOLIA = '0xB82381A3fBD3FaFA77B3a7bE693342618240067b';
 
 // ---------------------------------------------------------------------------
 // Multichain contract config (MCHN-01, MCHN-04)
@@ -123,12 +123,12 @@ export const LIDO_NETWORK_CONFIG: Record<string, LidoNetworkContracts> = {
 };
 
 /**
- * Testnet config (Holesky only, mapped to ethereum-sepolia network).
+ * Testnet config (Sepolia — deprecated by Lido, but contracts still readable).
  */
 export const LIDO_TESTNET_NETWORK_CONFIG: Record<string, LidoNetworkContracts> = {
   'ethereum-sepolia': {
-    stethAddress: '0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034',
-    wstethAddress: '0x8d09a4502Cc8Cf1547aD300E066060D043f6982D',
+    stethAddress: '0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af',
+    wstethAddress: '0xB82381A3fBD3FaFA77B3a7bE693342618240067b',
     caip2: 'eip155:11155111',
   },
 };

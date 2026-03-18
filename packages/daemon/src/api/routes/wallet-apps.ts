@@ -47,6 +47,7 @@ function toApiResponse(app: WalletApp | WalletAppWithUsedBy) {
     sign_topic: app.signTopic,
     notify_topic: app.notifyTopic,
     subscription_token: app.subscriptionToken,
+    push_relay_url: app.pushRelayUrl,
     used_by: 'usedBy' in app ? app.usedBy : [],
     created_at: app.createdAt,
     updated_at: app.updatedAt,
@@ -160,6 +161,7 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         walletType: body.wallet_type,
         signTopic: body.sign_topic,
         notifyTopic: body.notify_topic,
+        pushRelayUrl: body.push_relay_url,
       });
       return c.json({ app: toApiResponse(app) }, 201);
     } catch (err) {
@@ -181,6 +183,7 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         signTopic: body.sign_topic,
         notifyTopic: body.notify_topic,
         subscriptionToken: body.subscription_token,
+        pushRelayUrl: body.push_relay_url,
       });
       // Re-fetch with usedBy info
       const appWithUsedBy = deps.walletAppService.listWithUsedBy().find((a) => a.id === app.id);
@@ -244,10 +247,10 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
       }, 200);
     }
 
-    // Resolve ntfy server and topic
-    const ntfyServer = deps.settingsService?.get('notifications.ntfy_server') || 'https://ntfy.sh';
-    const notifyTopic = app.notifyTopic || `waiaas-notify-${app.name}`;
-    const url = `${ntfyServer}/${notifyTopic}`;
+    // Gate 5: Push Relay URL configured
+    if (!app.pushRelayUrl) {
+      return c.json({ success: false, error: 'No Push Relay URL configured for this app' }, 200);
+    }
 
     try {
       const message = {
@@ -260,24 +263,28 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         body: `WAIaaS test notification for ${app.displayName}`,
         timestamp: Math.floor(Date.now() / 1000),
       };
-      const encoded = Buffer.from(JSON.stringify(message), 'utf-8').toString('base64url');
 
-      const res = await fetch(url, {
+      const pushRelayUrl = app.pushRelayUrl.replace(/\/$/, '');
+      const apiKey = deps.settingsService?.get('signing_sdk.push_relay_api_key') || '';
+      const res = await fetch(`${pushRelayUrl}/v1/push`, {
         method: 'POST',
-        body: encoded,
         headers: {
-          'Priority': '3',
-          'Title': message.title,
-          'Tags': 'waiaas,system',
+          'Content-Type': 'application/json',
+          ...(apiKey ? { 'X-Api-Key': apiKey } : {}),
         },
+        body: JSON.stringify({
+          subscriptionToken: app.subscriptionToken,
+          category: 'notification',
+          payload: message,
+        }),
       });
       if (!res.ok) {
-        return c.json({ success: false, topic: notifyTopic, error: `ntfy returned ${res.status}` }, 200);
+        return c.json({ success: false, error: `Push Relay returned ${res.status}` }, 200);
       }
-      return c.json({ success: true, topic: notifyTopic }, 200);
+      return c.json({ success: true }, 200);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      return c.json({ success: false, topic: notifyTopic, error: msg }, 200);
+      return c.json({ success: false, error: msg }, 200);
     }
   });
 

@@ -2,24 +2,23 @@
  * Tests for WalletNotificationChannel service.
  *
  * Tests cover:
- * 1. NOTI-01: publishes to waiaas-notify-{appName} for alerts_enabled=1 apps
+ * 1. NOTI-01: publishes to Push Relay for alerts_enabled=1 apps with push_relay_url
  * 2. NOTI-02: skips alerts_enabled=0 apps
  * 3. NOTI-03: skips entirely when no alert-enabled apps
- * 4. DAEMON-05: security_alert -> priority 5, others -> priority 3
+ * 4. DAEMON-05: security_alert uses priority 5, others use priority 3
  * 5. DAEMON-06: failure does not throw (catch isolation)
  * 6. SETTINGS-01/02: signing_sdk.enabled=false / notifications_enabled=false suppresses
  * 7. SETTINGS-03: notify_categories filters by category
  * 8. SETTINGS-04: notify_events filters by event
- * 9. CHAN-02: notify_topic from wallet_apps DB used for ntfy publish URL
- * 10. CHAN-05: system events reach all active wallet apps
+ * 9. Push Relay: apps without push_relay_url are skipped
+ * 10. Push Relay: API key and subscription token sent correctly
  *
- * All HTTP calls mocked via globalThis.fetch -- no actual ntfy server.
+ * All HTTP calls mocked via globalThis.fetch -- no actual Push Relay server.
  *
  * @see packages/daemon/src/services/signing-sdk/channels/wallet-notification-channel.ts
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { NotificationMessageSchema } from '@waiaas/core';
 import { WalletNotificationChannel } from '../services/signing-sdk/channels/wallet-notification-channel.js';
 
 // ---------------------------------------------------------------------------
@@ -36,8 +35,8 @@ function createMockSettings(overrides: Record<string, string> = {}) {
   const map = new Map<string, string>([
     ['signing_sdk.enabled', 'true'],
     ['signing_sdk.notifications_enabled', 'true'],
+    ['signing_sdk.push_relay_api_key', 'test-api-key'],
     ['notifications.notify_categories', '[]'],
-    ['notifications.ntfy_server', 'https://ntfy.sh'],
   ]);
   for (const [k, v] of Object.entries(overrides)) {
     map.set(k, v);
@@ -54,7 +53,7 @@ function createMockSettings(overrides: Record<string, string> = {}) {
 interface MockWalletAppRow {
   name: string;
   alerts_enabled: number;
-  notify_topic?: string | null;
+  push_relay_url?: string | null;
 }
 
 function createMockSqlite(apps: MockWalletAppRow[]) {
@@ -64,7 +63,7 @@ function createMockSqlite(apps: MockWalletAppRow[]) {
         // wallet_apps WHERE alerts_enabled = 1
         return apps
           .filter((a) => a.alerts_enabled === 1)
-          .map((a) => ({ name: a.name, notify_topic: a.notify_topic ?? null }));
+          .map((a) => ({ name: a.name, wallet_type: a.name, push_relay_url: a.push_relay_url ?? null }));
       }),
     })),
   } as any;
@@ -74,11 +73,11 @@ function createMockSqlite(apps: MockWalletAppRow[]) {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const APP_DCENT: MockWalletAppRow = { name: 'dcent', alerts_enabled: 1 };
-const APP_CUSTOM: MockWalletAppRow = { name: 'custom-wallet', alerts_enabled: 1 };
+const APP_DCENT: MockWalletAppRow = { name: 'dcent', alerts_enabled: 1, push_relay_url: 'https://relay.example.com' };
+const APP_CUSTOM: MockWalletAppRow = { name: 'custom-wallet', alerts_enabled: 1, push_relay_url: 'https://relay2.example.com' };
 const APP_DISABLED: MockWalletAppRow = { name: 'disabled-app', alerts_enabled: 0 };
+const APP_NO_URL: MockWalletAppRow = { name: 'no-url-app', alerts_enabled: 1, push_relay_url: null };
 
-// Arbitrary walletId for tests (doesn't affect routing now)
 const SOME_WALLET_ID = '01935a3b-7c8d-7e00-b123-456789abcdef';
 
 // ---------------------------------------------------------------------------
@@ -96,10 +95,10 @@ describe('WalletNotificationChannel', () => {
   });
 
   // -------------------------------------------------------------------------
-  // NOTI-01: publishes to waiaas-notify-{appName} for alerts_enabled=1 apps
+  // NOTI-01: publishes to Push Relay for alerts_enabled=1 apps
   // -------------------------------------------------------------------------
-  describe('NOTI-01: app-based topic routing', () => {
-    it('publishes to waiaas-notify-{appName} with base64url body matching NotificationMessageSchema', async () => {
+  describe('NOTI-01: Push Relay notification delivery', () => {
+    it('publishes to Push Relay POST /v1/push with correct JSON body', async () => {
       const settings = createMockSettings();
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
@@ -109,27 +108,23 @@ describe('WalletNotificationChannel', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const [url, opts] = fetchMock.mock.calls[0]!;
 
-      // Correct topic URL -- uses app name, not wallet name
-      expect(url).toBe('https://ntfy.sh/waiaas-notify-dcent');
-
-      // Body is base64url-encoded
+      // Correct Push Relay URL
+      expect(url).toBe('https://relay.example.com/v1/push');
       expect(opts.method).toBe('POST');
-      const decoded = Buffer.from(opts.body, 'base64url').toString('utf-8');
-      const parsed = JSON.parse(decoded);
+      expect(opts.headers['Content-Type']).toBe('application/json');
+      expect(opts.headers['X-Api-Key']).toBe('test-api-key');
 
-      // Validate against NotificationMessageSchema
-      const result = NotificationMessageSchema.safeParse(parsed);
-      expect(result.success).toBe(true);
-
-      // Check key fields
-      expect(parsed.version).toBe('1');
-      expect(parsed.eventType).toBe('TX_CONFIRMED');
-      expect(parsed.walletId).toBe(SOME_WALLET_ID);
-      expect(parsed.walletName).toBe('dcent');
-      expect(parsed.category).toBe('transaction');
-      expect(parsed.title).toBe('Tx Confirmed');
-      expect(parsed.body).toBe('Your transaction was confirmed.');
-      expect(typeof parsed.timestamp).toBe('number');
+      const body = JSON.parse(opts.body);
+      expect(body.subscriptionToken).toBe('dcent');
+      expect(body.category).toBe('notification');
+      expect(body.payload.version).toBe('1');
+      expect(body.payload.eventType).toBe('TX_CONFIRMED');
+      expect(body.payload.walletId).toBe(SOME_WALLET_ID);
+      expect(body.payload.walletName).toBe('dcent');
+      expect(body.payload.category).toBe('transaction');
+      expect(body.payload.title).toBe('Tx Confirmed');
+      expect(body.payload.body).toBe('Your transaction was confirmed.');
+      expect(typeof body.payload.timestamp).toBe('number');
     });
 
     it('publishes to multiple alert-enabled apps', async () => {
@@ -142,8 +137,8 @@ describe('WalletNotificationChannel', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
 
       const urls = fetchMock.mock.calls.map((c: any) => c[0]);
-      expect(urls).toContain('https://ntfy.sh/waiaas-notify-dcent');
-      expect(urls).toContain('https://ntfy.sh/waiaas-notify-custom-wallet');
+      expect(urls).toContain('https://relay.example.com/v1/push');
+      expect(urls).toContain('https://relay2.example.com/v1/push');
     });
   });
 
@@ -158,11 +153,9 @@ describe('WalletNotificationChannel', () => {
 
       await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
 
-      // Only 1 call (dcent), not disabled-app
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const url = fetchMock.mock.calls[0]![0];
-      expect(url).toBe('https://ntfy.sh/waiaas-notify-dcent');
-      expect(url).not.toContain('disabled-app');
+      expect(url).toBe('https://relay.example.com/v1/push');
     });
   });
 
@@ -192,29 +185,57 @@ describe('WalletNotificationChannel', () => {
   });
 
   // -------------------------------------------------------------------------
-  // DAEMON-05: security_alert -> priority 5, others -> priority 3
+  // Apps without push_relay_url are skipped
   // -------------------------------------------------------------------------
-  describe('DAEMON-05: priority by category', () => {
-    it('uses priority 5 for security_alert events (KILL_SWITCH_ACTIVATED)', async () => {
+  describe('Push Relay URL filtering', () => {
+    it('skips apps without push_relay_url', async () => {
+      const settings = createMockSettings();
+      const sqlite = createMockSqlite([APP_DCENT, APP_NO_URL]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
+
+      // Only dcent (with URL) should be called
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const url = fetchMock.mock.calls[0]![0];
+      expect(url).toBe('https://relay.example.com/v1/push');
+    });
+
+    it('skips entirely when all apps lack push_relay_url', async () => {
+      const settings = createMockSettings();
+      const sqlite = createMockSqlite([APP_NO_URL]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // DAEMON-05: priority by category
+  // -------------------------------------------------------------------------
+  describe('DAEMON-05: category classification', () => {
+    it('uses security_alert category for KILL_SWITCH_ACTIVATED', async () => {
       const settings = createMockSettings();
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
 
       await channel.notify('KILL_SWITCH_ACTIVATED', SOME_WALLET_ID, 'Kill Switch', 'Activated!');
 
-      const headers = fetchMock.mock.calls[0]![1].headers;
-      expect(headers.Priority).toBe('5');
+      const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+      expect(body.payload.category).toBe('security_alert');
     });
 
-    it('uses priority 3 for transaction events (TX_CONFIRMED)', async () => {
+    it('uses transaction category for TX_CONFIRMED', async () => {
       const settings = createMockSettings();
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
 
       await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx Confirmed', 'Body');
 
-      const headers = fetchMock.mock.calls[0]![1].headers;
-      expect(headers.Priority).toBe('3');
+      const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+      expect(body.payload.category).toBe('transaction');
     });
   });
 
@@ -228,7 +249,6 @@ describe('WalletNotificationChannel', () => {
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
 
-      // Should resolve without throwing
       await expect(
         channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body'),
       ).resolves.toBeUndefined();
@@ -331,7 +351,6 @@ describe('WalletNotificationChannel', () => {
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
 
-      // TX_CONFIRMED is in notify_events, should be allowed even though category is "transaction" not "policy"
       await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
@@ -344,7 +363,6 @@ describe('WalletNotificationChannel', () => {
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
 
-      // TX_CONFIRMED category=transaction, not in notify_categories=["policy"]
       await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
       expect(fetchMock).not.toHaveBeenCalled();
     });
@@ -354,7 +372,7 @@ describe('WalletNotificationChannel', () => {
   // Details passthrough
   // -------------------------------------------------------------------------
   describe('details passthrough', () => {
-    it('includes details in the NotificationMessage when provided', async () => {
+    it('includes details in the payload when provided', async () => {
       const settings = createMockSettings();
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
@@ -364,146 +382,33 @@ describe('WalletNotificationChannel', () => {
         amount: '1.5',
       });
 
-      const decoded = JSON.parse(
-        Buffer.from(fetchMock.mock.calls[0]![1].body, 'base64url').toString('utf-8'),
-      );
-      expect(decoded.details).toEqual({ txId: 'abc-123', amount: '1.5' });
+      const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+      expect(body.payload.details).toEqual({ txId: 'abc-123', amount: '1.5' });
     });
   });
 
   // -------------------------------------------------------------------------
-  // CHAN-02: notify_topic from wallet_apps DB used for ntfy publish URL
+  // System events broadcast
   // -------------------------------------------------------------------------
-  describe('CHAN-02: DB-based notify_topic routing', () => {
-    it('T-CHAN-02a: uses custom notify_topic from DB for ntfy publish URL', async () => {
-      const settings = createMockSettings();
-      const appWithCustomTopic: MockWalletAppRow = {
-        name: 'dcent',
-        alerts_enabled: 1,
-        notify_topic: 'my-custom-notify-topic',
-      };
-      const sqlite = createMockSqlite([appWithCustomTopic]);
-      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
-
-      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      const url = fetchMock.mock.calls[0]![0];
-      expect(url).toBe('https://ntfy.sh/my-custom-notify-topic');
-    });
-
-    it('T-CHAN-02b: NULL notify_topic falls back to waiaas-notify-{appName}', async () => {
-      const settings = createMockSettings();
-      const appWithNullTopic: MockWalletAppRow = {
-        name: 'dcent',
-        alerts_enabled: 1,
-        notify_topic: null,
-      };
-      const sqlite = createMockSqlite([appWithNullTopic]);
-      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
-
-      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      const url = fetchMock.mock.calls[0]![0];
-      expect(url).toBe('https://ntfy.sh/waiaas-notify-dcent');
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // #242: non-ASCII Title header RFC 2047 encoding
-  // -------------------------------------------------------------------------
-  describe('#242: non-ASCII Title encoding', () => {
-    it('encodes non-ASCII title as RFC 2047 Base64 to avoid undici ByteString rejection', async () => {
-      const settings = createMockSettings();
-      const sqlite = createMockSqlite([APP_DCENT]);
-      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
-
-      const koreanTitle = '송금 완료';
-      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, koreanTitle, 'Body');
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      const headers = fetchMock.mock.calls[0]![1].headers;
-
-      // Must be RFC 2047 encoded
-      expect(headers.Title).toMatch(/^=\?UTF-8\?B\?.+\?=$/);
-
-      // Decode back and verify original text
-      const match = headers.Title.match(/^=\?UTF-8\?B\?(.+)\?=$/);
-      const decoded = Buffer.from(match[1], 'base64').toString('utf-8');
-      expect(decoded).toBe(koreanTitle);
-    });
-
-    it('does not encode ASCII-only title', async () => {
-      const settings = createMockSettings();
-      const sqlite = createMockSqlite([APP_DCENT]);
-      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
-
-      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Transfer Complete', 'Body');
-
-      const headers = fetchMock.mock.calls[0]![1].headers;
-      expect(headers.Title).toBe('Transfer Complete');
-    });
-
-    it('encodes Japanese/CJK title correctly', async () => {
-      const settings = createMockSettings();
-      const sqlite = createMockSqlite([APP_DCENT]);
-      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
-
-      const japaneseTitle = '取引完了';
-      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, japaneseTitle, 'Body');
-
-      const headers = fetchMock.mock.calls[0]![1].headers;
-      expect(headers.Title).toMatch(/^=\?UTF-8\?B\?.+\?=$/);
-
-      const match = headers.Title.match(/^=\?UTF-8\?B\?(.+)\?=$/);
-      const decoded = Buffer.from(match[1], 'base64').toString('utf-8');
-      expect(decoded).toBe(japaneseTitle);
-    });
-
-    it('body still contains original non-ASCII title in base64url payload', async () => {
-      const settings = createMockSettings();
-      const sqlite = createMockSqlite([APP_DCENT]);
-      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
-
-      const koreanTitle = '거래 확인';
-      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, koreanTitle, 'Body');
-
-      // Header is encoded
-      const headers = fetchMock.mock.calls[0]![1].headers;
-      expect(headers.Title).toMatch(/^=\?UTF-8\?B\?.+\?=$/);
-
-      // But base64url body contains original title
-      const decoded = JSON.parse(
-        Buffer.from(fetchMock.mock.calls[0]![1].body, 'base64url').toString('utf-8'),
-      );
-      expect(decoded.title).toBe(koreanTitle);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // CHAN-05: system events reach all active wallet apps
-  // -------------------------------------------------------------------------
-  describe('CHAN-05: system events broadcast to all alert-enabled apps', () => {
-    it('T-CHAN-05: broadcast event reaches all active wallet apps with correct topics', async () => {
+  describe('system events broadcast to all alert-enabled apps', () => {
+    it('broadcast event reaches all active wallet apps with push_relay_url', async () => {
       const settings = createMockSettings();
       const apps: MockWalletAppRow[] = [
-        { name: 'app-one', alerts_enabled: 1, notify_topic: 'custom-topic-one' },
-        { name: 'app-two', alerts_enabled: 1, notify_topic: 'custom-topic-two' },
-        { name: 'app-three', alerts_enabled: 1, notify_topic: null },
+        { name: 'app-one', alerts_enabled: 1, push_relay_url: 'https://relay1.com' },
+        { name: 'app-two', alerts_enabled: 1, push_relay_url: 'https://relay2.com' },
+        { name: 'app-three', alerts_enabled: 1, push_relay_url: null }, // no URL, skipped
       ];
       const sqlite = createMockSqlite(apps);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
 
       await channel.notify('UPDATE_AVAILABLE', SOME_WALLET_ID, 'Update', 'New version available');
 
-      // One fetch call per alert-enabled app
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      // Only 2 calls (app-three has no push_relay_url)
+      expect(fetchMock).toHaveBeenCalledTimes(2);
 
       const urls = fetchMock.mock.calls.map((c: any) => c[0]);
-      expect(urls).toContain('https://ntfy.sh/custom-topic-one');
-      expect(urls).toContain('https://ntfy.sh/custom-topic-two');
-      expect(urls).toContain('https://ntfy.sh/waiaas-notify-app-three'); // NULL fallback
+      expect(urls).toContain('https://relay1.com/v1/push');
+      expect(urls).toContain('https://relay2.com/v1/push');
     });
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FcmProvider } from '../providers/fcm-provider.js';
-import type { PushPayload } from '../subscriber/message-parser.js';
+import type { PushPayload } from '../providers/push-provider.js';
 
 // Mock fs.readFileSync
 vi.mock('node:fs', () => ({
@@ -171,6 +171,24 @@ describe('FcmProvider', () => {
       const result = await provider.send(['token1'], mockPayload);
       expect(result.failed).toBe(1);
       expect(result.invalidTokens).toEqual([]);
+    });
+
+    it('handles retryable server errors (500+)', async () => {
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ access_token: 'mock-token' }), { status: 200 }),
+        )
+        // First attempt: 503 (retryable) — should retry
+        .mockResolvedValueOnce(new Response('{}', { status: 503 }))
+        // Second attempt: success
+        .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+
+      // Advance timers for retry delay
+      const sendPromise = provider.send(['token1'], mockPayload);
+      await vi.advanceTimersByTimeAsync(2000);
+      const result = await sendPromise;
+      expect(result.sent).toBe(1);
+      expect(result.failed).toBe(0);
     });
 
     it('handles non-retryable errors', async () => {

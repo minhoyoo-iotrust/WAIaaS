@@ -8,7 +8,6 @@ import type { NotificationPayload } from '@waiaas/core';
 import { NOTIFICATION_EVENT_TYPES } from '@waiaas/core';
 import { TelegramChannel } from '../notifications/channels/telegram.js';
 import { DiscordChannel } from '../notifications/channels/discord.js';
-import { NtfyChannel } from '../notifications/channels/ntfy.js';
 import { SlackChannel } from '../notifications/channels/slack.js';
 import { getNotificationMessage } from '../notifications/templates/message-templates.js';
 
@@ -329,119 +328,6 @@ describe('DiscordChannel', () => {
     mockFetch.mockResolvedValueOnce(new Response('Rate limited', { status: 429 }));
     await channel.initialize({ discord_webhook_url: 'https://discord.com/api/webhooks/1/x' });
     await expect(channel.send(makePayload())).rejects.toThrow('DiscordChannel: 429');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// NtfyChannel tests
-// ---------------------------------------------------------------------------
-
-describe('NtfyChannel', () => {
-  let channel: NtfyChannel;
-
-  beforeEach(() => {
-    channel = new NtfyChannel();
-    mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
-  });
-
-  it('has name "ntfy"', () => {
-    expect(channel.name).toBe('ntfy');
-  });
-
-  it('initialize() with valid topic succeeds', async () => {
-    await expect(channel.initialize({ ntfy_topic: 'waiaas-alerts' })).resolves.toBeUndefined();
-  });
-
-  it('initialize() throws with missing topic', async () => {
-    await expect(channel.initialize({})).rejects.toThrow('ntfy_topic required');
-  });
-
-  it('initialize() uses custom server when provided', async () => {
-    await channel.initialize({ ntfy_topic: 'test', ntfy_server: 'https://my-ntfy.example.com' });
-    await channel.send(makePayload());
-
-    const [url] = mockFetch.mock.calls[0]!;
-    expect(url).toBe('https://my-ntfy.example.com/test');
-  });
-
-  it('initialize() defaults to ntfy.sh server', async () => {
-    await channel.initialize({ ntfy_topic: 'waiaas' });
-    await channel.send(makePayload());
-
-    const [url] = mockFetch.mock.calls[0]!;
-    expect(url).toBe('https://ntfy.sh/waiaas');
-  });
-
-  it('send() sets Priority header to 5 for KILL_SWITCH_ACTIVATED', async () => {
-    await channel.initialize({ ntfy_topic: 'alerts' });
-    await channel.send(makePayload({ eventType: 'KILL_SWITCH_ACTIVATED' }));
-
-    const options = mockFetch.mock.calls[0]![1]!;
-    expect((options.headers as Record<string, string>)['Priority']).toBe('5');
-  });
-
-  it('send() sets Priority header to 4 for TX_FAILED', async () => {
-    await channel.initialize({ ntfy_topic: 'alerts' });
-    await channel.send(makePayload({ eventType: 'TX_FAILED' }));
-
-    const options = mockFetch.mock.calls[0]![1]!;
-    expect((options.headers as Record<string, string>)['Priority']).toBe('4');
-  });
-
-  it('send() sets Priority header to 2 for informational events', async () => {
-    await channel.initialize({ ntfy_topic: 'alerts' });
-    await channel.send(makePayload({ eventType: 'TX_REQUESTED' }));
-
-    const options = mockFetch.mock.calls[0]![1]!;
-    expect((options.headers as Record<string, string>)['Priority']).toBe('2');
-  });
-
-  it('send() sets Tags header with rotating_light for KILL_SWITCH', async () => {
-    await channel.initialize({ ntfy_topic: 'alerts' });
-    await channel.send(makePayload({ eventType: 'KILL_SWITCH_ACTIVATED' }));
-
-    const options = mockFetch.mock.calls[0]![1]!;
-    expect((options.headers as Record<string, string>)['Tags']).toBe('rotating_light,warning');
-  });
-
-  it('send() sets Tags header with key for SESSION events', async () => {
-    await channel.initialize({ ntfy_topic: 'alerts' });
-    await channel.send(makePayload({ eventType: 'SESSION_CREATED' }));
-
-    const options = mockFetch.mock.calls[0]![1]!;
-    expect((options.headers as Record<string, string>)['Tags']).toBe('key');
-  });
-
-  it('send() sends plain text body with wallet name and timestamp', async () => {
-    await channel.initialize({ ntfy_topic: 'alerts' });
-    const payload = makePayload({
-      walletId: '019c6fb6-2b2d-72a8-8515-235255be884d',
-      walletName: 'my-wallet',
-      walletAddress: '3HfEUdN5VBrkgP3bMGKNSwv4nBxy',
-      network: 'solana-devnet',
-    });
-    await channel.send(payload);
-
-    const body = mockFetch.mock.calls[0]![1]!.body as string;
-    expect(body).toContain('Transaction abc123 confirmed. Amount: 1.5 SOL');
-    expect(body).toContain('my-wallet (019c6f…884d)');
-    expect(body).toContain('3HfE…nBxy');
-    expect(body).toContain('solana-devnet');
-    expect(body).toContain('Time:');
-  });
-
-  it('send() throws on non-ok response', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('Server Error', { status: 500 }));
-    await channel.initialize({ ntfy_topic: 'alerts' });
-    await expect(channel.send(makePayload())).rejects.toThrow('NtfyChannel: 500');
-  });
-
-  it('send() sets Title header with event type', async () => {
-    await channel.initialize({ ntfy_topic: 'alerts' });
-    await channel.send(makePayload({ eventType: 'TX_CONFIRMED' }));
-
-    const options = mockFetch.mock.calls[0]![1]!;
-    expect((options.headers as Record<string, string>)['Title']).toBe('[WAIaaS] Transaction Confirmed');
   });
 });
 

@@ -379,11 +379,11 @@ describe('ApprovalChannelRouter EIP-712 constraint', () => {
       '../services/signing-sdk/approval-channel-router.js'
     );
 
-    // Mock: wallet has sdk_ntfy as explicit method
+    // Mock: wallet has sdk_push as explicit method
     const mockSqlite = {
       prepare: vi.fn().mockReturnValue({
         get: vi.fn().mockReturnValue({
-          owner_approval_method: 'sdk_ntfy',
+          owner_approval_method: 'sdk_push',
           wallet_type: null,
         }),
       }),
@@ -402,7 +402,7 @@ describe('ApprovalChannelRouter EIP-712 constraint', () => {
       settingsService: mockSettings as any,
     });
 
-    // Route with approvalType='EIP712' -- should override sdk_ntfy to walletconnect
+    // Route with approvalType='EIP712' -- should override sdk_push to walletconnect
     const result = await router.route(walletId, {
       walletId,
       txId: 'test-tx',
@@ -416,7 +416,7 @@ describe('ApprovalChannelRouter EIP-712 constraint', () => {
       approvalType: 'EIP712',
     });
 
-    // EIP-712 should NOT route to sdk_ntfy, should fallback to walletconnect or rest
+    // EIP-712 should NOT route to sdk_push, should fallback to walletconnect or rest
     expect(['walletconnect', 'rest']).toContain(result.method);
   });
 });

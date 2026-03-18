@@ -1214,6 +1214,40 @@
 
 ---
 
+## Milestone: v32.9 — Push Relay 직접 연동 (ntfy.sh 제거)
+
+**Shipped:** 2026-03-18
+**Phases:** 3 | **Plans:** 7
+
+### What Was Built
+- ResponseChannelSchema에서 ntfy 타입 제거, push_relay 타입 추가
+- APPROVAL_METHODS sdk_ntfy → sdk_push 전환
+- Push Relay 서버 자체 sign_responses DB + long-polling API (POST /v1/sign-response, GET /v1/sign-response/:requestId)
+- PushRelaySigningChannel: HTTP POST 서명 요청 + long-polling 응답 수신 (지수 백오프 재시도)
+- NtfyChannel / ntfy config / settings / hot-reload 코드 전량 삭제
+- DB v60: wallet_apps.push_relay_url 컬럼, DCent 프리셋 자동 설정
+- Wallet SDK ntfy 함수 @deprecated 처리
+- Admin UI Approval Method "Wallet App (Push)" 라벨 + Push Relay URL 관리
+
+### What Worked
+- 3-phase 구조 (Foundation → Daemon → Client)가 의존성을 깔끔하게 분리
+- ntfy 코드 전량 삭제가 118 파일에 걸쳐 있었지만 타입 시스템이 삭제 범위를 정확히 가이드
+- Push Relay long-polling 패턴이 SSE보다 구현이 단순하고 방화벽 친화적
+
+### What Was Inefficient
+- Audit에서 발견된 residual ntfy 참조(테스트/Admin UI) — 삭제 대상 grep을 plan에 포함했으면 첫 pass에서 처리 가능
+- sign_topic/notify_topic 컬럼은 NULL로 비웠지만 DROP하지 않음 — 추후 cleanup 필요
+
+### Patterns Established
+- ntfy→Push Relay 전환 완료: 이후 서명/알림 채널은 모두 HTTP POST + long-polling 기반
+- Wallet SDK deprecated 함수: @deprecated JSDoc으로 표시 후 다음 메이저에서 제거하는 패턴
+
+### Key Lessons
+- 의존성 제거 마일스톤은 타입 시스템이 컴파일 에러로 모든 참조를 잡아줘서 누락 위험이 낮음
+- ~2시간 내 완료 — 설계가 명확하고 범위가 좁은 마일스톤의 이상적 크기
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -1245,6 +1279,7 @@
 | v31.13 | 1 | 5 | DeFi 포지션 대시보드 완성(5개 프로바이더 getPositions), 44 파일 5시간 완료 |
 | v31.14 | 1 | 4 | EVM RPC 프록시 모드(JSON-RPC proxy + CONTRACT_DEPLOY 9-type), 82 파일 4시간 완료 |
 | v32.7 | 1 | 5 | SEO/AEO 최적화(정적 사이트 빌드), 53 파일 30분 완료 |
+| v32.9 | 1 | 3 | Push Relay 직접 연동(ntfy 제거), 118 파일 2시간 완료 |
 
 ### Cumulative Quality
 
@@ -1275,6 +1310,7 @@
 | v31.13 | ~7,861 (+188) | maintained | +21 decisions |
 | v31.14 | ~8,050 (+189) | maintained | +10 decisions |
 | v32.7 | ~8,050 (unchanged) | maintained | +15 decisions |
+| v32.9 | ~8,050 (unchanged) | maintained | +17 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

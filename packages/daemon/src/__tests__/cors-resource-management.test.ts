@@ -12,7 +12,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApp } from '../api/server.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
-import { NtfyChannel } from '../notifications/channels/ntfy.js';
 import { DiscordChannel } from '../notifications/channels/discord.js';
 import { SlackChannel } from '../notifications/channels/slack.js';
 import { EventBus } from '@waiaas/core';
@@ -42,7 +41,7 @@ function mockConfig(overrides: Partial<DaemonConfig['security']> = {}): DaemonCo
     notifications: {
       enabled: false, min_channels: 2, health_check_interval: 300, log_retention_days: 30,
       dedup_ttl: 300, telegram_bot_token: '', telegram_chat_id: '', discord_webhook_url: '',
-      ntfy_server: 'https://ntfy.sh', ntfy_topic: '', locale: 'en' as const, rate_limit_rpm: 20,
+      locale: 'en' as const, rate_limit_rpm: 20,
       slack_webhook_url: '',
     },
     security: {
@@ -127,24 +126,6 @@ describe('CORS middleware (CORS-01, CORS-02)', () => {
 // ---------------------------------------------------------------------------
 
 describe('Notification channel fetch timeout (RSRC-01)', () => {
-  it('NtfyChannel passes AbortSignal to fetch', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('ok', { status: 200 }));
-    try {
-      const channel = new NtfyChannel();
-      await channel.initialize({ ntfy_server: 'https://ntfy.sh', ntfy_topic: 'test-topic' });
-      await channel.send(minimalPayload());
-
-      expect(fetchSpy).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          signal: expect.any(AbortSignal),
-        }),
-      );
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
   it('DiscordChannel passes AbortSignal to fetch', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('ok', { status: 200 }));
     try {
