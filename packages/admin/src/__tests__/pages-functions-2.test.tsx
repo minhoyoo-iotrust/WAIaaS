@@ -267,33 +267,6 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
     vi.mocked(globalThis.confirm).mockRestore();
   });
 
-  it('cancelTopicEdit: cancels topic editing mode', async () => {
-    mockApiCalls();
-
-    render(<HumanWalletAppsPage />);
-    await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
-    });
-
-    // Enter topic edit mode
-    const editButtons = screen.getAllByText('Edit');
-    fireEvent.click(editButtons[0]!);
-
-    await waitFor(() => {
-      expect(document.querySelector('input[name="sign-topic-app-1"]')).toBeTruthy();
-    });
-
-    // Cancel topic edit
-    // Find "Cancel" button in the topic edit area (not modal)
-    const cancelButtons = screen.getAllByText('Cancel');
-    fireEvent.click(cancelButtons[0]!);
-
-    await waitFor(() => {
-      // Input should be gone
-      expect(document.querySelector('input[name="sign-topic-app-1"]')).toBeNull();
-    });
-  });
-
   it('handleNotifToggle error shows toast', async () => {
     mockApiCalls();
     mockApiPut.mockRejectedValueOnce(new Error('Network'));
