@@ -13,6 +13,14 @@
       "dependsOn": ["@waiaas/sdk#build"],
       "outputs": ["dist/**"]
     },
+    "@waiaas/mcp#test:unit": {
+      "dependsOn": [],
+      "outputs": ["coverage/**"]
+    },
+    "@waiaas/mcp#build": {
+      "dependsOn": [],
+      "outputs": ["dist/**"]
+    },
     "//#generate:api-types": {
       "dependsOn": ["@waiaas/core#build", "@waiaas/shared#build", "@waiaas/actions#build", "@waiaas/adapter-evm#build", "@waiaas/adapter-solana#build"],
       "outputs": ["packages/admin/src/api/types.generated.ts", "packages/admin/openapi.json"],
