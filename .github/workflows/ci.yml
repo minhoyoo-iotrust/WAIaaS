@@ -49,19 +49,10 @@ jobs:
         env:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
 
-      - name: Configure swap
-        run: |
-          sudo swapoff -a
-          sudo fallocate -l 8G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-
       - name: Typecheck (affected)
-        run: pnpm turbo run typecheck --affected --concurrency 1
+        run: pnpm turbo run typecheck --affected
         env:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
-          NODE_OPTIONS: '--max-old-space-size=8192'
 
       - name: Unit Tests (affected)
         run: pnpm turbo run test:unit --affected -- --coverage
