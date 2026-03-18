@@ -1,5 +1,5 @@
 /**
- * Database migrations v51 through v59.
+ * Database migrations v51 through v60.
  *
  * v51: hyperliquid_orders table
  * v52: hyperliquid_sub_accounts table
@@ -10,6 +10,7 @@
  * v57: composite index for external action tracking
  * v58: CONTRACT_DEPLOY type CHECK constraint
  * v59: defi_positions.environment column
+ * v60: Push Relay migration (push_relay_url, clear ntfy topics, sdk_ntfy -> sdk_push)
  */
 
 import type { Database } from 'better-sqlite3';
@@ -355,6 +356,30 @@ export const migrations: Migration[] = [
         sqlite.exec("ALTER TABLE defi_positions ADD COLUMN environment TEXT NOT NULL DEFAULT 'mainnet'");
       }
       sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_environment ON defi_positions(environment)');
+    },
+  },
+
+  // v60: Push Relay migration
+  {
+    version: 60,
+    description: 'Add wallet_apps.push_relay_url, clear sign_topic/notify_topic, rename sdk_ntfy to sdk_push',
+    up: (sqlite: Database) => {
+      // 1. Add push_relay_url column to wallet_apps
+      const cols = (sqlite.prepare("PRAGMA table_info('wallet_apps')").all() as Array<{ name: string }>).map(c => c.name);
+      if (!cols.includes('push_relay_url')) {
+        sqlite.exec("ALTER TABLE wallet_apps ADD COLUMN push_relay_url TEXT");
+      }
+
+      // 2. Set dcent wallet_type push_relay_url (only if not already set)
+      sqlite.prepare(
+        "UPDATE wallet_apps SET push_relay_url = ? WHERE wallet_type = 'dcent' AND (push_relay_url IS NULL OR push_relay_url = '')",
+      ).run('https://waiaas-push.dcentwallet.com');
+
+      // 3. Clear sign_topic and notify_topic (no longer used)
+      sqlite.exec("UPDATE wallet_apps SET sign_topic = NULL, notify_topic = NULL");
+
+      // 4. Update owner_approval_method from 'sdk_ntfy' to 'sdk_push' in wallets
+      sqlite.exec("UPDATE wallets SET owner_approval_method = 'sdk_push' WHERE owner_approval_method = 'sdk_ntfy'");
     },
   },
 ];

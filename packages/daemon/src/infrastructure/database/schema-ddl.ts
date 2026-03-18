@@ -54,7 +54,7 @@ export const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 59;
+export const LATEST_SCHEMA_VERSION = 60;
 
 export function getCreateTableStatements(): string[] {
   return [
@@ -314,7 +314,7 @@ export function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7, v29.10: sign_topic/notify_topic, v34: wallet_type, v35: subscription_token)
+    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7, v60: push_relay_url added)
     `CREATE TABLE IF NOT EXISTS wallet_apps (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
@@ -325,6 +325,7 @@ export function getCreateTableStatements(): string[] {
   sign_topic TEXT,
   notify_topic TEXT,
   subscription_token TEXT,
+  push_relay_url TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`,
