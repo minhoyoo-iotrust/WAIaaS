@@ -4,7 +4,7 @@ milestone: v32.9
 milestone_name: Push Relay 직접 연동 (ntfy.sh 제거)
 status: completed
 stopped_at: Phase 450 completed (2/2 plans)
-last_updated: "2026-03-18T05:27:47.127Z"
+last_updated: "2026-03-18T05:28:26.258Z"
 last_activity: 2026-03-18 — Phase 449 completed (3/3 plans)
 progress:
   total_phases: 3
