@@ -50,10 +50,10 @@ jobs:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
 
       - name: Typecheck (affected)
-        run: pnpm turbo run typecheck --affected
+        run: pnpm turbo run typecheck --affected --concurrency 1
         env:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
-          NODE_OPTIONS: '--max-old-space-size=6144'
+          NODE_OPTIONS: '--max-old-space-size=4096'
 
       - name: Unit Tests (affected)
         run: pnpm turbo run test:unit --affected -- --coverage
