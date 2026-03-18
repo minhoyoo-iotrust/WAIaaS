@@ -59,7 +59,7 @@ describe('WAIaaSClient coverage tests', () => {
       expect(url).toContain('limit=10');
       expect(url).toContain('chain=solana');
       expect(url).toContain('network=solana-mainnet');
-      expect(url).toContain('status=confirmed');
+      expect(url).toContain('status=CONFIRMED');
       expect(url).toContain('token=SOL');
       expect(url).toContain('from_address=0xabc');
       expect(url).toContain('since=1000');
@@ -88,7 +88,7 @@ describe('WAIaaSClient coverage tests', () => {
       });
       const url = fetchSpy.mock.calls[0]![0] as string;
       expect(url).toContain('/v1/wallet/incoming/summary?');
-      expect(url).toContain('period=24h');
+      expect(url).toContain('period=daily');
       expect(url).toContain('chain=ethereum');
       expect(url).toContain('wallet_id=w2');
     });
@@ -154,7 +154,7 @@ describe('WAIaaSClient coverage tests', () => {
 
   describe('getConnectInfo', () => {
     it('calls GET /v1/connect-info', async () => {
-      fetchSpy.mockResolvedValue(mockResponse({ walletId: 'w1', chains: ['solana'] }));
+      fetchSpy.mockResolvedValue(mockResponse({ wallets: [{ id: 'w1', chain: 'solana' }], chains: ['solana'] }));
       const result = await client.getConnectInfo();
       const url = fetchSpy.mock.calls[0]![0] as string;
       expect(url).toBe('http://localhost:3100/v1/connect-info');
