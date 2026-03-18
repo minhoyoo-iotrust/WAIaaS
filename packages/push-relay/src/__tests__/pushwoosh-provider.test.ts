@@ -94,6 +94,57 @@ describe('PushwooshProvider', () => {
     expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledTimes(1);
   });
 
+  it('throws non-retryable error on generic HTTP failure (e.g. 400)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+    });
+
+    const provider = new PushwooshProvider({
+      api_token: 'test-token',
+      application_code: 'APP-123',
+      api_url: DEFAULT_API_URL,
+    });
+
+    await expect(provider.send(['device-1'], mockPayload)).rejects.toThrow('Pushwoosh error: HTTP 400');
+    expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws on Pushwoosh API-level error (status_code != 200)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status_code: 400, status_message: 'Invalid application' }),
+    });
+
+    const provider = new PushwooshProvider({
+      api_token: 'test-token',
+      application_code: 'BAD-APP',
+      api_url: DEFAULT_API_URL,
+    });
+
+    await expect(provider.send(['device-1'], mockPayload)).rejects.toThrow('Pushwoosh API error: Invalid application');
+  });
+
+  it('retries on 500 server error and succeeds', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 503 })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ status_code: 200, status_message: 'OK' }),
+      });
+    globalThis.fetch = fetchMock;
+
+    const provider = new PushwooshProvider({
+      api_token: 'test-token',
+      application_code: 'APP-123',
+      api_url: DEFAULT_API_URL,
+    });
+
+    const result = await provider.send(['device-1'], mockPayload);
+    expect(result.sent).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('validates config checks token and code length', async () => {
     const valid = new PushwooshProvider({ api_token: 'tok', application_code: 'code', api_url: DEFAULT_API_URL });
     expect(await valid.validateConfig()).toBe(true);

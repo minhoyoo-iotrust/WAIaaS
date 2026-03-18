@@ -121,6 +121,32 @@ describe('POST /devices', () => {
   });
 });
 
+describe('GET /devices/:token/subscription-token', () => {
+  it('returns subscription token for existing device', async () => {
+    registry.register('dcent', 'test-push-token', 'ios');
+
+    const res = await app.request('/devices/test-push-token/subscription-token', {
+      method: 'GET',
+      headers: { 'X-API-Key': API_KEY },
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { subscription_token: string };
+    expect(body.subscription_token).toBeTruthy();
+  });
+
+  it('returns 404 for non-existent device token', async () => {
+    const res = await app.request('/devices/nonexistent/subscription-token', {
+      method: 'GET',
+      headers: { 'X-API-Key': API_KEY },
+    });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('Device not found');
+  });
+});
+
 describe('DELETE /devices/:token', () => {
   it('removes an existing device token', async () => {
     registry.register('dcent', 'token-to-delete', 'ios');

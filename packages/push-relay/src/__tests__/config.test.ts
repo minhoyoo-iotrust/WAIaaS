@@ -173,6 +173,24 @@ api_key = "secret"
     rmSync(dir, { recursive: true });
   });
 
+  it('throws on missing fcm section when provider is fcm', () => {
+    const dir = tmpDirFn();
+    const path = join(dir, 'config.toml');
+    writeFileSync(
+      path,
+      `
+[relay.push]
+provider = "fcm"
+
+[relay.server]
+api_key = "secret"
+`,
+    );
+
+    expect(() => loadConfig(path)).toThrow('fcm');
+    rmSync(dir, { recursive: true });
+  });
+
   it('loads config without [relay.push.payload] section (backward compat)', () => {
     const dir = tmpDirFn();
     const path = join(dir, 'config.toml');

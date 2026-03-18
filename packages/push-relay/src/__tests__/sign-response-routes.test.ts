@@ -156,6 +156,24 @@ describe('GET /v1/sign-response/:requestId', () => {
   });
 });
 
+describe('GET /v1/sign-response/:requestId (polling)', () => {
+  it('returns response found during polling (not immediately)', async () => {
+    const requestId = '550e8400-e29b-41d4-a716-446655440099';
+
+    // Store the response after a short delay (simulating async store)
+    setTimeout(() => {
+      registry.saveSignResponse(requestId, JSON.stringify({
+        version: '1', requestId, action: 'reject', signerAddress: 'addr2', signedAt: new Date().toISOString(),
+      }), 300);
+    }, 500);
+
+    const res = await app.request(`/v1/sign-response/${requestId}?timeout=5`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { action: string };
+    expect(body.action).toBe('reject');
+  }, 10000);
+});
+
 describe('POST /v1/push', () => {
   it('sends push to registered device', async () => {
     registry.register('dcent', 'push-token-123', 'ios');
@@ -201,6 +219,54 @@ describe('POST /v1/push', () => {
     });
 
     expect(res.status).toBe(400);
+  });
+
+  it('removes invalid tokens reported by provider', async () => {
+    registry.register('dcent', 'bad-push-token', 'ios');
+    const device = registry.getByPushToken('bad-push-token')!;
+    const subToken = device.subscriptionToken!;
+
+    // Mock provider returning the token as invalid
+    vi.mocked(mockProvider.send).mockResolvedValueOnce({
+      sent: 0,
+      failed: 1,
+      invalidTokens: ['bad-push-token'],
+    });
+
+    const res = await app.request('/v1/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({
+        subscriptionToken: subToken,
+        category: 'sign_request',
+        payload: { title: 'Sign', body: 'Sign this TX', requestId: 'req-2' },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    // The invalid token should have been removed from registry
+    expect(registry.getByPushToken('bad-push-token')).toBeNull();
+  });
+
+  it('sends with normal priority for notification category', async () => {
+    registry.register('dcent', 'notif-token', 'android');
+    const device = registry.getByPushToken('notif-token')!;
+    const subToken = device.subscriptionToken!;
+
+    const res = await app.request('/v1/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({
+        subscriptionToken: subToken,
+        category: 'notification',
+        payload: { title: 'Info', body: 'General notification' },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    // Verify the provider was called with normal priority
+    const sendCall = vi.mocked(mockProvider.send).mock.calls[0]!;
+    expect(sendCall[1].priority).toBe('normal');
   });
 
   it('returns 401 without API key', async () => {

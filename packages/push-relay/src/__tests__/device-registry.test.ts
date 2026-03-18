@@ -149,6 +149,32 @@ describe('DeviceRegistry', () => {
   });
 });
 
+describe('DeviceRegistry sign response cleanup', () => {
+  it('cleanupExpiredResponses removes expired entries', () => {
+    // Save a response with 1 second TTL
+    registry.saveSignResponse('req-expired', '{"action":"approve"}', 1);
+    // Save one with long TTL
+    registry.saveSignResponse('req-valid', '{"action":"reject"}', 3600);
+
+    // Advance time by manipulating the stored expires_at via raw check
+    // Instead, just wait — but we can use a trick: save with TTL=0 which expires immediately
+    registry.saveSignResponse('req-instant-expire', '{"action":"approve"}', 0);
+
+    const cleaned = registry.cleanupExpiredResponses();
+    // At least the TTL=0 one should be cleaned
+    expect(cleaned).toBeGreaterThanOrEqual(1);
+
+    // The valid one should still be there
+    expect(registry.getSignResponse('req-valid')).not.toBeNull();
+  });
+
+  it('cleanupExpiredResponses returns 0 when nothing expired', () => {
+    registry.saveSignResponse('req-future', '{"action":"approve"}', 3600);
+    const cleaned = registry.cleanupExpiredResponses();
+    expect(cleaned).toBe(0);
+  });
+});
+
 describe('DeviceRegistry migration', () => {
   it('migrates existing DB without subscription_token column', () => {
     const dir = join(tmpdir(), `push-relay-mig-${Date.now()}-${Math.random().toString(36).slice(2)}`);
