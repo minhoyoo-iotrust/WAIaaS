@@ -43,26 +43,40 @@ function setupPreV60Schema(db: Database.Database): void {
     )
   `);
 
-  // Create minimal wallets table (with sdk_ntfy in CHECK -- simplified for test)
+  // Create wallets table with full CHECK constraints matching v59 schema (sdk_ntfy in CHECK)
   db.exec(`
     CREATE TABLE IF NOT EXISTS wallets (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      chain TEXT NOT NULL DEFAULT 'ethereum',
-      environment TEXT NOT NULL DEFAULT 'mainnet',
+      chain TEXT NOT NULL CHECK (chain IN ('ethereum', 'solana')),
+      environment TEXT NOT NULL CHECK (environment IN ('mainnet', 'testnet')) DEFAULT 'mainnet',
       public_key TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'ACTIVE',
+      status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN ('CREATING', 'ACTIVE', 'SUSPENDED')),
       owner_address TEXT,
-      owner_verified INTEGER NOT NULL DEFAULT 0,
+      owner_verified INTEGER NOT NULL DEFAULT 0 CHECK (owner_verified IN (0, 1)),
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      owner_approval_method TEXT,
-      wallet_type TEXT,
-      account_type TEXT NOT NULL DEFAULT 'eoa',
+      suspended_at INTEGER,
+      suspension_reason TEXT,
       monitor_incoming INTEGER NOT NULL DEFAULT 0,
-      deployed INTEGER NOT NULL DEFAULT 1
+      owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')),
+      wallet_type TEXT,
+      account_type TEXT NOT NULL DEFAULT 'eoa' CHECK (account_type IN ('eoa', 'smart')),
+      signer_key TEXT,
+      deployed INTEGER NOT NULL DEFAULT 1,
+      entry_point TEXT,
+      aa_provider TEXT CHECK (aa_provider IS NULL OR aa_provider IN ('pimlico', 'alchemy', 'custom')),
+      aa_provider_api_key_encrypted TEXT,
+      aa_bundler_url TEXT,
+      aa_paymaster_url TEXT,
+      aa_paymaster_policy_id TEXT,
+      factory_address TEXT
     )
   `);
+  db.exec('CREATE UNIQUE INDEX idx_wallets_public_key ON wallets(public_key)');
+  db.exec('CREATE INDEX idx_wallets_status ON wallets(status)');
+  db.exec('CREATE INDEX idx_wallets_chain_environment ON wallets(chain, environment)');
+  db.exec('CREATE INDEX idx_wallets_owner_address ON wallets(owner_address)');
 
   // Create schema_version table
   db.exec(`
@@ -172,6 +186,51 @@ describe('migration v60', () => {
     const v60 = getV60Migration();
     v60.up(db);
     expect(() => v60.up(db)).not.toThrow();
+  });
+
+  it('rebuilds wallets table CHECK constraint from sdk_ntfy to sdk_push', () => {
+    const now = Math.floor(Date.now() / 1000);
+    db.prepare(`INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_approval_method, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run('w-1', 'wallet-1', 'ethereum', 'mainnet', '0xabc', 'ACTIVE', 'sdk_ntfy', now, now);
+
+    const v60 = getV60Migration();
+    v60.up(db);
+
+    // Verify CHECK now allows sdk_push
+    const createSql = (db.prepare(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='wallets'",
+    ).get() as { sql: string }).sql;
+    expect(createSql).toContain('sdk_push');
+    expect(createSql).not.toContain('sdk_ntfy');
+  });
+
+  it('rejects sdk_ntfy after migration (CHECK enforced)', () => {
+    const v60 = getV60Migration();
+    v60.up(db);
+
+    const now = Math.floor(Date.now() / 1000);
+    expect(() => {
+      db.prepare(`INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_approval_method, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run('w-bad', 'bad-wallet', 'ethereum', 'mainnet', '0xbad', 'ACTIVE', 'sdk_ntfy', now, now);
+    }).toThrow(/CHECK/);
+  });
+
+  it('preserves all 4 wallets indexes after table rebuild', () => {
+    const v60 = getV60Migration();
+    v60.up(db);
+
+    const indexes = (db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='wallets' AND name LIKE 'idx_%'",
+    ).all() as Array<{ name: string }>).map(i => i.name).sort();
+
+    expect(indexes).toEqual([
+      'idx_wallets_chain_environment',
+      'idx_wallets_owner_address',
+      'idx_wallets_public_key',
+      'idx_wallets_status',
+    ]);
   });
 
   it('does not overwrite existing push_relay_url for dcent', () => {
