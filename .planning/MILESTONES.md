@@ -1,5 +1,23 @@
 # Project Milestones: WAIaaS
 
+## v32.10 에이전트 스킬 정리 + OpenClaw 플러그인 (Shipped: 2026-03-18)
+
+**Phases completed:** 4 phases (452-455), 7 plans, 48 requirements
+
+**Key accomplishments:**
+- docs/guides/ → docs/agent-guides/ 디렉토리 구조 분리 + docs/admin-manual/ 9개 파일 생성 (masterAuth 운영 가이드 이전)
+- skills/ 12개 파일에서 masterAuth 콘텐츠 완전 제거 — admin/setup 스킬 삭제, 나머지 7개 sessionAuth 전용 정리
+- @waiaas/openclaw-plugin 패키지 구현 — 17개 sessionAuth 도구(5 그룹), register() 진입점, fetch 기반 HTTP 클라이언트
+- release-please + turbo + npm publish + smoke-test 파이프라인에 openclaw-plugin 통합
+- openclaw-integration.md 플러그인 우선 구조로 재작성 + openclaw-plugin SEO 랜딩 페이지 + 사이트 30페이지 빌드
+
+**Stats:**
+- 28 commits, 239 files changed, +17,896/-10,026 lines
+- ~327,768 LOC TS
+- Timeline: 1 day (2026-03-18)
+
+---
+
 ## v32.9 Push Relay 직접 연동 (ntfy.sh 제거) (Shipped: 2026-03-18)
 
 **Phases completed:** 3 phases (449-451), 7 plans, 32 requirements

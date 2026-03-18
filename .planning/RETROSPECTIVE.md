@@ -2,6 +2,47 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v32.10 — 에이전트 스킬 정리 + OpenClaw 플러그인
+
+**Shipped:** 2026-03-18
+**Phases:** 4 | **Plans:** 7
+
+### What Was Built
+- docs/guides/ → docs/agent-guides/ 리네이밍 (5개 파일 git mv 히스토리 보존)
+- docs/admin-manual/ 9개 파일 생성 (README 인덱스 + 8개 운영 매뉴얼, 한국어+frontmatter)
+- skills/ 12개 파일에서 masterAuth 콘텐츠 완전 제거 (admin/setup 스킬 삭제, 7개 sessionAuth 전용 재작성)
+- @waiaas/openclaw-plugin 패키지 (17개 sessionAuth 도구, 5그룹, fetch HTTP 클라이언트, 8-test suite)
+- release-please + turbo + npm publish + smoke-test 파이프라인 통합
+- openclaw-integration.md 플러그인 우선 구조 재작성 + SEO 랜딩 페이지 + 사이트 30페이지 빌드
+
+### What Worked
+- Phase 구조가 자연스러운 파이프라인: 디렉토리 리네임(452) → 콘텐츠 분리(453) → 플러그인 구현(454) → CI/CD+SEO(455)
+- skills/ 정리가 admin-manual/ 생성 후에 진행되어 masterAuth 콘텐츠의 명확한 이전 대상 확보
+- workspace:* 의존성이 rc 버전에서도 정상 해석 — monorepo 내부 SDK 참조 문제 회피
+- site/build.mjs가 admin-manual frontmatter 기반으로 자동 포함 — EXCLUDE_DIRS 빈 배열만으로 충분
+
+### What Was Inefficient
+- REQUIREMENTS.md DOC-05~15 + SKL-01~12 체크박스 미갱신 — Phase 453 실행 완료 후 traceability 미업데이트
+- Plan에서 ~22개 도구 목표였으나 실제 17개 — 사전 도구 목록 확정 부재로 plan/reality 갭
+- 453 phase에서 telegram-setup.md frontmatter 누락 발견 — site build 실패로 auto-fix (예방 가능했음)
+
+### Patterns Established
+- docs/agent-guides/ + docs/admin-manual/ 2-tier 문서 구조 (에이전트/관리자 명확 분리)
+- OpenClaw 플러그인 패턴: register() + 5-group tool registrar + fetch HTTP client
+- site/build.mjs EXCLUDE_DIRS=[] + frontmatter 기반 자동 포함 패턴
+
+### Key Lessons
+1. 문서/스킬 파일 정리는 "이동 대상 먼저 준비" 원칙이 효과적 — admin-manual 생성 → skills 정리 순서
+2. 도구 수 추정은 사전 열거 필수 — ~22 vs 17 갭은 plan 단계에서 해결 가능했음
+3. site build는 모든 마크다운에 frontmatter 필수 — CI에서 사전 검증 추가 고려
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 4 phases 1일 완료, 239 files 변경 but 대부분 docs/skills/config 파일 (코어 로직 변경 없음)
+
+---
+
 ## Milestone: v32.6 — 성능 + 구조 개선
 
 **Shipped:** 2026-03-17
@@ -1280,6 +1321,7 @@
 | v31.14 | 1 | 4 | EVM RPC 프록시 모드(JSON-RPC proxy + CONTRACT_DEPLOY 9-type), 82 파일 4시간 완료 |
 | v32.7 | 1 | 5 | SEO/AEO 최적화(정적 사이트 빌드), 53 파일 30분 완료 |
 | v32.9 | 1 | 3 | Push Relay 직접 연동(ntfy 제거), 118 파일 2시간 완료 |
+| v32.10 | 1 | 4 | 에이전트 스킬 정리 + OpenClaw 플러그인, 239 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -1311,6 +1353,7 @@
 | v31.14 | ~8,050 (+189) | maintained | +10 decisions |
 | v32.7 | ~8,050 (unchanged) | maintained | +15 decisions |
 | v32.9 | ~8,050 (unchanged) | maintained | +17 decisions |
+| v32.10 | ~8,058 (+8) | maintained | +10 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

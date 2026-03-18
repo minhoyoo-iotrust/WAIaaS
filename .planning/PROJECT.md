@@ -8,15 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v32.10 에이전트 스킬 정리 + OpenClaw 플러그인
+## Previous Milestone: v32.10 에이전트 스킬 정리 + OpenClaw 플러그인 — SHIPPED 2026-03-18
 
-**Goal:** skills/ 디렉토리를 에이전트 전용으로 정리하고, 관리자 전용 내용은 docs/admin-manual/로 분리. docs/guides/ → docs/agent-guides/ 리네이밍. 정리된 에이전트 스킬 기반 OpenClaw 플러그인(@waiaas/openclaw-plugin) 패키지 제작 및 npm 배포.
-
-**Target features:**
-- 문서 구조 정리 (docs/guides/ → docs/agent-guides/, docs/admin-manual/ 신설)
-- skills/ 에이전트 전용 정리 (7개 혼합 파일에서 masterAuth 내용 추출, 2개 admin 파일 이동)
-- OpenClaw 플러그인 패키지 제작 (~22개 sessionAuth 도구, register() 진입점)
-- CI/CD 통합 (release-please, npm trusted publishing) + SEO 빌드 포함
+docs/guides/ → docs/agent-guides/ 리네이밍으로 에이전트/관리자 문서 구조 분리. docs/admin-manual/ 9개 파일로 masterAuth 운영 가이드 이전. skills/ 12개 파일에서 masterAuth 콘텐츠 완전 제거(admin/setup 스킬 삭제, 나머지 7개 sessionAuth 전용). @waiaas/openclaw-plugin 패키지 구현(17개 sessionAuth 도구, 5그룹, register() 진입점, fetch HTTP 클라이언트). release-please + turbo + npm publish + smoke-test 파이프라인 통합. openclaw-integration.md 플러그인 우선 구조 재작성 + openclaw-plugin SEO 랜딩 페이지 + 사이트 30페이지 빌드. 4 phases, 7 plans, 48 requirements, 28 commits, 239 files, +17,896/-10,026 lines, ~327,768 LOC TS.
 
 ## Previous Milestone: v32.9 Push Relay 직접 연동 (ntfy.sh 제거) — SHIPPED 2026-03-18
 
@@ -212,6 +206,16 @@ v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성 shipped (2026-03-15).
 - ✅ v31.15 Amount 단위 표준화 및 AI 에이전트 DX 개선 — shipped 2026-03-14 (5 phases, 9 plans, 33 requirements, ~294,834 LOC TS)
 - ✅ v31.16 CAIP 표준 식별자 승격 — shipped 2026-03-15 (5 phases, 8 plans, 46 requirements, 239 tests)
 - ✅ v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성 — shipped 2026-03-15 (5 phases, 11 plans, 21 requirements, ~347,156 LOC TS)
+- ✅ v31.18 Admin UI IA 재구조화 — shipped 2026-03-15 (4 phases, 7 plans, 38 requirements)
+- ✅ v32.0 Contract Name Resolution — shipped 2026-03-15 (3 phases, 4 plans, 24 requirements)
+- ✅ v32.2 보안 패치 — shipped 2026-03-16 (3 phases, 3 plans, 14 requirements)
+- ✅ v32.4 타입 안전 + 코드 품질 — shipped 2026-03-16 (5 phases, 11 plans, 51 requirements)
+- ✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 — shipped 2026-03-16 (3 phases, 8 plans, 30 requirements)
+- ✅ v32.6 성능 + 구조 개선 — shipped 2026-03-17 (4 phases, 9 plans, 46 requirements)
+- ✅ v32.7 SEO/AEO 최적화 — shipped 2026-03-17 (5 phases, 7 plans, 33 requirements)
+- ✅ v32.8 테스트 커버리지 강화 — shipped 2026-03-18 (6 phases, 17 plans, 48 requirements)
+- ✅ v32.9 Push Relay 직접 연동 — shipped 2026-03-18 (3 phases, 7 plans, 32 requirements)
+- ✅ v32.10 에이전트 스킬 정리 + OpenClaw 플러그인 — shipped 2026-03-18 (4 phases, 7 plans, 48 requirements, ~327,768 LOC TS)
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
 - IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 + display_currency
 - 누적 USD 지출 한도 (CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우, APPROVAL 격상, 80% 경고)
@@ -770,6 +774,16 @@ v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성 shipped (2026-03-15).
 - ✓ Amount 단위 표준화 — 14개 provider smallest-unit 통일, migrateAmount(), MCP typed schema, amountFormatted/humanAmount XOR 파라미터 — v31.15
 - ✓ CAIP 표준 식별자 승격 — normalizeNetworkInput CAIP-2 dual-accept, assetId-only 토큰 특정, 모든 응답 chainId/assetId, MCP resolve_asset, 239 tests — v31.16
 - ✓ OpenAPI 기반 프론트엔드 타입 자동 생성 — Build-time spec 추출+openapi-typescript, openapi-fetch 타입 안전 클라이언트, 18+ 페이지 마이그레이션, @waiaas/shared 상수, contract test CI 게이트 — v31.17
+- ✓ Admin UI IA 재구조화 — 5섹션 헤더 그룹핑, 페이지 리네이밍, 지갑 상세 8→4탭 통합, Ctrl+K 검색 동기화 — v31.18
+- ✓ Contract Name Resolution — 4단계 우선순위 동기 해석, well-known 305+ 엔트리, 17 provider displayName, Admin UI 표시 — v32.0
+- ✓ 보안 패치 — SSRF 가드 범용화, Rate Limit 3계층, CORS 미들웨어, AutoStop 리스너 정리 — v32.2
+- ✓ 타입 안전 + 코드 품질 — `as any` 0건, JSON.parse→Zod safeParse, IChainSubscriber 확장, 레이어 위반 0건 — v32.4
+- ✓ 멀티체인 DeFi 포지션 + 테스트넷 토글 — PositionQueryContext 8프로바이더, Lido/Aave/Pendle 멀티체인, DB v59 environment — v32.5
+- ✓ 성능 + 구조 개선 — N+1 배치 6곳, sessions/policies 페이지네이션, 4대형 파일 분할, ILogger — v32.6
+- ✓ SEO/AEO 최적화 — site/build.mjs ESM, 19 마크다운→HTML, sitemap.xml, JSON-LD, llms-full.txt, FAQ 스키마, GitHub Actions CI — v32.7
+- ✓ 테스트 커버리지 강화 — 620+ 신규 테스트, 9/12 패키지 L:90/B:85/F:95 기준 달성, 7개 이슈 해결 — v32.8
+- ✓ Push Relay 직접 연동 — ntfy.sh 완전 제거, PushRelaySigningChannel HTTP POST+long-polling, DB v60, NtfyChannel 전량 삭제 — v32.9
+- ✓ 에이전트 스킬 정리 + OpenClaw 플러그인 — docs/agent-guides/ 분리, docs/admin-manual/ 9파일, skills/ sessionAuth 전용, @waiaas/openclaw-plugin 17도구, CI/CD 통합, SEO — v32.10
 
 ### 활성
 

@@ -1,7 +1,8 @@
 # 마일스톤 m32-10: 에이전트 스킬 정리 + OpenClaw 플러그인
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v32.10
+- **Completed:** 2026-03-18
 
 ## 목표
 
