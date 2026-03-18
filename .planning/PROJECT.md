@@ -8,6 +8,16 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v32.10 에이전트 스킬 정리 + OpenClaw 플러그인
+
+**Goal:** skills/ 디렉토리를 에이전트 전용으로 정리하고, 관리자 전용 내용은 docs/admin-manual/로 분리. docs/guides/ → docs/agent-guides/ 리네이밍. 정리된 에이전트 스킬 기반 OpenClaw 플러그인(@waiaas/openclaw-plugin) 패키지 제작 및 npm 배포.
+
+**Target features:**
+- 문서 구조 정리 (docs/guides/ → docs/agent-guides/, docs/admin-manual/ 신설)
+- skills/ 에이전트 전용 정리 (7개 혼합 파일에서 masterAuth 내용 추출, 2개 admin 파일 이동)
+- OpenClaw 플러그인 패키지 제작 (~22개 sessionAuth 도구, register() 진입점)
+- CI/CD 통합 (release-please, npm trusted publishing) + SEO 빌드 포함
+
 ## Previous Milestone: v32.9 Push Relay 직접 연동 (ntfy.sh 제거) — SHIPPED 2026-03-18
 
 ntfy.sh SSE 의존성을 완전 제거하고 데몬-Push Relay 간 HTTP 직접 연동으로 전환. ResponseChannelSchema에서 type: 'ntfy' 제거 + type: 'push_relay' 추가, APPROVAL_METHODS에서 sdk_ntfy→sdk_push 전환. Push Relay 서버 자체 sign_responses DB + long-polling API 구현. PushRelaySigningChannel HTTP POST + long-polling 서명 채널 재작성. NtfyChannel/ntfy config/settings/hot-reload 코드 전량 삭제. DB v60 마이그레이션(push_relay_url 컬럼, DCent 프리셋 자동 설정). Wallet SDK ntfy 함수 deprecated 처리(@deprecated JSDoc). Admin UI Push Relay URL 관리 + Approval Method 라벨 "Wallet App (Push)" 전환. 3 phases, 7 plans, 32 requirements, 36 commits, 118 files, +5,426/-4,411 lines, ~326,625 LOC TS.
