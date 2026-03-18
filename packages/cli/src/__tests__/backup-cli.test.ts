@@ -112,6 +112,20 @@ describe('backup CLI commands', () => {
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Cannot reach WAIaaS daemon'));
     });
 
+    it('exits with error on non-401 failure response from backup API', async () => {
+      globalThis.fetch = vi.fn()
+        .mockResolvedValueOnce({ ok: true }) // health check
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ message: 'Internal server error' }),
+        });
+
+      await expect(backupCommand({ password: 'test-pass' })).rejects.toThrow('process.exit called');
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Backup creation failed'));
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Internal server error'));
+    });
+
     it('exits with error when masterAuth fails (401)', async () => {
       globalThis.fetch = vi.fn()
         .mockResolvedValueOnce({ ok: true }) // health check
@@ -190,6 +204,54 @@ describe('backup CLI commands', () => {
       await expect(backupInspectCommand('/nonexistent/path.waiaas-backup'))
         .rejects.toThrow('process.exit called');
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Backup file not found'));
+    });
+
+    it('displays "none" when backup has no keystore files', async () => {
+      const filePath = createTestBackupFile(tempDir, 'no-keystore.waiaas-backup', {
+        created_at: '2026-03-03T16:00:00Z',
+        daemon_version: '2.9.0',
+        schema_version: 33,
+        contents: {
+          database: { name: 'waiaas.db', size: 4096 },
+          keystore_files: [],
+        },
+      });
+
+      await backupInspectCommand(filePath);
+
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Keystore files: none'));
+    });
+
+    it('displays MB for large backup sizes', async () => {
+      const filePath = createTestBackupFile(tempDir, 'large.waiaas-backup', {
+        created_at: '2026-03-03T17:00:00Z',
+        contents: {
+          database: { name: 'waiaas.db', size: 2 * 1024 * 1024 },
+          keystore_files: [],
+        },
+      });
+
+      await backupInspectCommand(filePath);
+
+      // The database size display should include "MB"
+      const allOutput = logSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      expect(allOutput).toContain('MB');
+    });
+
+    it('exits with UNSUPPORTED_BACKUP_VERSION for unsupported version', async () => {
+      // Create a file with valid magic but wrong version
+      const filePath = join(tempDir, 'bad-version.waiaas-backup');
+      // WAIaaS backup magic: 0x57 0x41 0x49 0x42 (WAIB) + version byte
+      const buf = Buffer.alloc(100, 0);
+      buf[0] = 0x57; buf[1] = 0x41; buf[2] = 0x49; buf[3] = 0x42;
+      buf[4] = 0xff; // invalid version
+      writeFileSync(filePath, buf);
+
+      await expect(backupInspectCommand(filePath))
+        .rejects.toThrow('process.exit called');
+      const allStderr = errorSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      // Should hit either INVALID_BACKUP_FORMAT or UNSUPPORTED_BACKUP_VERSION
+      expect(allStderr).toMatch(/Not a valid WAIaaS backup|Unsupported backup/);
     });
 
     it('exits with error for file with invalid magic bytes', async () => {
