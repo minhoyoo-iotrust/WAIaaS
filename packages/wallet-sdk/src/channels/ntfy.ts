@@ -1,10 +1,9 @@
 /**
  * ntfy channel functions for the WAIaaS Signing Protocol.
  *
- * sendViaNtfy - Publish a SignResponse to an ntfy response topic.
- * subscribeToRequests - SSE subscription for incoming sign requests.
- * subscribeToNotifications - SSE subscription for notification events.
- * parseNotification - Decode and validate base64url NotificationMessage.
+ * @deprecated All functions in this module are deprecated. Use Push Relay
+ * functions (sendViaRelay, registerDevice, etc.) from the relay channel instead.
+ * These will be removed in the next major version.
  *
  * @see internal/design/73-signing-protocol-v1.md Section 7.4
  * @see internal/design/74-wallet-sdk-daemon-components.md Section 2.6
@@ -46,6 +45,7 @@ async function resolveMessage(event: NtfyEvent): Promise<string | null> {
  *
  * Encodes the response as base64url and POSTs it to the ntfy server.
  *
+ * @deprecated Use Push Relay functions (sendViaRelay) instead. Will be removed in next major version.
  * @param response - Validated SignResponse object
  * @param responseTopic - ntfy topic name for responses
  * @param serverUrl - ntfy server URL (defaults to https://ntfy.sh)
@@ -77,6 +77,7 @@ export async function sendViaNtfy(
  * Listens for new messages on the specified ntfy topic and parses them
  * as SignRequest objects. Valid, non-expired requests trigger the callback.
  *
+ * @deprecated Use Push Relay device registration instead. Will be removed in next major version.
  * @param topic - ntfy topic name for incoming sign requests
  * @param callback - Function called for each valid SignRequest received
  * @param serverUrl - ntfy server URL (defaults to https://ntfy.sh)
@@ -177,6 +178,7 @@ export function subscribeToRequests(
  * Decodes the base64url string, parses JSON, and validates against
  * NotificationMessageSchema.
  *
+ * @deprecated Use Push Relay notification parsing instead. Will be removed in next major version.
  * @param data - base64url-encoded NotificationMessage JSON string
  * @returns Validated NotificationMessage object
  * @throws Error if decoding, parsing, or validation fails
@@ -194,6 +196,7 @@ export function parseNotification(data: string): NotificationMessage {
  * as NotificationMessage objects via parseNotification().
  * Valid messages trigger the callback.
  *
+ * @deprecated Use Push Relay device registration instead. Will be removed in next major version.
  * @param topic - ntfy topic name (e.g., 'waiaas-notify-trading-bot')
  * @param callback - Function called for each valid NotificationMessage received
  * @param serverUrl - ntfy server URL (defaults to https://ntfy.sh)
