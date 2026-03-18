@@ -88,10 +88,10 @@ See `.planning/milestones/v32.9-ROADMAP.md` for full details.
   2. README.md 내 docs/guides/ 참조가 0건이고 docs/agent-guides/ 로 업데이트되어 있다
   3. site/index.html 내 docs/guides GitHub 링크가 docs/agent-guides/ 를 가리킨다
   4. 코드베이스 전체에서 docs/guides/ 참조가 0건이다 (아카이브 파일 제외)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 452-01: TBD
+- [ ] 452-01-PLAN.md — docs/guides/ -> docs/agent-guides/ 이름 변경 + 전체 참조 업데이트
 
 ### Phase 453: Skills Cleanup + Admin Manual
 **Goal**: 에이전트 스킬 파일이 sessionAuth 전용이 되고, masterAuth 콘텐츠가 docs/admin-manual/ 8개 파일로 이전된다
@@ -168,7 +168,7 @@ Phases execute in numeric order: 452 -> 453 -> 454 -> 455
 | 449. Foundation | v32.9 | 3/3 | Complete | 2026-03-18 |
 | 450. Daemon 서명 채널 재작성 | v32.9 | 2/2 | Complete | 2026-03-18 |
 | 451. 클라이언트 업데이트 | v32.9 | 2/2 | Complete | 2026-03-18 |
-| 452. Document Structure Rename | v32.10 | 0/? | Not started | - |
+| 452. Document Structure Rename | v32.10 | 0/1 | Not started | - |
 | 453. Skills Cleanup + Admin Manual | v32.10 | 0/? | Not started | - |
 | 454. OpenClaw Plugin Package | v32.10 | 0/? | Not started | - |
 | 455. CI/CD, Documentation, SEO | v32.10 | 0/? | Not started | - |
