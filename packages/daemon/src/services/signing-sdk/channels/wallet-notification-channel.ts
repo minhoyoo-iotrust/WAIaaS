@@ -87,9 +87,6 @@ export class WalletNotificationChannel {
       // Get API key for Push Relay
       const apiKey = this.settings.get('signing_sdk.push_relay_api_key');
 
-      // Determine priority
-      const priority = category === 'security_alert' ? 5 : 3;
-
       // Send to all alert-enabled apps with push_relay_url in parallel
       await Promise.allSettled(
         apps
@@ -105,7 +102,6 @@ export class WalletNotificationChannel {
               body,
               details,
               timestamp: Math.floor(Date.now() / 1000),
-              priority,
             }),
           ),
       );
