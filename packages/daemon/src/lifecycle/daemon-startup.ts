@@ -632,7 +632,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         SignRequestBuilder,
         SignResponseHandler,
         WalletLinkRegistry,
-        NtfySigningChannel,
+        PushRelaySigningChannel,
         TelegramSigningChannel,
         ApprovalChannelRouter,
         WalletNotificationChannel,
@@ -648,7 +648,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         { sqlite: state.sqlite! },
         { onApproved: (txId) => state.handleApprovalApproved(txId) },
       );
-      const ntfyChannel = new NtfySigningChannel({
+      const pushRelayChannel = new PushRelaySigningChannel({
         signRequestBuilder,
         signResponseHandler,
         settingsService: state._settingsService!,
@@ -677,7 +677,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       state.approvalChannelRouter = new ApprovalChannelRouter({
         sqlite: state.sqlite!,
         settingsService: state._settingsService!,
-        ntfyChannel,
+        pushRelayChannel,
         telegramChannel,
       });
 
