@@ -83,13 +83,45 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| CORE-01 | Phase 449 | Pending |
+| CORE-02 | Phase 449 | Pending |
+| CORE-03 | Phase 449 | Pending |
+| DB-01 | Phase 449 | Pending |
+| DB-02 | Phase 449 | Pending |
+| DB-03 | Phase 449 | Pending |
+| DB-04 | Phase 449 | Pending |
+| DB-05 | Phase 449 | Pending |
+| RELAY-01 | Phase 449 | Pending |
+| RELAY-02 | Phase 449 | Pending |
+| RELAY-03 | Phase 449 | Pending |
+| RELAY-04 | Phase 449 | Pending |
+| RELAY-05 | Phase 449 | Pending |
+| RELAY-06 | Phase 449 | Pending |
+| RELAY-07 | Phase 449 | Pending |
+| SIGN-01 | Phase 450 | Pending |
+| SIGN-02 | Phase 450 | Pending |
+| SIGN-03 | Phase 450 | Pending |
+| SIGN-04 | Phase 450 | Pending |
+| SIGN-05 | Phase 450 | Pending |
+| CONF-01 | Phase 450 | Pending |
+| CONF-02 | Phase 450 | Pending |
+| CONF-03 | Phase 450 | Pending |
+| ERR-01 | Phase 450 | Pending |
+| ERR-02 | Phase 450 | Pending |
+| SDK-01 | Phase 451 | Pending |
+| SDK-02 | Phase 451 | Pending |
+| ADMIN-01 | Phase 451 | Pending |
+| ADMIN-02 | Phase 451 | Pending |
+| ADMIN-03 | Phase 451 | Pending |
+| ADMIN-04 | Phase 451 | Pending |
+| ADMIN-05 | Phase 451 | Pending |
+| ADMIN-06 | Phase 451 | Pending |
 
 **Coverage:**
 - v32.9 requirements: 32 total
-- Mapped to phases: 0
-- Unmapped: 32 ⚠️
+- Mapped to phases: 32
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 after roadmap creation*
