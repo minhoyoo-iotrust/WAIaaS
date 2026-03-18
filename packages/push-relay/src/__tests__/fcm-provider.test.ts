@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FcmProvider } from '../providers/fcm-provider.js';
-import type { PushPayload } from '../subscriber/message-parser.js';
+import type { PushPayload } from '../providers/push-provider.js';
 
 // Mock fs.readFileSync
 vi.mock('node:fs', () => ({

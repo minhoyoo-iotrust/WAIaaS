@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PushwooshProvider } from '../providers/pushwoosh-provider.js';
-import type { PushPayload } from '../subscriber/message-parser.js';
+import type { PushPayload } from '../providers/push-provider.js';
 
 const DEFAULT_API_URL = 'https://api.pushwoosh.com/json/1.3/createMessage';
 

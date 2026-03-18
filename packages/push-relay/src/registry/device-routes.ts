@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { DeviceRegistry } from './device-registry.js';
-import type { NtfySubscriber } from '../subscriber/ntfy-subscriber.js';
 import type { IPushProvider } from '../providers/push-provider.js';
 import { debug } from '../logger.js';
 
@@ -13,16 +12,13 @@ const DeviceRegistrationSchema = z.object({
 
 export interface DeviceRoutesOpts {
   registry: DeviceRegistry;
-  subscriber: NtfySubscriber;
   provider: IPushProvider;
-  signTopicPrefix: string;
-  notifyTopicPrefix: string;
   version?: string;
 }
 
 export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
   const app = new Hono();
-  const { registry, subscriber, provider, signTopicPrefix, notifyTopicPrefix, version } = opts;
+  const { registry, provider, version } = opts;
 
   // POST /devices — register device token
   app.post('/devices', async (c) => {
@@ -37,13 +33,6 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
     const result = registry.register(walletName, pushToken, platform);
     const token = result.subscriptionToken;
     debug(`Device registered: subscriptionToken=${token}`);
-
-    // Dynamically subscribe to subscription-token-based topics
-    subscriber.addTopics(
-      walletName,
-      `${signTopicPrefix}-${walletName}-${token}`,
-      `${notifyTopicPrefix}-${walletName}-${token}`,
-    );
 
     return c.json({ status: 'registered', subscription_token: token }, 201);
   });
@@ -63,19 +52,9 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
     const pushToken = c.req.param('token');
     debug(`DELETE /devices/${pushToken.slice(0, 8)}...`);
 
-    // Look up device before deletion to get topic info
-    const device = registry.getByPushToken(pushToken);
     const removed = registry.unregister(pushToken);
     if (!removed) {
       return c.json({ error: 'Token not found' }, 404);
-    }
-
-    // Dynamically unsubscribe from subscription-token-based topics
-    if (device?.subscriptionToken) {
-      subscriber.removeTopics(
-        `${signTopicPrefix}-${device.walletName}-${device.subscriptionToken}`,
-        `${notifyTopicPrefix}-${device.walletName}-${device.subscriptionToken}`,
-      );
     }
 
     return c.body(null, 204);
@@ -87,15 +66,12 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
     return c.json({
       status: 'ok',
       version: version ?? 'unknown',
-      ntfy: {
-        connected: subscriber.connected,
-        topics: subscriber.topicCount,
-      },
       push: {
         provider: provider.name,
         configured: providerValid,
       },
       devices: registry.count(),
+      sign_responses: registry.signResponseCount(),
     });
   });
 

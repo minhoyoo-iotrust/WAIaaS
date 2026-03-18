@@ -34,10 +34,6 @@ const ServerConfigSchema = z.object({
 });
 
 const RelayConfigSchema = z.object({
-  ntfy_server: z.string().url().default('https://ntfy.sh'),
-  sign_topic_prefix: z.string().default('waiaas-sign'),
-  notify_topic_prefix: z.string().default('waiaas-notify'),
-  wallet_names: z.array(z.string().min(1)).min(1),
   push: PushConfigSchema,
   server: ServerConfigSchema,
 });

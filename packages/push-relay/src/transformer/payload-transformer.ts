@@ -1,4 +1,4 @@
-import type { PushPayload } from '../subscriber/message-parser.js';
+import type { PushPayload } from '../providers/push-provider.js';
 import type { PayloadConfig } from '../config.js';
 
 export interface IPayloadTransformer {

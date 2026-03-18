@@ -1,5 +1,4 @@
-import type { PushPayload } from '../subscriber/message-parser.js';
-import type { IPushProvider, PushResult } from './push-provider.js';
+import type { PushPayload, IPushProvider, PushResult } from './push-provider.js';
 import { withRetry, isRetryableHttpError } from './push-provider.js';
 import type { PushwooshConfig } from '../config.js';
 
