@@ -7,7 +7,7 @@
  * - NATIVE_DECIMALS / NATIVE_SYMBOLS constants
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Core error classes

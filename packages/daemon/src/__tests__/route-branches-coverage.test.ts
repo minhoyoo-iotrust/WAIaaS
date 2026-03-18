@@ -8,8 +8,7 @@
  * - dry-run.ts executeDryRun
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WAIaaSError } from '@waiaas/core';
+import { describe, it, expect, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // buildByType coverage (stage5-execute.ts)

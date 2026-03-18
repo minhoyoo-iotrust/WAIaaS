@@ -5,7 +5,7 @@
  * uncovered function targets.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { buildTokenMap, formatTxAmount } from '../api/routes/admin-wallets.js';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { tokenRegistry } from '../infrastructure/database/schema.js';

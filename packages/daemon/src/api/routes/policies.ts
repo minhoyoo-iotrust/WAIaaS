@@ -6,6 +6,7 @@
  *
  * POST /policies         -> create a new policy (201)
  * GET /policies          -> list policies with optional walletId filter (200)
+ * GET /policies/:id      -> get a single policy (200)
  * PUT /policies/:id      -> update a policy (200)
  * DELETE /policies/:id   -> delete a policy (200)
  *
@@ -192,6 +193,23 @@ const updatePolicyRoute = createRoute({
   },
 });
 
+const getPolicyRoute = createRoute({
+  method: 'get',
+  path: '/policies/{id}',
+  tags: ['Policies'],
+  summary: 'Get a policy by ID',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Policy details',
+      content: { 'application/json': { schema: PolicyResponseSchema } },
+    },
+    ...buildErrorResponses(['POLICY_NOT_FOUND']),
+  },
+});
+
 const deletePolicyRoute = createRoute({
   method: 'delete',
   path: '/policies/{id}',
@@ -218,6 +236,7 @@ const deletePolicyRoute = createRoute({
  *
  * POST /policies         -> create policy (201)
  * GET /policies          -> list policies (200)
+ * GET /policies/:id      -> get policy (200)
  * PUT /policies/:id      -> update policy (200)
  * DELETE /policies/:id   -> delete policy (200)
  */
@@ -341,6 +360,38 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
     const paginatedData = result.slice(offset, offset + limit);
 
     return c.json({ data: paginatedData, total, limit, offset }, 200);
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /policies/:id -- get a single policy by ID
+  // -------------------------------------------------------------------------
+  router.openapi(getPolicyRoute, (c) => {
+    const { id: policyId } = c.req.valid('param');
+
+    const row = deps.db
+      .select()
+      .from(policies)
+      .where(eq(policies.id, policyId))
+      .get();
+
+    if (!row) {
+      throw new WAIaaSError('POLICY_NOT_FOUND');
+    }
+
+    return c.json(
+      {
+        id: row.id,
+        walletId: row.walletId,
+        type: row.type,
+        rules: JSON.parse(row.rules),
+        priority: row.priority,
+        enabled: row.enabled,
+        network: row.network,
+        createdAt: Math.floor(row.createdAt.getTime() / 1000),
+        updatedAt: Math.floor(row.updatedAt.getTime() / 1000),
+      },
+      200,
+    );
   });
 
   // -------------------------------------------------------------------------

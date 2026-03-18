@@ -693,7 +693,6 @@ describe('AlchemyNftIndexer', () => {
 
 import { executeSignOnly, type SignOnlyDeps } from '../pipeline/sign-only.js';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
-import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 
 function createTestDb() {
   const conn = createDatabase(':memory:');

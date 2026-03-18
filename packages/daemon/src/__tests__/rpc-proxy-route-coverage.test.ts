@@ -22,7 +22,6 @@ import {
 import {
   jsonRpcError,
   JSON_RPC_ERRORS,
-  type JsonRpcErrorResponse,
 } from '../rpc-proxy/index.js';
 import { OpenAPIHono } from '@hono/zod-openapi';
 

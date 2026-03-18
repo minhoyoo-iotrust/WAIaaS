@@ -8,7 +8,7 @@
  * - CREDENTIAL_KEYS export
  */
 
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Settings crypto

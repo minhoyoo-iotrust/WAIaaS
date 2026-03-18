@@ -7,11 +7,8 @@
  * - dry-run.ts (executeDryRun balance checks, oracle errors, warnings)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WAIaaSError } from '@waiaas/core';
+import { describe, it, expect, vi } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
-import { transactions } from '../infrastructure/database/schema.js';
-import { generateId } from '../infrastructure/database/id.js';
 
 // ---------------------------------------------------------------------------
 // In-memory DB helper

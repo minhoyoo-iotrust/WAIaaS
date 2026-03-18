@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { wallets, transactions } from '../infrastructure/database/schema.js';
+import { transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 
 // ---------------------------------------------------------------------------

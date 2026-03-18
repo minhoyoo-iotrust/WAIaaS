@@ -6,7 +6,7 @@
  * - WalletAppService integration patterns
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { walletApps } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
