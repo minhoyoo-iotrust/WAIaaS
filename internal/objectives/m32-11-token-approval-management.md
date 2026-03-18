@@ -1,7 +1,7 @@
-# 마일스톤 m32-10: ERC-20 Token Approval 관리 (Allowance 조회 + Revoke)
+# 마일스톤 m32-11: ERC-20 Token Approval 관리 (Allowance 조회 + Revoke)
 
 - **Status:** PLANNED
-- **Milestone:** v32.10
+- **Milestone:** v32.11
 
 ## 목표
 
