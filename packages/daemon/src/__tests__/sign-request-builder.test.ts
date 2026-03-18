@@ -8,7 +8,7 @@
  * 4. signing_sdk.enabled=false -> SIGNING_SDK_DISABLED error
  * 5. preferred_wallet not set + walletName not specified -> error
  * 6. expiresAt reflects request_expiry_min setting
- * 7. ntfy response channel with custom server URL
+ * 7. push_relay response channel with pushRelayUrl from DB
  *
  * SettingsService and WalletLinkRegistry are mocked.
  */
@@ -27,10 +27,7 @@ function createMockSettingsService(overrides: Record<string, string> = {}) {
     'signing_sdk.enabled': 'true',
     'signing_sdk.preferred_wallet': 'dcent',
     'signing_sdk.request_expiry_min': '30',
-    'signing_sdk.preferred_channel': 'ntfy',
-    'signing_sdk.ntfy_request_topic_prefix': 'waiaas-sign',
-    'signing_sdk.ntfy_response_topic_prefix': 'waiaas-response',
-    'notifications.ntfy_server': 'https://ntfy.sh',
+    'signing_sdk.preferred_channel': 'push_relay',
     'telegram.bot_token': '',
   };
 
@@ -51,9 +48,6 @@ const walletConfig: WalletLinkConfig = {
   universalLink: {
     base: 'https://link.dcentwallet.com',
     signPath: '/waiaas/sign',
-  },
-  ntfy: {
-    requestTopic: 'waiaas-sign-dcent',
   },
 };
 
@@ -137,8 +131,8 @@ describe('SignRequestBuilder', () => {
     expect(result.universalLinkUrl).toContain('https://link.dcentwallet.com');
     expect(mockRegistry.buildSignUrl).toHaveBeenCalledWith('dcent', result.request);
 
-    // Request topic
-    expect(result.requestTopic).toBe('waiaas-sign-dcent');
+    // Request topic is wallet name
+    expect(result.requestTopic).toBe('dcent');
   });
 
   // -----------------------------------------------------------------------
@@ -244,24 +238,38 @@ describe('SignRequestBuilder', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 7. ntfy response channel with custom server URL
+  // 7. push_relay response channel with pushRelayUrl from DB
   // -----------------------------------------------------------------------
 
-  it('includes serverUrl in ntfy response channel when not default', () => {
-    mockSettings = createMockSettingsService({
-      'notifications.ntfy_server': 'https://ntfy.example.com',
-    });
-    builder = new SignRequestBuilder({
+  it('builds push_relay response channel with pushRelayUrl from wallet_apps DB', () => {
+    const mockSqlite = {
+      prepare: vi.fn((sql: string) => {
+        if (sql.includes('push_relay_url') && sql.includes('wallet_apps')) {
+          return { get: vi.fn(() => ({ push_relay_url: 'https://relay.example.com' })) };
+        }
+        return { get: vi.fn(() => undefined) };
+      }),
+    };
+
+    const dbBuilder = new SignRequestBuilder({
       settingsService: mockSettings as any,
       walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
     });
 
-    const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+    const result = dbBuilder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+    expect(result.request.responseChannel.type).toBe('push_relay');
+    if (result.request.responseChannel.type === 'push_relay') {
+      expect(result.request.responseChannel.pushRelayUrl).toBe('https://relay.example.com');
+      expect(result.request.responseChannel.requestId).toBe(result.request.requestId);
+    }
+  });
 
-    expect(result.request.responseChannel.type).toBe('ntfy');
-    if (result.request.responseChannel.type === 'ntfy') {
-      expect(result.request.responseChannel.serverUrl).toBe('https://ntfy.example.com');
-      expect(result.request.responseChannel.responseTopic).toContain('waiaas-response-');
+  it('builds push_relay response channel with empty URL when no DB', () => {
+    const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+    expect(result.request.responseChannel.type).toBe('push_relay');
+    if (result.request.responseChannel.type === 'push_relay') {
+      expect(result.request.responseChannel.pushRelayUrl).toBe('');
     }
   });
 
@@ -298,92 +306,16 @@ describe('SignRequestBuilder', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 10. ntfy response channel omits serverUrl when default ntfy.sh
+  // 10. requestTopic is walletName
   // -----------------------------------------------------------------------
 
-  it('omits serverUrl when using default ntfy.sh', () => {
+  it('sets requestTopic to walletName', () => {
     const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
-
-    expect(result.request.responseChannel.type).toBe('ntfy');
-    if (result.request.responseChannel.type === 'ntfy') {
-      expect(result.request.responseChannel.serverUrl).toBeUndefined();
-    }
+    expect(result.requestTopic).toBe('dcent');
   });
 
   // -----------------------------------------------------------------------
-  // 11. DB-based topic lookup: exact name match (CHAN-01)
-  // -----------------------------------------------------------------------
-
-  it('uses sign_topic from wallet_apps DB when exact name match exists', () => {
-    const mockSqlite = {
-      prepare: vi.fn((sql: string) => {
-        if (sql.includes('WHERE name = ?')) {
-          return { get: vi.fn(() => ({ sign_topic: 'custom-sign-topic-dcent' })) };
-        }
-        return { get: vi.fn(() => undefined) };
-      }),
-    };
-
-    const dbBuilder = new SignRequestBuilder({
-      settingsService: mockSettings as any,
-      walletLinkRegistry: mockRegistry as any,
-      sqlite: mockSqlite as any,
-    });
-
-    const result = dbBuilder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
-    expect(result.requestTopic).toBe('custom-sign-topic-dcent');
-  });
-
-  // -----------------------------------------------------------------------
-  // 12. DB-based topic lookup: fallback to wallet_type match
-  // -----------------------------------------------------------------------
-
-  it('falls back to wallet_type match when exact name not found in DB', () => {
-    const mockSqlite = {
-      prepare: vi.fn((sql: string) => {
-        if (sql.includes('WHERE name = ?')) {
-          return { get: vi.fn(() => undefined) }; // no exact name match
-        }
-        if (sql.includes('WHERE wallet_type = ?')) {
-          return { get: vi.fn(() => ({ sign_topic: 'type-based-sign-topic' })) };
-        }
-        return { get: vi.fn(() => undefined) };
-      }),
-    };
-
-    const dbBuilder = new SignRequestBuilder({
-      settingsService: mockSettings as any,
-      walletLinkRegistry: mockRegistry as any,
-      sqlite: mockSqlite as any,
-    });
-
-    const result = dbBuilder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
-    expect(result.requestTopic).toBe('type-based-sign-topic');
-  });
-
-  // -----------------------------------------------------------------------
-  // 13. DB-based topic lookup: no match -> fallback to prefix-name
-  // -----------------------------------------------------------------------
-
-  it('uses prefix-name fallback when no DB match found', () => {
-    const mockSqlite = {
-      prepare: vi.fn(() => ({
-        get: vi.fn(() => undefined),
-      })),
-    };
-
-    const dbBuilder = new SignRequestBuilder({
-      settingsService: mockSettings as any,
-      walletLinkRegistry: mockRegistry as any,
-      sqlite: mockSqlite as any,
-    });
-
-    const result = dbBuilder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
-    expect(result.requestTopic).toBe('waiaas-sign-dcent');
-  });
-
-  // -----------------------------------------------------------------------
-  // 14. Telegram response channel
+  // 11. Telegram response channel
   // -----------------------------------------------------------------------
 
   it('uses telegram response channel when preferred_channel is telegram', () => {
@@ -404,7 +336,7 @@ describe('SignRequestBuilder', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 15. Display message without amount
+  // 12. Display message without amount
   // -----------------------------------------------------------------------
 
   it('generates display message without amount for CONTRACT_CALL', () => {

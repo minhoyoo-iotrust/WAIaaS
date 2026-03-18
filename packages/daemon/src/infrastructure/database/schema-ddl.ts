@@ -73,7 +73,7 @@ export function getCreateTableStatements(): string[] {
   suspended_at INTEGER,
   suspension_reason TEXT,
   monitor_incoming INTEGER NOT NULL DEFAULT 0,
-  owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')),
+  owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_push', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')),
   wallet_type TEXT,
   account_type TEXT NOT NULL DEFAULT 'eoa' CHECK (account_type IN (${inList(ACCOUNT_TYPES)})),
   signer_key TEXT,

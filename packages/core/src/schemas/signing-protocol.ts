@@ -34,7 +34,7 @@ export type ApprovalMethod = z.infer<typeof ApprovalMethodSchema>;
 
 export const PushRelayResponseChannelSchema = z.object({
   type: z.literal('push_relay'),
-  pushRelayUrl: z.string().url(),
+  pushRelayUrl: z.string(), // URL of the Push Relay server (empty when not configured)
   requestId: z.string().uuid(),
 });
 
