@@ -8,6 +8,10 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Previous Milestone: v32.8 테스트 커버리지 강화 — SHIPPED 2026-03-18
+
+전 패키지 커버리지 강화: 620+ 신규 테스트, 9/12 패키지 L:90/B:85/F:95 통일 기준 달성. SDK 99.93%, shared 100%, EVM B:91%, wallet-sdk B:95%. daemon/cli/admin은 프레임워크 제약으로 근접 수준 달성. coverage-gate.sh 12 패키지 동기화. 7개 오픈 이슈 전량 해결(EVM 체크섬, PositionTracker RPC, DeFi UAT 등). 6 phases, 17 plans, 48 requirements, 58 commits, 131 files, +21,334/-185 lines, ~368,589 LOC TS.
+
 ## Previous Milestone: v32.7 SEO/AEO 최적화 — SHIPPED 2026-03-17
 
 ESM 빌드 파이프라인(`site/build.mjs`)으로 19개 마크다운 파일을 CRT 테마 HTML 페이지로 변환(빌드타임 구문 강조), Blog/Docs 목록 페이지 + 활성 네비게이션 + 259개 내부 링크 검증(0 broken). sitemap.xml(22 URL) + JSON-LD 구조화 데이터(Article/TechArticle + BreadcrumbList) + canonical URL, llms-full.txt(188KB) AEO 최적화 + 20개 FAQ Q&A(FAQPage 스키마), GitHub Actions CI 파이프라인(docs/** 변경 시 자동 빌드 + GitHub Pages 배포), SEO 랜딩 페이지 3종("AI wallet" 카테고리) + SUBMISSION_KIT(7 플랫폼) + 커뮤니티 포스팅 초안 4개. 5 phases, 7 plans, 33 requirements, 30 commits, 53 files, +6,080/-867 lines, ~355,935 LOC TS.

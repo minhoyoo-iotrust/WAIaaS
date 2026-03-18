@@ -279,6 +279,41 @@ describe('restore CLI command', () => {
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Restore complete'));
   });
 
+  it('displays MB for large backup in pre-restore summary', async () => {
+    // Create a backup large enough to trigger MB formatting
+    const sourceDir = trackDir(makeTempDir());
+    const dataDbDir = join(sourceDir, 'data');
+    const backupsDir = join(sourceDir, 'backups');
+    mkdirSync(dataDbDir, { recursive: true });
+    mkdirSync(backupsDir, { recursive: true });
+
+    const dbPath = join(dataDbDir, 'waiaas.db');
+    const db = new Database(dbPath);
+    db.exec('CREATE TABLE t (id INTEGER PRIMARY KEY, data TEXT)');
+    // Insert enough data to make the backup > 1MB after encryption
+    const bigValue = 'x'.repeat(100_000);
+    for (let i = 0; i < 15; i++) {
+      db.exec(`INSERT INTO t VALUES (${i}, '${bigValue}')`);
+    }
+
+    const service = new EncryptedBackupService(sourceDir, backupsDir, db);
+    const info = await service.createBackup(TEST_PASSWORD);
+    db.close();
+
+    const targetDir = trackDir(makeTempDir());
+    await restoreCommand({
+      from: info.path,
+      dataDir: targetDir,
+      password: TEST_PASSWORD,
+      force: true,
+    });
+
+    // The size display should contain MB
+    const allLog = logSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+    expect(allLog).toContain('MB');
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Restore complete'));
+  });
+
   it('handles backup with no config.toml', async () => {
     const sourceDir = trackDir(makeTempDir());
     const dataDbDir = join(sourceDir, 'data');

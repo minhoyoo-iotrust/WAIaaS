@@ -101,7 +101,7 @@ export const BUILTIN_TOKENS: Record<string, TokenEntry[]> = {
     { address: '0x88541670E55cC00bEEFD87eB59EDd1b7C511AC9a', symbol: 'AAVE', name: 'Aave Token', decimals: 18 },
     { address: '0xc4bF5CbDaBE595361438F8c6a187bDc330539c60', symbol: 'GHO', name: 'Gho Token', decimals: 18 },
     { address: '0x6d906e526a4e2Ca02097BA9d0caA3c382F52278E', symbol: 'EURS', name: 'EURS Stablecoin', decimals: 2 },
-    { address: '0xFc3e86566895FB007c6A0D3809eB2827dF94f751', symbol: 'PIM', name: 'Pimlico Test Token', decimals: 6 },
+    { address: '0xFC3e86566895Fb007c6A0d3809eb2827DF94F751', symbol: 'PIM', name: 'Pimlico Test Token', decimals: 6 },
   ],
 
   // ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ export const BUILTIN_TOKENS: Record<string, TokenEntry[]> = {
     { address: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
     { address: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73', symbol: 'WETH', name: 'Wrapped Ether', decimals: 18 },
     { address: '0xb1D4538B4571d411F07960EF2838Ce337FE1E80E', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
-    { address: '0xFc3e86566895FB007c6A0D3809eB2827dF94f751', symbol: 'PIM', name: 'Pimlico Test Token', decimals: 6 },
+    { address: '0xFC3e86566895Fb007c6A0d3809eb2827DF94F751', symbol: 'PIM', name: 'Pimlico Test Token', decimals: 6 },
   ],
 
   // ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ export const BUILTIN_TOKENS: Record<string, TokenEntry[]> = {
     { address: '0x54114591963CF60EF3aA63bEfD6eC263D98145a4', symbol: 'WBTC', name: 'Wrapped Bitcoin', decimals: 8 },
     { address: '0xE4aB69C077896252FAFBD49EFD26B5D171A32410', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
     { address: '0xD171b9694f7A2597Ed006D41f7509aaD4B485c4B', symbol: 'cbETH', name: 'Coinbase Wrapped Staked ETH', decimals: 18 },
-    { address: '0xFc3e86566895FB007c6A0D3809eB2827dF94f751', symbol: 'PIM', name: 'Pimlico Test Token', decimals: 6 },
+    { address: '0xFC3e86566895Fb007c6A0d3809eb2827DF94F751', symbol: 'PIM', name: 'Pimlico Test Token', decimals: 6 },
   ],
 };
 

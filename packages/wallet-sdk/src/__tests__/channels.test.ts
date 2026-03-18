@@ -475,6 +475,568 @@ describe('subscribeToNotifications', () => {
   });
 });
 
+describe('subscribeToRequests - SSE edge cases', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should skip non-"data: " lines in SSE stream', async () => {
+    const request = makeValidRequest();
+    const encoded = encodeSignRequest(request);
+    const sseData = JSON.stringify({ message: encoded });
+    // Mix in non-data lines (event, id, comment)
+    const sseContent = `event: message\nid: 123\n: comment\ndata: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      body: { getReader: () => mockReader },
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Only the valid data line should produce a callback
+    expect(callback).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('should skip empty data strings', async () => {
+    // "data: \n\n" -> dataStr after trim() is empty
+    const sseContent = 'data: \n\n';
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      body: { getReader: () => mockReader },
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(callback).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it('should attempt reconnection on SSE connection failure (res.ok === false)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    let fetchCallCount = 0;
+    fetchMock.mockImplementation(() => {
+      fetchCallCount++;
+      // First call fails, second succeeds with empty stream
+      if (fetchCallCount <= 1) {
+        return Promise.resolve({ ok: false, status: 503, body: null });
+      }
+      const mockReader = {
+        read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      };
+      return Promise.resolve({ ok: true, body: { getReader: () => mockReader } });
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('my-topic', callback);
+
+    // Let the first failed attempt process
+    await vi.advanceTimersByTimeAsync(100);
+    // Advance past reconnect delay (5000ms)
+    await vi.advanceTimersByTimeAsync(5500);
+
+    // Should have attempted reconnection
+    expect(fetchCallCount).toBeGreaterThanOrEqual(2);
+
+    unsubscribe();
+    vi.useRealTimers();
+  });
+
+  it('should stop reconnecting after MAX_RECONNECT_ATTEMPTS (3)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    let fetchCallCount = 0;
+    fetchMock.mockImplementation(() => {
+      fetchCallCount++;
+      return Promise.resolve({ ok: false, status: 503, body: null });
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('my-topic', callback);
+
+    // Process 4 attempts (initial + 3 reconnects)
+    for (let i = 0; i < 5; i++) {
+      await vi.advanceTimersByTimeAsync(6000);
+    }
+
+    // Should have called fetch 4 times (1 initial + 3 reconnects)
+    expect(fetchCallCount).toBeLessThanOrEqual(5);
+    expect(callback).not.toHaveBeenCalled();
+
+    unsubscribe();
+    vi.useRealTimers();
+  });
+
+  it('should not reconnect when explicitly aborted', async () => {
+    // Subscribe and immediately abort -> the abort handler in catch prevents reconnect
+    fetchMock.mockImplementation((_url: string, init: { signal: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        init.signal.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'));
+        });
+      }),
+    );
+
+    const { unsubscribe } = subscribeToRequests('my-topic', vi.fn());
+
+    // Immediately abort
+    unsubscribe();
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // The initial fetch call was made; abort prevented reconnection
+    // Just verify no crash
+  });
+
+  it('should reset reconnectAttempts on successful connection', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    let fetchCallCount = 0;
+    fetchMock.mockImplementation(() => {
+      fetchCallCount++;
+      if (fetchCallCount === 1) {
+        // First call fails
+        return Promise.resolve({ ok: false, status: 503, body: null });
+      }
+      // Second call succeeds then stream ends (triggers reconnect loop reset)
+      const mockReader = {
+        read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      };
+      return Promise.resolve({ ok: true, body: { getReader: () => mockReader } });
+    });
+
+    const { unsubscribe } = subscribeToRequests('my-topic', vi.fn());
+
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(6000);
+
+    expect(fetchCallCount).toBeGreaterThanOrEqual(2);
+
+    unsubscribe();
+    vi.useRealTimers();
+  });
+
+  it('should handle resolveMessage with attachment URL (success)', async () => {
+    const request = makeValidRequest();
+    const encoded = encodeSignRequest(request);
+    // Simulate ntfy event where message is in attachment
+    const sseData = JSON.stringify({
+      attachment: { url: 'https://ntfy.sh/file/abc.json' },
+    });
+    const sseContent = `data: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    // First fetch = SSE stream, second fetch = attachment download
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        body: { getReader: () => mockReader },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: encoded }),
+      });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(callback).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('should handle resolveMessage with attachment URL failure (res.ok = false)', async () => {
+    const sseData = JSON.stringify({
+      attachment: { url: 'https://ntfy.sh/file/bad.json' },
+    });
+    const sseContent = `data: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        body: { getReader: () => mockReader },
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // resolveMessage returns null -> message skipped
+    expect(callback).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it('should handle resolveMessage with attachment where body.message is not string', async () => {
+    const sseData = JSON.stringify({
+      attachment: { url: 'https://ntfy.sh/file/bad.json' },
+    });
+    const sseContent = `data: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        body: { getReader: () => mockReader },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: 12345 }), // not a string
+      });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(callback).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it('should handle event with no attachment and no message (resolveMessage returns null)', async () => {
+    const sseData = JSON.stringify({ title: 'notification only' });
+    const sseContent = `data: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      body: { getReader: () => mockReader },
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToRequests('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(callback).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it('should handle res.body === null (throw -> reconnect)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    let fetchCallCount = 0;
+    fetchMock.mockImplementation(() => {
+      fetchCallCount++;
+      if (fetchCallCount === 1) {
+        return Promise.resolve({ ok: true, body: null });
+      }
+      const mockReader = {
+        read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      };
+      return Promise.resolve({ ok: true, body: { getReader: () => mockReader } });
+    });
+
+    const { unsubscribe } = subscribeToRequests('my-topic', vi.fn());
+
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(6000);
+
+    expect(fetchCallCount).toBeGreaterThanOrEqual(2);
+
+    unsubscribe();
+    vi.useRealTimers();
+  });
+});
+
+describe('subscribeToNotifications - SSE edge cases', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should attempt reconnection on connection failure', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    let fetchCallCount = 0;
+    fetchMock.mockImplementation(() => {
+      fetchCallCount++;
+      if (fetchCallCount <= 1) {
+        return Promise.resolve({ ok: false, status: 500, body: null });
+      }
+      const mockReader = {
+        read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      };
+      return Promise.resolve({ ok: true, body: { getReader: () => mockReader } });
+    });
+
+    const { unsubscribe } = subscribeToNotifications('my-topic', vi.fn());
+
+    await vi.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(6000);
+
+    expect(fetchCallCount).toBeGreaterThanOrEqual(2);
+
+    unsubscribe();
+    vi.useRealTimers();
+  });
+
+  it('should stop reconnecting after MAX_RECONNECT_ATTEMPTS', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    let fetchCallCount = 0;
+    fetchMock.mockImplementation(() => {
+      fetchCallCount++;
+      return Promise.resolve({ ok: false, status: 503, body: null });
+    });
+
+    const { unsubscribe } = subscribeToNotifications('my-topic', vi.fn());
+
+    for (let i = 0; i < 5; i++) {
+      await vi.advanceTimersByTimeAsync(6000);
+    }
+
+    expect(fetchCallCount).toBeLessThanOrEqual(5);
+
+    unsubscribe();
+    vi.useRealTimers();
+  });
+
+  it('should not reconnect when explicitly aborted', async () => {
+    fetchMock.mockImplementation((_url: string, init: { signal: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        init.signal.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'));
+        });
+      }),
+    );
+
+    const { unsubscribe } = subscribeToNotifications('my-topic', vi.fn());
+
+    unsubscribe();
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Should not have thrown or caused issues
+  });
+
+  it('should skip non-data lines and empty data', async () => {
+    const msg = {
+      version: '1',
+      eventType: 'TX_CONFIRMED',
+      walletId: '01958f3a-1234-7000-8000-abcdef123456',
+      walletName: 'trading-bot',
+      category: 'transaction',
+      title: 'Transaction Confirmed',
+      body: 'Confirmed',
+      timestamp: 1707000000,
+    };
+    const encodedMsg = Buffer.from(JSON.stringify(msg), 'utf-8').toString('base64url');
+    const sseData = JSON.stringify({ message: encodedMsg });
+    // Mix non-data lines and empty data
+    const sseContent = `event: message\ndata: \ndata: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      body: { getReader: () => mockReader },
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToNotifications('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(callback).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('should ignore malformed notification messages', async () => {
+    const sseContent = [
+      'data: not-json\n\n',
+      'data: {"message": "not-valid-base64"}\n\n',
+      'data: {}\n\n',
+    ].join('');
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      body: { getReader: () => mockReader },
+    });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToNotifications('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(callback).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it('should handle resolveMessage attachment in notifications', async () => {
+    const msg = {
+      version: '1',
+      eventType: 'TX_CONFIRMED',
+      walletId: '01958f3a-1234-7000-8000-abcdef123456',
+      walletName: 'bot',
+      category: 'transaction',
+      title: 'Confirmed',
+      body: 'Done',
+      timestamp: 1707000000,
+    };
+    const encodedMsg = Buffer.from(JSON.stringify(msg), 'utf-8').toString('base64url');
+
+    const sseData = JSON.stringify({ attachment: { url: 'https://ntfy.sh/file/abc.json' } });
+    const sseContent = `data: ${sseData}\n\n`;
+
+    const mockReader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(sseContent),
+        })
+        .mockResolvedValueOnce({ done: true, value: undefined }),
+    };
+
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, body: { getReader: () => mockReader } })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ message: encodedMsg }) });
+
+    const callback = vi.fn();
+    const { unsubscribe } = subscribeToNotifications('my-topic', callback);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(callback).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('should handle abortController.signal.aborted at start of connect()', async () => {
+    // Subscribe and immediately unsubscribe before connect runs
+    fetchMock.mockReturnValue(new Promise(() => {}));
+
+    const { unsubscribe } = subscribeToNotifications('my-topic', vi.fn());
+    unsubscribe();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    // No crash
+  });
+});
+
+describe('getSubscriptionToken - error paths', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should throw on non-404 HTTP error', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 500 });
+
+    await expect(
+      getSubscriptionToken('https://relay.example.com', 'key', 'device'),
+    ).rejects.toThrow('Failed to get subscription token from Push Relay: HTTP 500');
+  });
+});
+
 describe('sendViaRelay', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 

@@ -873,6 +873,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         state.positionTracker = new PositionTracker({
           sqlite: state.sqlite,
           settingsService: state._settingsService,
+          rpcPool: state.rpcPool ?? undefined,
         });
         state.positionTracker.start();
         console.debug('Step 4c-10.5: Position tracker started');

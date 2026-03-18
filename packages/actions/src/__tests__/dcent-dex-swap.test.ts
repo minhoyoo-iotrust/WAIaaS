@@ -520,6 +520,74 @@ describe('dcent-dex-swap', () => {
       ).rejects.toThrow('DCent API returned empty txdata');
     });
 
+    it('passes fromWalletAddress in quote request when provided', async () => {
+      let capturedBody: Record<string, unknown> | undefined;
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, async ({ request }) => {
+          capturedBody = await request.json() as Record<string, unknown>;
+          return HttpResponse.json(makeQuotesResponse());
+        }),
+      );
+
+      const client = createClient();
+      await getDcentQuotes(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+        fromWalletAddress: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+      });
+
+      expect(capturedBody).toBeDefined();
+      expect(capturedBody!.fromWalletAddress).toBe('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045');
+    });
+
+    it('omits fromWalletAddress from quote request when not provided', async () => {
+      let capturedBody: Record<string, unknown> | undefined;
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, async ({ request }) => {
+          capturedBody = await request.json() as Record<string, unknown>;
+          return HttpResponse.json(makeQuotesResponse());
+        }),
+      );
+
+      const client = createClient();
+      await getDcentQuotes(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+      });
+
+      expect(capturedBody).toBeDefined();
+      expect(capturedBody!.fromWalletAddress).toBeUndefined();
+    });
+
+    it('executeDexSwap passes walletAddress as fromWalletAddress in quote request', async () => {
+      let capturedQuoteBody: Record<string, unknown> | undefined;
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, async ({ request }) => {
+          capturedQuoteBody = await request.json() as Record<string, unknown>;
+          return HttpResponse.json(makeQuotesResponse());
+        }),
+      );
+
+      const client = createClient();
+      await executeDexSwap(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+        walletAddress: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+      }, DEFAULT_CONFIG);
+
+      expect(capturedQuoteBody).toBeDefined();
+      expect(capturedQuoteBody!.fromWalletAddress).toBe('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045');
+    });
+
     it('handles txdata with no value (defaults to 0)', async () => {
       server.use(
         http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () => {

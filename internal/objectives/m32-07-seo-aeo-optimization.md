@@ -1,7 +1,8 @@
 # 마일스톤 m32-07: SEO/AEO 최적화 (GitHub Pages 확장)
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v32.7
+- **Completed:** 2026-03-17
 
 ## 목표
 

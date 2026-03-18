@@ -105,6 +105,36 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=eth
 
 **Check**: 사용자에게 리베이싱 메커니즘 설명 완료
 
+### Step 7: Lido 언스테이킹 (optional)
+**Action**: stETH를 ETH로 언스테이킹한다. Lido withdrawal 큐를 통해 처리되며, 완료까지 1~5일 소요된다.
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <session-token>' \
+  -d '{
+    "walletId": "<WALLET_ID>",
+    "type": "CONTRACT_CALL",
+    "action": "lido-unstake",
+    "params": {
+      "amount": "0.005"
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+**Expected**: 200 OK, withdrawal request NFT가 발행된다
+**Check**: `txId`, `txHash` 필드 기록. Lido withdrawal은 큐 기반이므로 즉시 ETH가 반환되지 않음
+
+### Step 8: 언스테이킹 상태 확인 (optional)
+**Action**: 언스테이킹 트랜잭션 상태를 확인한다.
+```bash
+curl -s http://localhost:3100/v1/transactions/<UNSTAKE_TX_ID> \
+  -H 'Authorization: Bearer <session-token>'
+```
+**Expected**: 트랜잭션 status가 `confirmed`로 전환
+**Check**: withdrawal request가 정상 등록됨. 실제 ETH 수령은 Lido finalization 후 claim 필요 (1~5일 후)
+
+> **Note**: Lido 언스테이킹은 두 단계로 진행된다: (1) withdrawal request 생성 (이 스텝), (2) finalization 후 claim. Claim은 Lido 프로토콜이 요청을 처리한 후에만 가능하며, 별도의 `lido-claim` 액션이 필요하다.
+
 ## Verification
 - [ ] ETH 잔액 조회 성공 (200 응답)
 - [ ] Lido 스테이킹 simulate 성공 (예상 stETH 수령량 반환)
@@ -112,6 +142,8 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=eth
 - [ ] 실제 스테이킹 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
 - [ ] 스테이킹 후 ETH 감소, stETH 증가 확인
+- [ ] (optional) Lido 언스테이킹 withdrawal request 생성 성공
+- [ ] (optional) 언스테이킹 트랜잭션 컨펌 확인
 
 ## Estimated Cost
 | Item | Network | Estimated Gas | USD |

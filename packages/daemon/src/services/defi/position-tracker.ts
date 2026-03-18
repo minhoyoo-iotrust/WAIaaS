@@ -21,8 +21,9 @@ import type { Database } from 'better-sqlite3';
 import type { IPositionProvider, PositionCategory, PositionQueryContext } from '@waiaas/core';
 import type { ChainType, EnvironmentType } from '@waiaas/core';
 import { POSITION_CATEGORIES, getNetworksForEnvironment } from '@waiaas/core';
+import type { RpcPool } from '@waiaas/core';
 import { PositionWriteQueue } from './position-write-queue.js';
-import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
+import { resolveRpcUrl, resolveRpcUrlFromPool } from '../../infrastructure/adapter-pool.js';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,7 @@ export class PositionTracker {
   private readonly sqlite: Database;
   private readonly settingsService?: SettingsService;
   private readonly rpcConfig: Record<string, string>;
+  private readonly rpcPool?: RpcPool;
   private readonly writeQueue: PositionWriteQueue;
   private readonly providers = new Map<string, IPositionProvider>();
   private readonly timers = new Map<PositionCategory, NodeJS.Timeout>();
@@ -58,10 +60,12 @@ export class PositionTracker {
     sqlite: Database;
     settingsService?: SettingsService;
     rpcConfig?: Record<string, string>;
+    rpcPool?: RpcPool;
   }) {
     this.sqlite = opts.sqlite;
     this.settingsService = opts.settingsService;
     this.rpcConfig = opts.rpcConfig ?? {};
+    this.rpcPool = opts.rpcPool;
     this.writeQueue = new PositionWriteQueue();
   }
 
@@ -161,7 +165,15 @@ export class PositionTracker {
             const networks = getNetworksForEnvironment(chain, environment);
             const rpcUrls: Record<string, string> = {};
             for (const net of networks) {
-              const url = resolveRpcUrl(this.rpcConfig, chain, net);
+              let url: string | undefined;
+              if (this.rpcPool && this.settingsService) {
+                try {
+                  url = resolveRpcUrlFromPool(this.rpcPool, this.settingsService.get.bind(this.settingsService), chain, net);
+                } catch { /* fall through to legacy */ }
+              }
+              if (!url) {
+                url = resolveRpcUrl(this.rpcConfig, chain, net);
+              }
               if (url) rpcUrls[net] = url;
             }
             const ctx: PositionQueryContext = {

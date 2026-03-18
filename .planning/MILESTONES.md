@@ -1,5 +1,25 @@
 # Project Milestones: WAIaaS
 
+## v32.8 테스트 커버리지 강화 (Shipped: 2026-03-18)
+
+**Phases completed:** 6 phases (444-448.1), 17 plans, 48 requirements
+
+**Key accomplishments:**
+- DeFi Provider 5종(Jupiter/0x/LiFi/Lido+Jito/Aave) + Pipeline 상태 머신 엣지 케이스 79 신규 테스트
+- daemon Infra(IncomingTx/RPC Proxy/Admin API/Notification) 195 신규 테스트, 임계값 L:90/F:95 달성
+- EVM adapter Branches 76%→91%, wallet-sdk Branches 79%→95%, 116 신규 테스트
+- SDK Lines 80%→99.93%, shared 100% 달성, coverage-gate.sh 12 패키지 동기화
+- 7개 오픈 이슈 전량 해결 (EVM 체크섬, PositionTracker RPC, DeFi UAT 시나리오 등)
+
+**Stats:**
+- 6 phases (444-448.1), 17 plans, 48 requirements complete
+- 58 commits, 131 files changed, +21,334/-185 lines
+- ~368,589 LOC TS, ~620+ 신규 테스트
+- Timeline: 2 days (2026-03-17 → 2026-03-18)
+- Known gaps: daemon B:83.76%, admin F:75.30% (프레임워크 제약)
+
+---
+
 ## v32.7 SEO/AEO Optimization (Shipped: 2026-03-17)
 
 **Phases completed:** 5 phases (439-443), 7 plans, 33 requirements

@@ -3,10 +3,10 @@ id: "advanced-05"
 title: "트랜잭션 승인 워크플로우"
 category: "advanced"
 auth: "session"
-network: ["ethereum-mainnet"]
+network: ["ethereum-sepolia"]
 requires_funds: true
-estimated_cost_usd: "0.50"
-risk_level: "medium"
+estimated_cost_usd: "0"
+risk_level: "low"
 tags: ["approval", "reject", "cancel", "pending", "owner", "spending-limit"]
 ---
 
@@ -15,10 +15,10 @@ tags: ["approval", "reject", "cancel", "pending", "owner", "spending-limit"]
 ## Metadata
 - **ID**: advanced-05
 - **Category**: advanced
-- **Network**: ethereum-mainnet
-- **Requires Funds**: Yes
-- **Estimated Cost**: ~$0.50
-- **Risk Level**: medium -- 메인넷 ETH 전송이 포함됨 (approve 시나리오)
+- **Network**: ethereum-sepolia
+- **Requires Funds**: Yes (testnet ETH)
+- **Estimated Cost**: $0 (testnet)
+- **Risk Level**: low -- 테스트넷 ETH 전송만 포함
 
 ## Prerequisites
 - [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
@@ -26,7 +26,7 @@ tags: ["approval", "reject", "cancel", "pending", "owner", "spending-limit"]
 - [ ] Owner 주소 등록 완료 (state=LOCKED)
 - [ ] Owner 서명 수단 준비 (SIWE 또는 WalletConnect)
 - [ ] SPENDING_LIMIT 정책에 APPROVAL 티어 설정 (예: 0.01 ETH 초과 시 APPROVAL)
-- [ ] 지갑에 ETH 잔액 보유 (최소 0.05 ETH)
+- [ ] 지갑에 Sepolia ETH 잔액 보유 (faucet에서 수령)
 
 ## Scenario Steps
 
@@ -56,7 +56,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "TRANSFER",
     "to": "<RECIPIENT_ADDRESS>",
     "amount": "50000000000000000",
-    "network": "ethereum-mainnet"
+    "network": "ethereum-sepolia"
   }'
 ```
 **Expected**: 200 OK, 트랜잭션이 PENDING_APPROVAL 상태로 생성된다
@@ -101,7 +101,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "TRANSFER",
     "to": "<RECIPIENT_ADDRESS>",
     "amount": "50000000000000000",
-    "network": "ethereum-mainnet"
+    "network": "ethereum-sepolia"
   }'
 ```
 **Expected**: PENDING_APPROVAL 상태. `id`를 TX_ID_2로 기록
@@ -135,7 +135,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "TRANSFER",
     "to": "<RECIPIENT_ADDRESS>",
     "amount": "50000000000000000",
-    "network": "ethereum-mainnet"
+    "network": "ethereum-sepolia"
   }'
 ```
 **Expected**: PENDING_APPROVAL 상태. `id`를 TX_ID_3으로 기록
@@ -169,7 +169,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "TRANSFER",
     "to": "<RECIPIENT_ADDRESS>",
     "amount": "50000000000000000",
-    "network": "ethereum-mainnet"
+    "network": "ethereum-sepolia"
   }'
 ```
 **Expected**: PENDING_APPROVAL 상태. `id`를 TX_ID_4로 기록
@@ -196,11 +196,11 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID_4> \
 ## Estimated Cost
 | Item | Network | Estimated Gas | USD |
 |------|---------|---------------|-----|
-| ETH transfer (approve 시나리오, Step 4) | ethereum-mainnet | ~21,000 | ~$0.50 |
-| reject/cancel/timeout 시나리오 | ethereum-mainnet | 0 | $0 |
-| **Total** | | | **~$0.50** |
+| ETH transfer (approve 시나리오, Step 4) | ethereum-sepolia | ~21,000 | $0 (testnet) |
+| reject/cancel/timeout 시나리오 | ethereum-sepolia | 0 | $0 |
+| **Total** | | | **$0** |
 
-> **Note**: reject, cancel, timeout 시나리오는 온체인 실행 없이 상태만 전환되므로 가스비가 발생하지 않는다. 실제 비용은 approve 시나리오 1건의 가스비만 소요된다.
+> **Note**: 테스트넷(Sepolia)에서 실행하므로 실제 비용 없음. reject, cancel, timeout 시나리오는 온체인 실행 없이 상태만 전환된다.
 
 ## Troubleshooting
 | Symptom | Cause | Resolution |
@@ -214,4 +214,4 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID_4> \
 
 ## Cleanup
 - reject/cancel/timeout 시나리오에서 생성한 CANCELLED TX는 DB에 기록으로 남음 (삭제 불필요)
-- approve 시나리오에서 실제 ETH가 전송되므로 필요 시 수신 주소에서 회수
+- approve 시나리오에서 테스트넷 ETH가 전송됨 (회수 불필요)

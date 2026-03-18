@@ -156,6 +156,33 @@ describe('initCommand', () => {
     mockStdout.mockRestore();
   });
 
+  it('creates recovery.key when autoProvision is true', async () => {
+    const mockStdout = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const { initCommand } = await import('../commands/init.js');
+    await initCommand(testDir, { autoProvision: true });
+
+    const recoveryPath = join(testDir, 'recovery.key');
+    expect(existsSync(recoveryPath)).toBe(true);
+    const content = readFileSync(recoveryPath, 'utf-8');
+    // recovery key is 32 random bytes hex = 64 chars
+    expect(content).toHaveLength(64);
+
+    const allOutput = mockStdout.mock.calls.map((c) => c[0]).join('\n');
+    expect(allOutput).toContain('Auto-provision mode enabled');
+    expect(allOutput).toContain('Recovery key saved to');
+    expect(allOutput).toContain('IMPORTANT: Change the master password');
+
+    mockStdout.mockRestore();
+  });
+
+  it('rethrows non-permission errors from mkdirSync', async () => {
+    const { initCommand } = await import('../commands/init.js');
+
+    // Use a path with null bytes which causes an error that is NOT EACCES/EPERM
+    await expect(initCommand('/invalid\x00path')).rejects.toThrow();
+  });
+
   it('prints permission denied message on EACCES error', async () => {
     const mockStderr = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mockExit = vi.spyOn(process, 'exit').mockImplementation((() => {
@@ -509,6 +536,83 @@ describe('statusCommand', () => {
     expect(mockStdout).toHaveBeenCalledWith('Status: stopped (stale PID file)');
     // PID file should be cleaned up
     expect(existsSync(pidPath)).toBe(false);
+  });
+
+  it('reports "starting" when health check returns non-200', async () => {
+    const { createServer } = await import('node:http');
+
+    const server = createServer((_, res) => {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end('{"status":"unavailable"}');
+    });
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, '127.0.0.1', () => resolve());
+    });
+
+    const port = (server.address() as { port: number }).port;
+
+    writeFileSync(join(testDir, 'daemon.pid'), String(process.pid));
+    writeFileSync(
+      join(testDir, 'config.toml'),
+      `[daemon]\nport = ${port}\nhostname = "127.0.0.1"\n`,
+    );
+
+    const { statusCommand } = await import('../commands/status.js');
+    await statusCommand(testDir);
+
+    expect(mockStdout).toHaveBeenCalledWith(`Status: starting (PID: ${process.pid})`);
+
+    server.close();
+  });
+
+  it('reports "starting" when health check fetch throws (connection refused)', async () => {
+    writeFileSync(join(testDir, 'daemon.pid'), String(process.pid));
+    // Use a port that is almost certainly not in use
+    writeFileSync(
+      join(testDir, 'config.toml'),
+      `[daemon]\nport = 19999\nhostname = "127.0.0.1"\n`,
+    );
+
+    const { statusCommand } = await import('../commands/status.js');
+    await statusCommand(testDir);
+
+    expect(mockStdout).toHaveBeenCalledWith(`Status: starting (PID: ${process.pid})`);
+  });
+
+  it('falls back to default port when no config.toml exists', async () => {
+    writeFileSync(join(testDir, 'daemon.pid'), String(process.pid));
+    // No config.toml written -- resolvePort should return DEFAULT_DAEMON_PORT (3100)
+
+    const { statusCommand } = await import('../commands/status.js');
+    await statusCommand(testDir);
+
+    // Should report either "running" or "starting" with our PID
+    const allOutput = mockStdout.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+    expect(allOutput).toMatch(/Status: (running|starting)/);
+    expect(allOutput).toContain(String(process.pid));
+  });
+
+  it('falls back to default port when config.toml has no port line', async () => {
+    writeFileSync(join(testDir, 'daemon.pid'), String(process.pid));
+    writeFileSync(join(testDir, 'config.toml'), `[daemon]\nhostname = "127.0.0.1"\n`);
+
+    const { statusCommand } = await import('../commands/status.js');
+    await statusCommand(testDir);
+
+    const allOutput = mockStdout.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+    expect(allOutput).toMatch(/Status: (running|starting)/);
+  });
+
+  it('falls back to default port when port in config.toml is out of range', async () => {
+    writeFileSync(join(testDir, 'daemon.pid'), String(process.pid));
+    writeFileSync(join(testDir, 'config.toml'), `[daemon]\nport = 99999\n`);
+
+    const { statusCommand } = await import('../commands/status.js');
+    await statusCommand(testDir);
+
+    const allOutput = mockStdout.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+    expect(allOutput).toMatch(/Status: (running|starting)/);
   });
 });
 

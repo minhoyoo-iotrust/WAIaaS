@@ -1391,7 +1391,38 @@ export type paths = {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get a policy by ID */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Policy details */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PolicyResponse"];
+                    };
+                };
+                /** @description POLICY_NOT_FOUND: Policy not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         /** Update a policy */
         put: {
             parameters: {

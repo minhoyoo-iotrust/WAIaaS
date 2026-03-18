@@ -341,6 +341,113 @@ describe('PositionTracker', () => {
     trackerWithRpc.stop();
   });
 
+  it('syncCategory resolves RPC URLs via rpcPool when provided', async () => {
+    const mockRpcPool = {
+      getUrl: vi.fn().mockImplementation((network: string) => {
+        if (network === 'ethereum-sepolia') return 'http://pool-rpc:8545';
+        throw new Error('no entry');
+      }),
+    } as any;
+
+    const mockSettingsService = {
+      get: vi.fn().mockReturnValue(''),
+    } as any;
+
+    const trackerWithPool = new PositionTracker({
+      sqlite,
+      settingsService: mockSettingsService,
+      rpcPool: mockRpcPool,
+    });
+
+    const capturedContexts: PositionQueryContext[] = [];
+    const ctxProvider = makeMockProvider({
+      getPositions: vi.fn().mockImplementation((ctx: PositionQueryContext) => {
+        capturedContexts.push(ctx);
+        return Promise.resolve([]);
+      }),
+    });
+    trackerWithPool.registerProvider(ctxProvider);
+
+    await trackerWithPool.syncCategory('LENDING');
+
+    const ctx1 = capturedContexts[0]!;
+    expect(ctx1.rpcUrls['ethereum-sepolia']).toBe('http://pool-rpc:8545');
+
+    trackerWithPool.stop();
+  });
+
+  it('syncCategory falls back to rpcConfig when rpcPool has no entry', async () => {
+    const mockRpcPool = {
+      getUrl: vi.fn().mockImplementation(() => {
+        throw new Error('no entry');
+      }),
+    } as any;
+
+    const mockSettingsService = {
+      get: vi.fn().mockReturnValue(''),
+    } as any;
+
+    const trackerWithPool = new PositionTracker({
+      sqlite,
+      settingsService: mockSettingsService,
+      rpcPool: mockRpcPool,
+      rpcConfig: { evm_ethereum_sepolia: 'http://fallback:8545' },
+    });
+
+    const capturedContexts: PositionQueryContext[] = [];
+    const ctxProvider = makeMockProvider({
+      getPositions: vi.fn().mockImplementation((ctx: PositionQueryContext) => {
+        capturedContexts.push(ctx);
+        return Promise.resolve([]);
+      }),
+    });
+    trackerWithPool.registerProvider(ctxProvider);
+
+    await trackerWithPool.syncCategory('LENDING');
+
+    const ctx1 = capturedContexts[0]!;
+    expect(ctx1.rpcUrls['ethereum-sepolia']).toBe('http://fallback:8545');
+
+    trackerWithPool.stop();
+  });
+
+  it('syncCategory uses rpcPool over rpcConfig when both are available', async () => {
+    const mockRpcPool = {
+      getUrl: vi.fn().mockImplementation((network: string) => {
+        if (network === 'ethereum-sepolia') return 'http://pool-preferred:8545';
+        throw new Error('no entry');
+      }),
+    } as any;
+
+    const mockSettingsService = {
+      get: vi.fn().mockReturnValue(''),
+    } as any;
+
+    const trackerWithBoth = new PositionTracker({
+      sqlite,
+      settingsService: mockSettingsService,
+      rpcPool: mockRpcPool,
+      rpcConfig: { evm_ethereum_sepolia: 'http://config-fallback:8545' },
+    });
+
+    const capturedContexts: PositionQueryContext[] = [];
+    const ctxProvider = makeMockProvider({
+      getPositions: vi.fn().mockImplementation((ctx: PositionQueryContext) => {
+        capturedContexts.push(ctx);
+        return Promise.resolve([]);
+      }),
+    });
+    trackerWithBoth.registerProvider(ctxProvider);
+
+    await trackerWithBoth.syncCategory('LENDING');
+
+    const ctx1 = capturedContexts[0]!;
+    // rpcPool URL should take precedence
+    expect(ctx1.rpcUrls['ethereum-sepolia']).toBe('http://pool-preferred:8545');
+
+    trackerWithBoth.stop();
+  });
+
   it('syncCategory builds solana context for solana wallets', async () => {
     // Insert a solana wallet
     sqlite.prepare(
