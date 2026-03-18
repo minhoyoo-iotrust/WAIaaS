@@ -100,8 +100,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 450-01: PushRelaySigningChannel 구현 + ApprovalChannelRouter sdk_push 라우팅
-- [ ] 450-02: 알림 채널 Push Relay 전환 + NtfyChannel 제거 + config 정리
+- [x] 450-01: PushRelaySigningChannel 구현 + ApprovalChannelRouter sdk_push 라우팅
+- [x] 450-02: 알림 채널 Push Relay 전환 + NtfyChannel 제거 + config 정리
 
 ### Phase 451: 클라이언트 업데이트 -- SDK deprecated + Admin UI
 **Goal**: Wallet SDK의 ntfy 함수가 deprecated 표시되고, Admin UI가 Push Relay URL 기반 워크플로우를 제공하는 상태
@@ -126,5 +126,5 @@ Phases execute in numeric order: 449 -> 450 -> 451
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 449. Foundation | 3/3 | Complete    | 2026-03-18 |
-| 450. Daemon 서명 채널 재작성 | 0/2 | Not started | - |
+| 450. Daemon 서명 채널 재작성 | 2/2 | Complete    | 2026-03-18 |
 | 451. 클라이언트 업데이트 | 0/2 | Not started | - |

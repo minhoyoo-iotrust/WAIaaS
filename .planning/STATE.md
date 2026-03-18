@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.9
 milestone_name: Push Relay 직접 연동 (ntfy.sh 제거)
 status: completed
-stopped_at: Phase 449 completed, ready for Phase 450
-last_updated: "2026-03-18T05:05:21.993Z"
+stopped_at: Phase 450 completed (2/2 plans)
+last_updated: "2026-03-18T05:27:47.127Z"
 last_activity: 2026-03-18 — Phase 449 completed (3/3 plans)
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 2
+  total_plans: 5
+  completed_plans: 5
   percent: 43
 ---
 
@@ -44,6 +44,8 @@ Progress: [####░░░░░░] 43%
 | 449 | 01 | ~5min | 2 | 7 |
 | 449 | 02 | ~3min | 1 | 4 |
 | 449 | 03 | ~5min | 2 | 22 |
+| Phase 450 P01 | ~10min | 2 tasks | 12 files |
+| Phase 450 P02 | ~5min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -58,6 +60,9 @@ Progress: [####░░░░░░] 43%
 - PushPayload type moved from message-parser to push-provider (canonical location)
 - POST /v1/push requires API key, POST /v1/sign-response is public
 - Long-polling uses 1s poll interval, configurable timeout (1-120s, default 30s)
+- [Phase 450]: PushRelaySigningChannel replaces NtfySigningChannel with HTTP POST + long-polling
+- [Phase 450]: WalletNotificationChannel uses Push Relay POST instead of ntfy topics
+- [Phase 450]: NtfyChannel completely deleted, ntfy config/settings removed
 
 ### Pending Todos
 
@@ -69,6 +74,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-18
-Stopped at: Phase 449 completed, ready for Phase 450
+Last session: 2026-03-18T05:27:47.123Z
+Stopped at: Phase 450 completed (2/2 plans)
 Resume file: None
