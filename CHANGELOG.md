@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.27...v2.11.0) (2026-03-19)
+
+
+### Bug Fixes
+
+* promote v2.11.0-rc.27 to stable 2.11.0 ([67a3828](https://github.com/minhoyoo-iotrust/WAIaaS/commit/67a3828de6c863a167d34456cc197b6c1387de0a))
+
 ## [2.11.0-rc.27](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.26...v2.11.0-rc.27) (2026-03-19)
 
 
