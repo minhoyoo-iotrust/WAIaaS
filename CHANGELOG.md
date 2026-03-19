@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.0-rc.26](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.25...v2.11.0-rc.26) (2026-03-19)
+
+
+### Bug Fixes
+
+* pass rpcUrl to Kamino/Drift SDK, accept Pendle array response, and auto-resolve DCent decimals ([0120f1b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0120f1baf666e753083428e7b6157505a1a57d4c))
+* resolve Kamino/Drift RPC URL, Pendle schema regression, and DCent decimals auto-resolution ([e2e9da3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e2e9da398eece343d23121b223eeb6e82345de92))
+
 ## [2.11.0-rc.25](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.24...v2.11.0-rc.25) (2026-03-19)
 
 
