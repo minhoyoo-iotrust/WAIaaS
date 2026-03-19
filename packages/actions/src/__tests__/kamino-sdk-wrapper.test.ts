@@ -600,6 +600,39 @@ describe('KaminoSdkWrapper with mocked SDK', () => {
     ).rejects.toThrow('no valid instructions with accounts');
   });
 
+  it('throws when borrow instructions all have empty keys', async () => {
+    const emptyKeysIx = { programId: mockPubkey(KAMINO_PROGRAM_ID), data: Buffer.from('e'), keys: [] };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (wrapper as any)._sdk.KaminoAction.buildBorrowTxns.mockResolvedValueOnce({
+      setupIxs: [], lendingIxs: [emptyKeysIx], cleanupIxs: [],
+    });
+    await expect(wrapper.buildBorrowInstruction({
+      market: MARKET, asset: ASSET, amount: 1000000n, walletAddress: WALLET,
+    })).rejects.toThrow('no valid instructions with accounts for borrow');
+  });
+
+  it('throws when repay instructions all have empty keys', async () => {
+    const emptyKeysIx = { programId: mockPubkey(KAMINO_PROGRAM_ID), data: Buffer.from('e'), keys: [] };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (wrapper as any)._sdk.KaminoAction.buildRepayTxns.mockResolvedValueOnce({
+      setupIxs: [], lendingIxs: [emptyKeysIx], cleanupIxs: [],
+    });
+    await expect(wrapper.buildRepayInstruction({
+      market: MARKET, asset: ASSET, amount: 1000000n, walletAddress: WALLET,
+    })).rejects.toThrow('no valid instructions with accounts for repay');
+  });
+
+  it('throws when withdraw instructions all have empty keys', async () => {
+    const emptyKeysIx = { programId: mockPubkey(KAMINO_PROGRAM_ID), data: Buffer.from('e'), keys: [] };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (wrapper as any)._sdk.KaminoAction.buildWithdrawTxns.mockResolvedValueOnce({
+      setupIxs: [], lendingIxs: [emptyKeysIx], cleanupIxs: [],
+    });
+    await expect(wrapper.buildWithdrawInstruction({
+      market: MARKET, asset: ASSET, amount: 1000000n, walletAddress: WALLET,
+    })).rejects.toThrow('no valid instructions with accounts for withdraw');
+  });
+
   it('loadMarket throws when market not found', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (wrapper as any)._sdk.KaminoMarket.load.mockResolvedValueOnce(null);
