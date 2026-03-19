@@ -212,4 +212,28 @@ describe('Jito smallest-unit migration', () => {
       ).rejects.toThrow(/rpcUrl is required/);
     });
   });
+
+  describe('getStakePoolAccounts error paths', () => {
+    it('throws when stake pool account not found (null data)', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          jsonrpc: '2.0', id: 1, result: { value: null },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      );
+      const { getStakePoolAccounts } = await import('./jito-stake-pool.js');
+      await expect(getStakePoolAccounts(TEST_RPC_URL, 'BadAddress')).rejects.toThrow('Stake pool account not found');
+    });
+
+    it('throws when account data too short', async () => {
+      // Return a buffer shorter than 226 bytes
+      const shortBuf = Buffer.alloc(100, 0);
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          jsonrpc: '2.0', id: 1, result: { value: { data: [shortBuf.toString('base64'), 'base64'], executable: false, lamports: 0, owner: '', rentEpoch: 0 } },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      );
+      const { getStakePoolAccounts } = await import('./jito-stake-pool.js');
+      await expect(getStakePoolAccounts(TEST_RPC_URL, 'SomeAddress')).rejects.toThrow('too short');
+    });
+  });
 });
