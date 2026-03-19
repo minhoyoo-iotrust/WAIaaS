@@ -72,7 +72,7 @@ describe('JitoStakingActionProvider', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let fetchSpy: any;
   beforeEach(() => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
       new Response(JSON.stringify(buildStakePoolRpcResponse()), { status: 200, headers: { 'Content-Type': 'application/json' } }),
     );
   });

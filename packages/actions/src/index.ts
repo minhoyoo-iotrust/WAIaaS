@@ -254,11 +254,14 @@ export function registerBuiltInProviders(
 
         const addresses = getJitoAddresses('mainnet');
 
+        const rpcUrl = settingsReader.get('rpc.solana_mainnet') || undefined;
+
         const config: JitoStakingConfig = {
           enabled: true,
           stakePoolAddress: stakePoolOverride || addresses.stakePoolAddress,
           jitosolMint: jitosolMintOverride || addresses.jitosolMint,
           stakePoolProgram: addresses.stakePoolProgram,
+          rpcUrl,
         };
         return new JitoStakingActionProvider(config);
       },
