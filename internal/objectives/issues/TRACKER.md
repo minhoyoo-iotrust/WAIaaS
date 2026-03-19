@@ -64,6 +64,7 @@
 | 414 | BUG | HIGH | Pendle buy_pt 스키마 불일치 5회차 재발 — #407 passthrough 수정 불완전, 실제 API 응답 구조 미반영 | — | OPEN | — |
 | 415 | BUG | HIGH | Drift SDK 초기화 시 Solana RPC 429 + 재시도 로직 부재 — subscribe() 3-4회 RPC, RPC Pool 미연동 | — | OPEN | — |
 | 416 | BUG | MEDIUM | Action Provider 디버그 로그가 log_level 설정 무시하고 항상 출력 — #412 후속, ConsoleLogger 레벨 필터링 없음 | — | OPEN | — |
+| 417 | MISSING | MEDIUM | DCent Swap Solana 체인 미지원 — EVM 전용 가드로 Solana 스왑 차단, defi-16 시나리오 실행 불가 | — | OPEN | — |
 
 ## Type Legend
 
@@ -75,8 +76,8 @@
 
 ## Summary
 
-- **OPEN:** 4
+- **OPEN:** 5
 - **FIXED:** 412
 - **WONTFIX:** 1
-- **Total:** 416
+- **Total:** 417
 - **Archived:** 366 (001–366)
