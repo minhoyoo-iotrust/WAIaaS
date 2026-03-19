@@ -1,44 +1,81 @@
-# #412 — DCent Swap API 요청/응답 디버그 로깅 누락
+# #412 — Action Provider 외부 API 요청/응답 디버그 로깅 누락
 
 - **유형**: ENHANCEMENT
-- **심각도**: MEDIUM
-- **영향 시나리오**: defi-12b, defi-15, defi-12c, defi-14
-- **컴포넌트**: `packages/actions/src/providers/dcent-swap/dcent-api-client.ts`
+- **심각도**: HIGH
+- **영향 시나리오**: defi-08, defi-09, defi-10, defi-12b, defi-12c, defi-14, defi-15
+- **컴포넌트**: `packages/actions/src/common/action-api-client.ts`, 각 SDK Wrapper
 
 ## 현상
 
-DCent Swap UAT 실패 시 `agent-swap.dcentwallet.com`에 보낸 HTTP 요청과 응답을 확인할 수 없어 실패 원인 분석이 불가능하다.
+Action Provider UAT 실패 시 외부 API/SDK에 보낸 요청과 응답을 확인할 수 없어 실패 원인 분석이 불가능하다.
 
-- defi-15 (크로스체인 EVM→Solana): empty txdata 반환 → "API 미지원"으로 오판하여 WONTFIX 처리
-- defi-12c (Solana SOL→USDC): 스키마 실패 시 원본 응답 확인 불가
-- defi-14 (2-hop): get_quotes 실패 시 어떤 파라미터로 요청했는지 불명
+- defi-15 (DCent 크로스체인): empty txdata → "API 미지원"으로 **오판하여 WONTFIX 처리**
+- defi-09 (Pendle): Zod 스키마 5회 반복 실패 → 실제 API 응답을 한 번도 확인 못함
+- defi-08 (Kamino): SDK instruction 빌드 실패 → SDK가 뭘 반환했는지 불명
+- defi-10 (Drift): RPC 429 → SDK 내부 어떤 호출이 rate limit에 걸렸는지 불명
 
 ## 원인
 
-`DcentSwapApiClient`의 `getQuotes()`, `getDexSwapTransactionData()` 메서드에 요청/응답 로깅이 전혀 없다. 에러 발생 시 ChainError 메시지만 남고 원본 HTTP 요청 body와 응답 body가 유실된다.
+모든 Action Provider에 요청/응답 로깅이 전혀 없다. 에러 발생 시 ChainError 메시지만 남고 원본 요청 body와 응답 body가 유실된다.
 
 ## 수정 방향
 
-1. `DcentSwapApiClient` 생성자에 `ILogger` 주입
-2. `getQuotes()`, `getDexSwapTransactionData()` 호출 시 `debug` 레벨로 기록:
-   - 요청: HTTP method, endpoint path, request body (JSON)
-   - 응답: HTTP status, response body (JSON)
-   - 에러 시: 요청 body + 에러 상세 함께 기록
-3. 기존 `ActionApiClient`는 변경하지 않음 (DCent 전용 로깅)
+### 계층 1: ActionApiClient (HTTP 기반 프로바이더 공통)
 
-## 기대 효과
+대상: DCent, Pendle, 0x, LI.FI, Across, Jupiter
+
+1. `ActionApiClient` 생성자에 `ILogger` 옵셔널 주입
+2. `get()`, `post()` 메서드에 debug 레벨 로깅 추가:
+   - 요청: HTTP method, endpoint path, request body/params (JSON)
+   - 응답: HTTP status, response body (JSON, Zod 검증 전 원본)
+   - 에러 시: 요청 body + 에러 상세 함께 기록
+3. logger 미주입 시 기존 동작 유지 (하위 호환)
 
 ```
-[DEBUG] DCent API POST api/swap/v3/get_dex_swap_transaction_data
-  Request: { fromId: "ETHEREUM", toId: "SPL-TOKEN/EPjF...", fromAmount: "1000000000000000", ... }
+[DEBUG] ActionApiClient POST api/swap/v3/get_dex_swap_transaction_data
+  Request: { fromId: "ETHEREUM", toId: "SPL-TOKEN/EPjF...", ... }
   Response: { status: "success", txdata: null, ... }
 ```
 
-UAT 실패 시 원인을 즉시 파악할 수 있어 "API 미지원" 같은 오판을 방지한다.
+### 계층 2: SDK Wrapper (SDK 기반 프로바이더)
+
+대상: Kamino, Drift, Jito, Lido, Aave
+
+1. 각 SDK Wrapper에 `ILogger` 주입
+2. SDK 메서드 호출 전후 params/result를 debug 레벨로 기록:
+   - 요청: SDK 메서드명, 입력 파라미터
+   - 응답: SDK 반환값 (instruction 개수, accounts 개수 등 요약)
+   - 에러 시: SDK 에러 메시지 + 입력 파라미터 함께 기록
+
+```
+[DEBUG] KaminoSdkWrapper.buildSupplyInstruction
+  Params: { asset: "EPjF...", humanAmount: "1.0", decimals: 6 }
+  Result: { instructions: 3, accounts: [12, 8, 5] }
+```
+
+```
+[DEBUG] DriftSdkWrapper.getClient
+  RPC: api.mainnet-beta.solana.com
+  Error: 429 Too Many Requests (subscribe() failed)
+```
+
+## 기대 효과
+
+- Pendle 스키마 문제: 실제 API 응답 원본을 즉시 확인 → 스키마를 정확히 수정 가능
+- DCent 크로스체인: 요청 파라미터와 응답을 대조 → "API 미지원" 오판 방지
+- Kamino/Drift: SDK 내부 동작 추적 → instruction 빌드 실패/RPC 에러 원인 즉시 파악
 
 ## 테스트 항목
 
-- [ ] `getQuotes()` 호출 시 request/response가 debug 로그에 출력되는지 확인
-- [ ] `getDexSwapTransactionData()` 호출 시 request/response가 debug 로그에 출력되는지 확인
-- [ ] API 에러(empty txdata, 429, timeout) 발생 시 request body가 에러 로그에 포함되는지 확인
-- [ ] 민감 정보(walletAddress)가 로그에 포함되지만 보안상 문제없는지 확인 (debug 레벨, 로컬 데몬)
+### ActionApiClient (공통)
+- [ ] `get()` 호출 시 request URL/params + response body가 debug 로그에 출력
+- [ ] `post()` 호출 시 request body + response body가 debug 로그에 출력
+- [ ] API 에러(4xx, 5xx, timeout) 발생 시 request body + 에러 상세가 로그에 포함
+- [ ] Zod 검증 실패 시 원본 response body가 로그에 포함 (스키마 디버깅용)
+- [ ] logger 미주입 시 기존 동작과 동일 (하위 호환)
+
+### SDK Wrapper (프로바이더별)
+- [ ] Kamino: buildSupplyInstruction 전후 params/result 로깅
+- [ ] Drift: getClient() subscribe 성공/실패 로깅
+- [ ] Pendle: convert API 호출 전후 raw response 로깅
+- [ ] 민감 정보(walletAddress)는 debug 레벨이므로 로컬 데몬 환경에서만 노출 (보안 영향 없음)
