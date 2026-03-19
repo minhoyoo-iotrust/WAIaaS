@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.11.0-rc.23](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.22...v2.11.0-rc.23) (2026-03-19)
+
+
+### Features
+
+* **453-02:** remove admin/setup skills and update registry/installer ([921a8d4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/921a8d4c1d94ca49f08c8d2e9af6f5d85e981fa5))
+* **453-02:** remove masterAuth content from all skill files ([97d4ec4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/97d4ec44358a2b3c732ea72503660ee063fc4fda))
+* **454-01:** scaffold @waiaas/openclaw-plugin package ([18beaf8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/18beaf8b478edd0613f7fafee4823b82fd7964c2))
+* **454-02:** implement 17 sessionAuth tools for OpenClaw plugin ([83f0d75](https://github.com/minhoyoo-iotrust/WAIaaS/commit/83f0d75582dd532d07f9b03a7115909ffdf7a741))
+* **455-01:** integrate openclaw-plugin into release and publish pipelines ([75860e4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/75860e4d298d3272cfd1aa4b57f791eccb113143))
+* **455-02:** rewrite openclaw-integration.md + add openclaw-plugin SEO page + rebuild site ([b26d493](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b26d49303f9435e4220b3c02011cc353ea546a12))
+
+
+### Bug Fixes
+
+* **db:** rebuild wallets table in v60 migration to update CHECK constraint ([7d933f4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7d933f414502eef8c4c15f53ba5ac667dc9e9b8c))
+
+
+### Code Refactoring
+
+* **452-01:** rename docs/guides/ to docs/agent-guides/ ([e235d2b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e235d2b2fc332c72652852bb6eb02dd84c3dabcf))
+
 ## [2.11.0-rc.22](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.21...v2.11.0-rc.22) (2026-03-18)
 
 
