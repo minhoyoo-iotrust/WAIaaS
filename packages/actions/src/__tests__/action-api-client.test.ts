@@ -12,8 +12,15 @@ import { ActionApiClient } from '../common/action-api-client.js';
 const BASE_URL = 'http://test-api.local';
 const TestSchema = z.object({ id: z.number(), name: z.string() });
 
-function createMockLogger(): ILogger & { calls: Record<string, Array<[string, Record<string, unknown>?]>> } {
-  const calls: Record<string, Array<[string, Record<string, unknown>?]>> = {
+interface MockCalls {
+  debug: Array<[string, Record<string, unknown>?]>;
+  info: Array<[string, Record<string, unknown>?]>;
+  warn: Array<[string, Record<string, unknown>?]>;
+  error: Array<[string, Record<string, unknown>?]>;
+}
+
+function createMockLogger(): ILogger & { calls: MockCalls } {
+  const calls: MockCalls = {
     debug: [], info: [], warn: [], error: [],
   };
   return {
