@@ -98,4 +98,26 @@ describe('ConsoleLogger', () => {
     logger.debug('visible');
     expect(spy).toHaveBeenCalledWith('visible');
   });
+
+  it('level getter returns current level', () => {
+    logger = new ConsoleLogger(undefined, 'warn');
+    expect(logger.level).toBe('warn');
+    logger.setLevel('error');
+    expect(logger.level).toBe('error');
+  });
+
+  it('defaults to info level when not specified', () => {
+    logger = new ConsoleLogger();
+    expect(logger.level).toBe('info');
+  });
+
+  it('error level only allows error messages', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    logger = new ConsoleLogger(undefined, 'error');
+    logger.warn('suppressed');
+    logger.error('visible');
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+  });
 });
