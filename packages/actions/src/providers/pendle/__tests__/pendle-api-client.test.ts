@@ -229,7 +229,72 @@ describe('PendleApiClient', () => {
     });
   });
 
-  describe('getSwappingPrices', () => {
+  describe('convert — extra fields tolerance (#407)', () => {
+      it('accepts object response with extra fields in tx', async () => {
+        server.use(
+          http.get(`${BASE_URL}/v2/sdk/1/convert`, () => {
+            return HttpResponse.json({
+              tx: {
+                to: '0xPendleRouter',
+                data: '0xabcdef',
+                value: '0',
+                gasLimit: '350000',
+                chainId: 1,
+                type: 2,
+              },
+              amountOut: '500',
+              priceImpact: 0.002,
+              route: { steps: 3 },
+            });
+          }),
+        );
+
+        const client = new PendleApiClient(makeConfig(), 1);
+        const result = await client.convert({
+          tokensIn: '0xA',
+          amountsIn: '100',
+          tokensOut: '0xB',
+          slippage: '0.01',
+          receiver: '0xC',
+        });
+
+        expect(result.tx.to).toBe('0xPendleRouter');
+        expect(result.tx.data).toBe('0xabcdef');
+        expect(result.amountOut).toBe('500');
+      });
+
+      it('accepts array response with extra fields in tx', async () => {
+        server.use(
+          http.get(`${BASE_URL}/v2/sdk/1/convert`, () => {
+            return HttpResponse.json([{
+              tx: {
+                to: '0xRouter',
+                data: '0x1234',
+                value: '0',
+                gasLimit: '500000',
+                maxFeePerGas: '30000000000',
+              },
+              amountOut: '999',
+              bonus: { amount: '10' },
+            }]);
+          }),
+        );
+
+        const client = new PendleApiClient(makeConfig(), 1);
+        const result = await client.convert({
+          tokensIn: '0xA',
+          amountsIn: '100',
+          tokensOut: '0xB',
+          slippage: '0.01',
+          receiver: '0xC',
+        });
+
+        expect(result.tx.to).toBe('0xRouter');
+        expect(result.amountOut).toBe('999');
+      });
+    });
+
+    describe('getSwappingPrices', () => {
     it('returns validated swapping prices', async () => {
       const client = new PendleApiClient(makeConfig(), 1);
       const result = await client.getSwappingPrices('0xMarketAddress123');

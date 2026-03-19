@@ -31,6 +31,8 @@ export const SimulationWarningCodeEnum = z.enum([
   'CONTRACT_NOT_WHITELISTED',
   'NETWORK_NOT_ALLOWED',
   'DOWNGRADED_NO_OWNER',
+  'GAS_CONDITION_NOT_MET',
+  'GAS_CONDITION_DISABLED',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -102,6 +104,15 @@ export const SimulationMetaSchema = z.object({
 // Top-level schema
 // ---------------------------------------------------------------------------
 
+/** Gas condition evaluation result (present only when gasCondition was specified in request). */
+export const GasConditionResultSchema = z.object({
+  met: z.boolean(),
+  currentGasPrice: z.string(),
+  currentPriorityFee: z.string().optional(),
+  maxGasPrice: z.string().optional(),
+  maxPriorityFee: z.string().optional(),
+});
+
 /** Complete dry-run simulation result (Zod SSoT). */
 export const DryRunSimulationResultSchema = z.object({
   success: z.boolean(),
@@ -111,6 +122,7 @@ export const DryRunSimulationResultSchema = z.object({
   warnings: z.array(SimulationWarningSchema),
   simulation: SimulationDetailSchema,
   meta: SimulationMetaSchema,
+  gasCondition: GasConditionResultSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -124,4 +136,5 @@ export type BalanceChange = z.infer<typeof BalanceChangeSchema>;
 export type SimulationWarning = z.infer<typeof SimulationWarningSchema>;
 export type SimulationDetail = z.infer<typeof SimulationDetailSchema>;
 export type SimulationMeta = z.infer<typeof SimulationMetaSchema>;
+export type GasConditionResult = z.infer<typeof GasConditionResultSchema>;
 export type DryRunSimulationResult = z.infer<typeof DryRunSimulationResultSchema>;

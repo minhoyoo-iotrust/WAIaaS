@@ -10,7 +10,7 @@ updated: "2026-03-18"
 |----------|-------|-------------|
 | testnet | 6 | Testnet 기능 검증 |
 | mainnet | 6 | Mainnet 전송 검증 |
-| defi | 13 | DeFi 프로토콜 검증 |
+| defi | 16 | DeFi 프로토콜 검증 |
 | admin | 13 | Admin UI 검증 |
 | admin-ops | 2 | 운영 모니터링 검증 |
 | advanced | 5 | 고급 기능 검증 |
@@ -51,8 +51,11 @@ updated: "2026-03-18"
 | defi-09 | Pendle Yield Trading (PT) | ethereum-mainnet | mainnet | Yes | $5.00 | medium |
 | defi-10 | Drift Perpetual Trading | solana-mainnet | mainnet | Yes | $0.01 | medium |
 | defi-11 | Hyperliquid Mainnet Perp/Spot | hyperliquid-mainnet | mainnet | Yes | $0 | medium |
-| defi-12 | DCent Swap Aggregator | ethereum-mainnet | mainnet | Yes | $5.00 | medium |
+| defi-12 | DCent Swap EVM (ETH→USDC) | ethereum-mainnet | mainnet | Yes | $5.00 | medium |
 | defi-13 | Polymarket 예측 시장 주문 | polygon-mainnet | mainnet | Yes | $1.00 | medium |
+| defi-14 | DCent 2-hop Auto-Routing (DAI→LINK) | ethereum-mainnet | mainnet | Yes | $5.00 | medium |
+| defi-15 | DCent 크로스체인 스왑 (EVM→Solana) | ethereum-mainnet, solana-mainnet | mainnet | Yes | $5.00 | medium |
+| defi-16 | DCent Solana 네이티브 스왑 (SOL→USDC) | solana-mainnet | mainnet | Yes | $0.01 | medium |
 
 ### Admin-Ops
 | ID | Title | Network | Env | Funds | Cost | Risk |
@@ -93,8 +96,8 @@ updated: "2026-03-18"
 | ethereum-sepolia | testnet-01, testnet-03, testnet-06, advanced-01, advanced-05, admin-ops-01, admin-ops-02, admin-09 |
 | solana-devnet | testnet-02, testnet-04, admin-ops-01, admin-ops-02 |
 | hyperliquid-testnet | testnet-05 |
-| ethereum-mainnet | mainnet-01, mainnet-03, defi-02, defi-03, defi-05, defi-07, defi-09, defi-12, advanced-02, advanced-03, advanced-04, admin-06, admin-07, admin-08, admin-12 |
-| solana-mainnet | mainnet-02, mainnet-04, defi-01, defi-06, defi-08, defi-10, admin-06, admin-07, admin-08 |
+| ethereum-mainnet | mainnet-01, mainnet-03, defi-02, defi-03, defi-05, defi-07, defi-09, defi-12, defi-14, defi-15, advanced-02, advanced-03, advanced-04, admin-06, admin-07, admin-08, admin-12 |
+| solana-mainnet | mainnet-02, mainnet-04, defi-01, defi-06, defi-08, defi-10, defi-15, defi-16, admin-06, admin-07, admin-08 |
 | polygon-mainnet | mainnet-05, defi-02, defi-07, defi-13 |
 | arbitrum-mainnet | mainnet-05, defi-03, defi-04 |
 | base-mainnet | mainnet-05, mainnet-06, defi-04, advanced-02 |
@@ -105,8 +108,8 @@ updated: "2026-03-18"
 - **세션 토큰만 (sessionAuth)**: testnet-01 ~ testnet-06, mainnet-01 ~ mainnet-06, defi-01 ~ defi-13, admin-ops-01 ~ admin-ops-02, advanced-01 ~ advanced-05
 - **무료 (no funds)**: advanced-03, advanced-04, admin-01, admin-02, admin-03, admin-05, admin-06, admin-07, admin-08, admin-10, admin-11, admin-12, admin-13
 - **Low risk**: testnet-01, testnet-02, testnet-03, testnet-04, testnet-06, advanced-01, advanced-05, admin-ops-01, admin-ops-02, admin-04, admin-09, admin-11
-- **Medium risk**: testnet-05, mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12, defi-13, advanced-02
+- **Medium risk**: testnet-05, mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12, defi-13, defi-14, defi-15, defi-16, advanced-02
 - **High risk**: (none yet)
 - **Offchain (no blockchain)**: admin-01, admin-02, admin-03, admin-04, admin-05, admin-09, admin-10, admin-11, admin-13
 - **Testnet only**: testnet-01, testnet-02, testnet-03, testnet-04, testnet-05, testnet-06, admin-ops-01, admin-ops-02, advanced-01, advanced-05
-- **Mainnet**: mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12, defi-13, admin-06, admin-07, admin-08, admin-12, advanced-02, advanced-03, advanced-04
+- **Mainnet**: mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12, defi-13, defi-14, defi-15, defi-16, admin-06, admin-07, admin-08, admin-12, advanced-02, advanced-03, advanced-04

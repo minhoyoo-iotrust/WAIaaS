@@ -17,6 +17,7 @@ import type {
   ActionDefinition,
   ActionContext,
   ContractCallRequest,
+  ApiDirectResult,
 } from '@waiaas/core';
 import { DcentSwapApiClient } from './dcent-api-client.js';
 import { type DcentSwapConfig, DCENT_SWAP_DEFAULTS } from './config.js';
@@ -142,25 +143,38 @@ export class DcentSwapActionProvider implements IActionProvider {
     actionName: string,
     params: Record<string, unknown>,
     context: ActionContext,
-  ): Promise<ContractCallRequest | ContractCallRequest[]> {
+  ): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult> {
+    // Chain guard: D'CENT Swap only supports EVM chains
+    if (context.chain !== 'ethereum') {
+      throw new ChainError('INVALID_INSTRUCTION', context.chain, {
+        message: `D'CENT Swap only supports EVM (ethereum) chains. Got: ${context.chain}`,
+      });
+    }
+
     // Phase 405: humanAmount -> amount conversion
     const rp = { ...params };
     resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
 
     switch (actionName) {
       case 'get_quotes': {
-        // DS-07: get_quotes is informational. Use queryQuotes() for direct access.
+        // DS-07: get_quotes is informational -- returns ApiDirectResult (issue #409 fix)
         const input = GetQuotesInputSchema.parse(rp);
         if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
         const fromDec = input.fromDecimals ?? resolveDecimals(input.fromAsset, 'fromDecimals');
         const toDec = input.toDecimals ?? resolveDecimals(input.toAsset, 'toDecimals');
         const result = await getDcentQuotes(this.getClient(), { ...input, fromDecimals: fromDec, toDecimals: toDec, fromWalletAddress: context.walletAddress } as GetQuotesParams);
-        throw new ChainError('INVALID_INSTRUCTION', context.chain, {
-          message: `get_quotes is informational. Use queryQuotes() query method. Result: ${JSON.stringify({
-            dexProviders: result.dexProviders.length,
-            bestDexProvider: result.bestDexProvider?.providerId ?? null,
-          })}`,
-        });
+        return {
+          __apiDirect: true as const,
+          externalId: `dcent-quotes-${Date.now()}`,
+          status: 'success' as const,
+          provider: 'dcent_swap',
+          action: 'get_quotes',
+          data: {
+            dexProviders: result.dexProviders,
+            bestDexProvider: result.bestDexProvider ?? null,
+            totalProviders: result.dexProviders.length,
+          },
+        };
       }
 
       case 'dex_swap': {

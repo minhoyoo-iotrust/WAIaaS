@@ -1269,6 +1269,15 @@ export const DryRunSimulationResultOpenAPI = z
       transactionType: z.string(),
       durationMs: z.number(),
     }),
+    gasCondition: z
+      .object({
+        met: z.boolean(),
+        currentGasPrice: z.string(),
+        currentPriorityFee: z.string().optional(),
+        maxGasPrice: z.string().optional(),
+        maxPriorityFee: z.string().optional(),
+      })
+      .optional(),
   })
   .openapi('DryRunSimulationResult');
 

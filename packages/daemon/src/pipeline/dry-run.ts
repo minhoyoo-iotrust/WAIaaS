@@ -27,6 +27,7 @@ import {
   type UnsignedTransaction,
   type SimulationResult,
   type DryRunSimulationResult,
+  type GasConditionResult,
   type ChainType,
   type PolicyEvaluation,
   type IPriceOracle,
@@ -38,6 +39,7 @@ import { buildByType, buildTransactionParam, getRequestAmount } from './stages.j
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { downgradeIfNoOwner } from '../workflow/owner-state.js';
 import { GAS_SAFETY_NUMERATOR, GAS_SAFETY_DENOMINATOR } from '../constants.js';
+import { queryEvmGasPrice, querySolanaGasPrice } from './gas-condition-tracker.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -54,6 +56,8 @@ export interface DryRunDeps {
   policyEngine: IPolicyEngine;
   priceOracle?: IPriceOracle;
   settingsService?: SettingsService;
+  /** RPC URL for gas price queries (needed for gasCondition evaluation). */
+  rpcUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,6 +75,7 @@ export interface DryRunCollector {
   startTime: number;
   amountUsd: number | null;
   feeUsd: number | null;
+  gasConditionResult: GasConditionResult | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -110,6 +115,7 @@ export async function executeDryRun(
     startTime: Date.now(),
     amountUsd: null,
     feeUsd: null,
+    gasConditionResult: null,
   };
 
   const chain = walletInfo.chain;
@@ -425,7 +431,120 @@ export async function executeDryRun(
     }
   }
 
+  // -----------------------------------------------------------------------
+  // Gas condition evaluation (read-only -- no DB writes, no pipeline halt)
+  // -----------------------------------------------------------------------
+
+  await evaluateGasCondition(deps, request, chain, collector);
+
   return buildResult(collector, request, txType, chain, resolvedNetwork);
+}
+
+// ---------------------------------------------------------------------------
+// Gas condition evaluation (read-only)
+// ---------------------------------------------------------------------------
+
+/**
+ * Evaluate gasCondition from the request against current on-chain gas prices.
+ * Populates collector.gasConditionResult and adds warnings if condition is not met.
+ * No side effects: no DB writes, no pipeline halt, no notifications.
+ */
+async function evaluateGasCondition(
+  deps: DryRunDeps,
+  request: TransactionRequest,
+  chain: string,
+  collector: DryRunCollector,
+): Promise<void> {
+  // Check if request has gasCondition
+  const gasCondition = ('gasCondition' in request && request.gasCondition)
+    ? request.gasCondition as { maxGasPrice?: string; maxPriorityFee?: string; timeout?: number }
+    : undefined;
+
+  if (!gasCondition) {
+    // No gas condition specified: skip (backward compat)
+    return;
+  }
+
+  // Check if gas_condition feature is enabled via settings
+  let gasConditionEnabled = true;
+  if (deps.settingsService) {
+    try {
+      const enabledValue = deps.settingsService.get('gas_condition.enabled');
+      gasConditionEnabled = enabledValue !== 'false';
+    } catch {
+      // Setting key not yet registered -- default to true
+      gasConditionEnabled = true;
+    }
+  }
+
+  if (!gasConditionEnabled) {
+    // Feature disabled: report in warnings, skip evaluation
+    collector.warnings.push({
+      code: 'GAS_CONDITION_DISABLED',
+      message: 'Gas condition feature is disabled in Admin Settings',
+      severity: 'info',
+    });
+    return;
+  }
+
+  // Need RPC URL to query gas price
+  const rpcUrl = deps.rpcUrl;
+  if (!rpcUrl) {
+    collector.warnings.push({
+      code: 'GAS_CONDITION_NOT_MET',
+      message: 'Cannot evaluate gas condition: no RPC URL available',
+      severity: 'warning',
+    });
+    return;
+  }
+
+  try {
+    // Query current gas price based on chain
+    const { gasPrice, priorityFee } = chain === 'solana'
+      ? await querySolanaGasPrice(rpcUrl)
+      : await queryEvmGasPrice(rpcUrl);
+
+    // Evaluate gas condition
+    let conditionMet = true;
+
+    if (gasCondition.maxGasPrice) {
+      const threshold = BigInt(gasCondition.maxGasPrice);
+      if (gasPrice > threshold) {
+        conditionMet = false;
+      }
+    }
+
+    if (gasCondition.maxPriorityFee && conditionMet) {
+      const threshold = BigInt(gasCondition.maxPriorityFee);
+      if (priorityFee > threshold) {
+        conditionMet = false;
+      }
+    }
+
+    collector.gasConditionResult = {
+      met: conditionMet,
+      currentGasPrice: gasPrice.toString(),
+      currentPriorityFee: priorityFee > 0n ? priorityFee.toString() : undefined,
+      maxGasPrice: gasCondition.maxGasPrice,
+      maxPriorityFee: gasCondition.maxPriorityFee,
+    };
+
+    if (!conditionMet) {
+      collector.warnings.push({
+        code: 'GAS_CONDITION_NOT_MET',
+        message: `Current gas price (${gasPrice.toString()}) exceeds maxGasPrice (${gasCondition.maxGasPrice ?? 'N/A'})`,
+        severity: 'warning',
+      });
+    }
+  } catch (err) {
+    // RPC error -- report as warning, gasConditionResult stays null
+    const errMsg = err instanceof Error ? err.message : 'Gas price query failed';
+    collector.warnings.push({
+      code: 'GAS_CONDITION_NOT_MET',
+      message: `Cannot evaluate gas condition: ${errMsg}`,
+      severity: 'warning',
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -525,5 +644,6 @@ function buildResult(
     warnings: collector.warnings as DryRunSimulationResult['warnings'],
     simulation,
     meta,
+    ...(collector.gasConditionResult ? { gasCondition: collector.gasConditionResult } : {}),
   };
 }

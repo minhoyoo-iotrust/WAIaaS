@@ -156,10 +156,10 @@ describe('DryRunSimulationResult Zod SSoT', () => {
     expect(result.decimals).toBe(18);
   });
 
-  // ---------- Test 6: SimulationWarningCodeEnum contains all 12 codes ----------
-  it('contains all 12 warning codes', () => {
+  // ---------- Test 6: SimulationWarningCodeEnum contains all 14 codes ----------
+  it('contains all 14 warning codes', () => {
     const codes = SimulationWarningCodeEnum.options;
-    expect(codes).toHaveLength(12);
+    expect(codes).toHaveLength(14);
     expect(codes).toContain('INSUFFICIENT_BALANCE');
     expect(codes).toContain('INSUFFICIENT_BALANCE_WITH_FEE');
     expect(codes).toContain('ORACLE_PRICE_UNAVAILABLE');
@@ -172,6 +172,8 @@ describe('DryRunSimulationResult Zod SSoT', () => {
     expect(codes).toContain('CONTRACT_NOT_WHITELISTED');
     expect(codes).toContain('NETWORK_NOT_ALLOWED');
     expect(codes).toContain('DOWNGRADED_NO_OWNER');
+    expect(codes).toContain('GAS_CONDITION_NOT_MET');
+    expect(codes).toContain('GAS_CONDITION_DISABLED');
   });
 
   // ---------- Test 7: SimulationWarningSchema ----------

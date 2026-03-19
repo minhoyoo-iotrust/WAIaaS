@@ -52,6 +52,13 @@
 | 402 | BUG | HIGH | Kamino/Drift SDK RPC URL 미설정으로 Action 실행 전면 실패 — Endpoint URL must start with http | — | FIXED | 2026-03-19 |
 | 403 | BUG | HIGH | Pendle API 응답 스키마 불일치 재발 — buy_pt array vs object (#373/#398 3회차) | — | FIXED | 2026-03-19 |
 | 404 | BUG | MEDIUM | DCent Swap dex_swap fromDecimals/toDecimals 필수인데 시나리오/문서 누락 — 파라미터 없이 호출 시 검증 실패 | — | FIXED | 2026-03-19 |
+| 405 | BUG | MEDIUM | simulate API에서 gasCondition 파라미터 무시됨 — 낮은 maxGasPrice에도 success: true 반환 | — | FIXED | 2026-03-19 |
+| 406 | BUG | HIGH | Kamino Supply programId.toBuffer is not a function — @solana/kit 6.x PublicKey 호환성 | — | FIXED | 2026-03-19 |
+| 407 | BUG | HIGH | Pendle API 응답 스키마 불일치 4회차 재발 — array vs object (#373/#398/#403 후속) | — | FIXED | 2026-03-19 |
+| 408 | BUG | HIGH | Drift SDK Wallet.local is not a function — SDK 초기화 호환성 에러 | — | FIXED | 2026-03-19 |
+| 409 | BUG | MEDIUM | DCent get_quotes informational 액션이 ACTION_RESOLVE_FAILED로 반환 — 결과 데이터는 포함 | — | FIXED | 2026-03-19 |
+| 410 | BUG | HIGH | DCent Swap Solana txdata 스키마 회귀 — EVM from/to Required (#394 재발) | — | FIXED | 2026-03-19 |
+| 411 | BUG | MEDIUM | UserOp Build/Sign 경로 불일치 + UAT 시나리오 오류 — /v1/wallets/{id}/userop/* 가 실제 경로 | — | FIXED | 2026-03-19 |
 
 ## Type Legend
 
@@ -64,7 +71,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 404
+- **FIXED:** 411
 - **WONTFIX:** 1
-- **Total:** 405
+- **Total:** 412
 - **Archived:** 366 (001–366)

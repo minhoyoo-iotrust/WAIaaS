@@ -1,0 +1,135 @@
+---
+id: "defi-16"
+title: "DCent Solana 네이티브 스왑 (SOL→USDC)"
+category: "defi"
+auth: "session"
+network: ["solana-mainnet"]
+requires_funds: true
+estimated_cost_usd: "0.01"
+risk_level: "medium"
+tags: ["defi", "swap", "dcent", "aggregator", "solana"]
+---
+
+# DCent Solana 네이티브 스왑 (SOL→USDC)
+
+## Metadata
+- **ID**: defi-16
+- **Category**: defi
+- **Network**: solana-mainnet
+- **Requires Funds**: Yes
+- **Estimated Cost**: ~$0.01
+- **Risk Level**: medium -- 실제 메인넷 SOL 스왑, 슬리피지에 의한 미세 손실 가능
+
+## Prerequisites
+- [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
+- [ ] 세션 토큰 보유 (sessionAuth)
+- [ ] Solana Mainnet 지갑 보유
+- [ ] SOL 보유 (최소 0.01 SOL -- 스왑 금액 + tx fee)
+
+## Scenario Steps
+
+### Step 1: SOL 잔액 조회
+**Action**: Solana Mainnet에서 SOL 잔액을 조회한다.
+```bash
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-mainnet \
+  -H 'Authorization: Bearer <session-token>'
+```
+**Expected**: 200 OK, SOL 잔액이 반환된다
+**Check**: SOL 잔액이 0.01 이상인지 확인
+
+### Step 2: DCent Solana 스왑 Simulate (dryRun)
+**Action**: DCent aggregator를 통해 Solana에서 SOL → USDC 스왑을 dryRun한다.
+```bash
+curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=true' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <session-token>' \
+  -d '{
+    "walletId": "<WALLET_ID>",
+    "network": "solana-mainnet",
+    "params": {
+      "fromAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
+      "toAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "amount": "10000000",
+      "slippageBps": 50,
+      "fromDecimals": 9,
+      "toDecimals": 6
+    }
+  }'
+```
+**Expected**: 200 OK, 예상 USDC 수령량과 Solana 트랜잭션 정보가 반환된다
+**Check**: `outputAmount`(예상 USDC), 프로바이더 확인
+
+### Step 3: 사용자 승인
+**Action**: 스왑 경로, 예상 수령량을 사용자에게 표시하고 승인을 요청한다.
+- 스왑: 0.01 SOL → {outputAmount} USDC
+- 프로바이더: {provider}
+- 슬리피지 허용: 0.5% (50 bps)
+- 예상 tx fee: ~0.000005 SOL
+
+**Check**: 사용자가 스왑 조건을 확인하고 승인
+
+### Step 4: 실제 스왑 실행
+**Action**: 사용자 승인 후 실제 DCent Solana 스왑을 실행한다.
+```bash
+curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <session-token>' \
+  -d '{
+    "walletId": "<WALLET_ID>",
+    "network": "solana-mainnet",
+    "params": {
+      "fromAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
+      "toAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "amount": "10000000",
+      "slippageBps": 50,
+      "fromDecimals": 9,
+      "toDecimals": 6
+    }
+  }'
+```
+**Expected**: 200 OK, 트랜잭션 ID와 tx signature가 반환된다
+**Check**: `txId`, `txHash` 필드 기록
+
+### Step 5: 트랜잭션 상태 확인
+**Action**: 트랜잭션 컨펌 상태를 확인한다.
+```bash
+curl -s http://localhost:3100/v1/transactions/<TX_ID> \
+  -H 'Authorization: Bearer <session-token>'
+```
+**Expected**: 트랜잭션 상태가 `confirmed`로 전환된다
+**Check**: `status` 필드 확인. Solana는 수 초 내 컨펌 기대
+
+### Step 6: 잔액 재확인
+**Action**: 스왑 후 잔액을 재조회하여 SOL 감소, USDC 증가를 확인한다.
+```bash
+curl -s http://localhost:3100/v1/wallet/assets?walletId=<WALLET_ID>&network=solana-mainnet \
+  -H 'Authorization: Bearer <session-token>'
+```
+**Expected**: SOL 잔액이 ~0.01 SOL + tx fee만큼 감소, USDC 잔액이 증가
+**Check**: SOL 감소분 확인, USDC 증가분이 simulate 예상치와 유사한지 확인
+
+## Verification
+- [ ] SOL 잔액 조회 성공 (200 응답)
+- [ ] DCent Solana 스왑 dryRun 성공 (예상 수령량 반환)
+- [ ] 사용자 승인 완료
+- [ ] 실제 스왑 트랜잭션 생성 성공 (txId, txHash 반환)
+- [ ] 트랜잭션 컨펌 완료 (status: confirmed)
+- [ ] 스왑 후 SOL 감소, USDC 증가 확인
+
+## Estimated Cost
+| Item | Network | Estimated Gas | USD |
+|------|---------|---------------|-----|
+| DCent Solana swap tx fee | solana-mainnet | ~5,000 lamports | ~$0.001 |
+| Priority fee | solana-mainnet | variable | ~$0.005 |
+| **Total** | | | **~$0.01** |
+
+> **Note**: DCent aggregator의 Solana 스왑은 LiFi/ButterSwap 프로바이더를 통해 라우팅된다. Jupiter Swap(defi-01)과 달리 DCent 자체 라우팅 엔진을 사용한다. Solana 트랜잭션은 EVM과 다른 직렬화 형식을 사용하므로 별도 스키마 처리가 필요하다 (#394).
+
+## Troubleshooting
+| Symptom | Cause | Resolution |
+|---------|-------|------------|
+| Zod validation: txdata.from/to Required | EVM 전용 스키마 적용됨 | #394 수정 필요 — Solana 트랜잭션 스키마 분기 |
+| Route not found | Solana 유동성 부족 | 스왑 금액 조정 또는 Jupiter(defi-01) 사용 |
+| Insufficient SOL | SOL 잔액 부족 | 최소 0.01 SOL 확보 필요 |
+| fromDecimals/toDecimals missing | 필수 파라미터 누락 | fromDecimals: 9, toDecimals: 6 추가 (#404) |
+| fail_no_available_provider | amount를 human-readable로 전달 | amount는 반드시 smallest unit(lamports)으로 전달 |

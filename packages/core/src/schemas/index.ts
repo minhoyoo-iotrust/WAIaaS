@@ -178,6 +178,8 @@ export {
   SimulationWarningSchema,
   SimulationDetailSchema,
   SimulationMetaSchema,
+  GasConditionResultSchema,
+  type GasConditionResult,
   type DryRunSimulationResult,
   type SimulationWarningCode,
   type PolicyResult,
