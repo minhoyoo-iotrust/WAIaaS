@@ -8408,6 +8408,13 @@ export type components = {
                 transactionType: string;
                 durationMs: number;
             };
+            gasCondition?: {
+                met: boolean;
+                currentGasPrice: string;
+                currentPriorityFee?: string;
+                maxGasPrice?: string;
+                maxPriorityFee?: string;
+            };
         };
         TxSignResponse: {
             /** Format: uuid */
