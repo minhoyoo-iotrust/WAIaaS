@@ -333,4 +333,46 @@ describe('DcentSwapActionProvider resolve()', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('decimals auto-resolution (#404)', () => {
+    it('auto-resolves fromDecimals/toDecimals for well-known tokens', async () => {
+      const provider = createProvider();
+      // ETH=18, USDC=6 — both well-known in INTERMEDIATE_TOKENS
+      const result = await provider.resolve('dex_swap', {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        // No fromDecimals/toDecimals provided
+      }, CONTEXT);
+
+      const requests = Array.isArray(result) ? result : [result];
+      expect(requests.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('throws clear error for unknown asset without explicit decimals', async () => {
+      const provider = createProvider();
+      await expect(
+        provider.resolve('dex_swap', {
+          fromAsset: 'eip155:1/erc20:0x0000000000000000000000000000000000099999',
+          toAsset: USDC_CAIP19,
+          amount: '1000',
+          // No fromDecimals — unknown token
+        }, CONTEXT),
+      ).rejects.toThrow('fromDecimals');
+    });
+
+    it('accepts explicit decimals even for known tokens', async () => {
+      const provider = createProvider();
+      const result = await provider.resolve('dex_swap', {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+      }, CONTEXT);
+
+      const requests = Array.isArray(result) ? result : [result];
+      expect(requests.length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

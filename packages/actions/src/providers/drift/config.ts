@@ -13,6 +13,8 @@ export interface DriftConfig {
   enabled: boolean;
   /** Sub-account index (default 0, DEC-PERP-15). */
   subAccount: number;
+  /** Solana RPC URL for SDK calls. */
+  rpcUrl?: string;
 }
 
 // ---------------------------------------------------------------------------

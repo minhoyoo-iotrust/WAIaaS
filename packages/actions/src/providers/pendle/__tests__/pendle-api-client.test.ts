@@ -207,6 +207,26 @@ describe('PendleApiClient', () => {
       expect(result.tx.value).toBe('0');
       expect(result.amountOut).toBe('1000000000000000000');
     });
+
+    it('normalizes array response to single object (#403)', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v2/sdk/1/convert`, () => {
+          return HttpResponse.json([CONVERT_RESPONSE]);
+        }),
+      );
+
+      const client = new PendleApiClient(makeConfig(), 1);
+      const result = await client.convert({
+        tokensIn: '0xA',
+        amountsIn: '100',
+        tokensOut: '0xB',
+        slippage: '0.01',
+        receiver: '0xC',
+      });
+
+      expect(result.tx.to).toBe('0xPendleRouter');
+      expect(result.amountOut).toBe('1000000000000000000');
+    });
   });
 
   describe('getSwappingPrices', () => {

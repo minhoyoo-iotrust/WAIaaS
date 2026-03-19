@@ -59,13 +59,15 @@ export class PendleApiClient extends ActionApiClient {
     slippage: string;
     receiver: string;
   }): Promise<PendleConvertResponse> {
-    return this.get(`v2/sdk/${this.chainId}/convert`, PendleConvertResponseSchema, {
+    const raw = await this.get(`v2/sdk/${this.chainId}/convert`, PendleConvertResponseSchema, {
       tokensIn: params.tokensIn,
       amountsIn: params.amountsIn,
       tokensOut: params.tokensOut,
       slippage: params.slippage,
       receiver: params.receiver,
     });
+    // Normalize: Pendle API alternates between object and array responses
+    return Array.isArray(raw) ? raw[0]! : raw;
   }
 
   /**
