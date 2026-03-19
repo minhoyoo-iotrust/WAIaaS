@@ -12,8 +12,8 @@
 |--------|-------|
 | Total | 12 |
 | Passed | 2 |
-| Failed | 6 |
-| Skipped | 3 |
+| Failed | 7 |
+| Skipped | 2 |
 | Partial | 1 |
 | New Issues Filed | 7 (#405-#411) |
 | Total Gas Cost | ~$0.01 (Sepolia self-transfer) |
@@ -26,7 +26,7 @@
 | 2 | defi-09 | Pendle Yield Trading (PT) | FAIL | $0 | 2s | #407 schema array vs object (4th) |
 | 3 | defi-10 | Drift Perpetual Trading | FAIL | $0 | 2s | #408 Wallet.local not a function |
 | 4 | defi-14 | DCent 2-hop Auto-Routing | PARTIAL | $0 | 3s | dryRun PASS, get_quotes FAIL (#409) |
-| 5 | defi-15 | DCent 크로스체인 (EVM→Solana) | SKIP | $0 | 2s | DCent API 크로스체인 미지원 (empty txdata) |
+| 5 | defi-15 | DCent 크로스체인 (EVM→Solana) | FAIL | $0 | 2s | empty txdata 반환 — 원인 미확인 (파라미터/금액/프로바이더 추가 조사 필요) |
 | 6 | defi-16 | DCent Solana 스왑 | FAIL | $0 | 2s | #410 txdata from/to schema regression |
 | 7 | advanced-01 | Smart Account UserOp Build/Sign | FAIL | $0 | 1s | #411 /v1/userop/* 엔드포인트 미구현 |
 | 8 | advanced-02 | x402 HTTP 결제 | SKIP | $0 | 1s | x402 서비스 없음, capability 확인만 PASS |
@@ -88,8 +88,9 @@
 ## Skipped Scenarios
 
 ### defi-15: DCent 크로스체인 (EVM→Solana)
-- DCent API가 EVM→Solana 크로스체인 경로를 지원하지 않음 (empty txdata)
-- 시나리오 Troubleshooting에 명시된 알려진 한계
+- DCent API가 empty txdata를 반환했으나, DCent Swap Aggregator는 ButterSwap/Rubic 등을 통해 EVM↔Solana 크로스체인을 지원함
+- **원인 미확인**: 요청 파라미터 매핑, 소액 최소 금액 미달, 또는 프로바이더 선택 문제 가능성
+- 추가 디버깅 필요 (API 요청/응답 상세 로그 확인)
 
 ### advanced-02: x402 HTTP 결제
 - x402 capability 확인: PASS

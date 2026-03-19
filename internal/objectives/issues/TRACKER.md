@@ -59,6 +59,7 @@
 | 409 | BUG | MEDIUM | DCent get_quotes informational 액션이 ACTION_RESOLVE_FAILED로 반환 — 결과 데이터는 포함 | — | FIXED | 2026-03-19 |
 | 410 | BUG | HIGH | DCent Swap Solana txdata 스키마 회귀 — EVM from/to Required (#394 재발) | — | FIXED | 2026-03-19 |
 | 411 | BUG | MEDIUM | UserOp Build/Sign 경로 불일치 + UAT 시나리오 오류 — /v1/wallets/{id}/userop/* 가 실제 경로 | — | FIXED | 2026-03-19 |
+| 412 | ENHANCEMENT | MEDIUM | DCent Swap API 요청/응답 디버그 로깅 누락 — 실패 원인 분석 불가 | — | OPEN | — |
 
 ## Type Legend
 
@@ -70,8 +71,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 411
 - **WONTFIX:** 1
-- **Total:** 412
+- **Total:** 413
 - **Archived:** 366 (001–366)
