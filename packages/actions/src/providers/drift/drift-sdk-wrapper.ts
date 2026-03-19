@@ -13,6 +13,7 @@
  * file's public API. All parameters and return types use plain JS types
  * (string, number, boolean) to maintain isolation from @solana/kit 6.x.
  */
+import type { ILogger } from '@waiaas/core';
 import { DRIFT_PROGRAM_ID } from './config.js';
 
 // ---------------------------------------------------------------------------
@@ -320,9 +321,12 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _client: any = null;
 
-  constructor(rpcUrl: string, subAccount: number) {
+  private readonly logger?: ILogger;
+
+  constructor(rpcUrl: string, subAccount: number, logger?: ILogger) {
     this.rpcUrl = rpcUrl;
     this.subAccount = subAccount;
+    this.logger = logger;
   }
 
   private async loadSdk(): Promise<NonNullable<typeof this._sdk>> {
@@ -364,6 +368,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async getClient(): Promise<any> {
     if (this._client) return this._client;
+    this.logger?.debug('DriftSdkWrapper.getClient: initializing', { rpcUrl: this.rpcUrl, subAccount: this.subAccount });
     const sdk = await this.loadSdk();
     const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
     const client = new sdk.DriftClient({
@@ -372,7 +377,15 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
       programID: new sdk.PublicKey(DRIFT_PROGRAM_ID),
       activeSubAccountId: this.subAccount,
     });
-    await client.subscribe();
+    try {
+      await client.subscribe();
+      this.logger?.debug('DriftSdkWrapper.getClient: subscribe succeeded');
+    } catch (err) {
+      this.logger?.error('DriftSdkWrapper.getClient: subscribe failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
     this._client = client;
     return client;
   }

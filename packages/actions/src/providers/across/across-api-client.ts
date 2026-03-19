@@ -11,6 +11,7 @@
  *
  * See: design doc 79 section 2
  */
+import type { ILogger } from '@waiaas/core';
 import { ActionApiClient } from '../../common/action-api-client.js';
 import {
   AcrossSuggestedFeesResponseSchema,
@@ -29,12 +30,12 @@ import type {
 import type { AcrossConfig } from './config.js';
 
 export class AcrossApiClient extends ActionApiClient {
-  constructor(config: AcrossConfig) {
+  constructor(config: AcrossConfig, logger?: ILogger) {
     // Append integratorId to base URL if provided (Across API recommendation)
     const baseUrl = config.integratorId
       ? `${config.apiBaseUrl}?integratorId=${encodeURIComponent(config.integratorId)}`
       : config.apiBaseUrl;
-    super(baseUrl, config.requestTimeoutMs);
+    super(baseUrl, config.requestTimeoutMs, {}, logger);
   }
 
   /**

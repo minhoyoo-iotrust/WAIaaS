@@ -18,6 +18,7 @@ import type {
   ActionContext,
   ContractCallRequest,
   ApiDirectResult,
+  ILogger,
 } from '@waiaas/core';
 import { DcentSwapApiClient } from './dcent-api-client.js';
 import { type DcentSwapConfig, DCENT_SWAP_DEFAULTS } from './config.js';
@@ -98,10 +99,12 @@ export class DcentSwapActionProvider implements IActionProvider {
   readonly actions: readonly ActionDefinition[];
 
   private readonly config: DcentSwapConfig;
+  private readonly logger?: ILogger;
   private client: DcentSwapApiClient | null = null;
 
-  constructor(config?: Partial<DcentSwapConfig>) {
+  constructor(config?: Partial<DcentSwapConfig>, logger?: ILogger) {
     this.config = { ...DCENT_SWAP_DEFAULTS, ...config };
+    this.logger = logger;
 
     this.metadata = {
       name: 'dcent_swap',
@@ -239,7 +242,7 @@ export class DcentSwapActionProvider implements IActionProvider {
   /** Lazy singleton API client. */
   private getClient(): DcentSwapApiClient {
     if (!this.client) {
-      this.client = new DcentSwapApiClient(this.config);
+      this.client = new DcentSwapApiClient(this.config, this.logger);
     }
     return this.client;
   }

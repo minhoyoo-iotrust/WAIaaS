@@ -5,6 +5,7 @@
  * All requests include chainId as query parameter and 0x-version: v2 header.
  * Auth is via 0x-api-key header (optional for price, required for quote).
  */
+import type { ILogger } from '@waiaas/core';
 import { ActionApiClient } from '../../common/action-api-client.js';
 import { PriceResponseSchema, QuoteResponseSchema } from './schemas.js';
 import type { PriceResponse, QuoteResponse } from './schemas.js';
@@ -13,14 +14,14 @@ import type { ZeroExSwapConfig } from './config.js';
 export class ZeroExApiClient extends ActionApiClient {
   private readonly chainId: number;
 
-  constructor(config: ZeroExSwapConfig, chainId: number) {
+  constructor(config: ZeroExSwapConfig, chainId: number, logger?: ILogger) {
     const headers: Record<string, string> = {
       '0x-version': 'v2',          // ZXSW-01
     };
     if (config.apiKey) {
       headers['0x-api-key'] = config.apiKey;  // ZXSW-01
     }
-    super(config.apiBaseUrl, config.requestTimeoutMs, headers);  // ZXSW-10
+    super(config.apiBaseUrl, config.requestTimeoutMs, headers, logger);  // ZXSW-10
     this.chainId = chainId;
   }
 

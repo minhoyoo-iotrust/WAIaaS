@@ -135,7 +135,7 @@ curl -s http://localhost:3100/v1/wallet/assets?walletId=<SOLANA_WALLET_ID>&netwo
 ## Troubleshooting
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
-| DCent API returned empty txdata | 크로스체인 경로 미지원 | DCent API 한계, LI.FI Bridge(defi-03) 사용 권장 |
+| DCent API returned empty txdata | 원인 미확인 (파라미터 매핑, 소액 최소 금액 미달, 프로바이더 선택 문제 가능성) | API 요청/응답 로그 상세 확인, 금액 상향(0.005 ETH+) 재시도, DCent API 문서 대조 |
 | Cross-chain timeout | 브릿지 처리 지연 | 크로스체인 특성상 수 분 소요 가능, 트랜잭션 상태 확인 |
 | Solana USDC not received | 브릿지 미완료 | 수 분 후 재조회, 소스 체인 tx 확인 |
 | Insufficient balance | ETH 잔액 부족 | 최소 0.005 ETH 확보 필요 |

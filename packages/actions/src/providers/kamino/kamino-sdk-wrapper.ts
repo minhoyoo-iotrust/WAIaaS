@@ -8,6 +8,7 @@
  * Instruction results (KaminoInstruction) use the same format as Jito's
  * ContractCallRequest: programId + base64 instructionData + accounts array.
  */
+import type { ILogger } from '@waiaas/core';
 import { KAMINO_PROGRAM_ID } from './config.js';
 
 // ---------------------------------------------------------------------------
@@ -270,12 +271,14 @@ export class MockKaminoSdkWrapper implements IKaminoSdkWrapper {
  */
 export class KaminoSdkWrapper implements IKaminoSdkWrapper {
   readonly rpcUrl: string;
+  private readonly logger?: ILogger;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _sdk: { Connection: any; PublicKey: any; KaminoMarket: any; KaminoAction: any; VanillaObligation: any } | null = null;
 
-  constructor(rpcUrl: string) {
+  constructor(rpcUrl: string, logger?: ILogger) {
     this.rpcUrl = rpcUrl;
+    this.logger = logger;
   }
 
   private async loadSdk() {
@@ -338,6 +341,9 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
     amount: bigint;
     walletAddress: string;
   }): Promise<KaminoInstruction[]> {
+    this.logger?.debug('KaminoSdkWrapper.buildSupplyInstruction', {
+      asset: params.asset, amount: params.amount.toString(), market: params.market,
+    });
     const sdk = await this.loadSdk();
     const { market } = await this.loadMarket(params.market);
     const wallet = new sdk.PublicKey(params.walletAddress);
@@ -346,7 +352,14 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
       market, params.amount.toString(), mint, wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)),
     );
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
-    return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
+    const filtered = allIxs.filter((ix: unknown) => ix != null);
+    const result = this.convertInstructions(filtered);
+    this.logger?.debug('KaminoSdkWrapper.buildSupplyInstruction result', {
+      setupIxs: action.setupIxs?.length ?? 0, lendingIxs: action.lendingIxs?.length ?? 0,
+      cleanupIxs: action.cleanupIxs?.length ?? 0, totalFiltered: filtered.length,
+      resultAccounts: result.map((ix: KaminoInstruction) => ix.accounts.length),
+    });
+    return result;
   }
 
   async buildBorrowInstruction(params: {

@@ -4,7 +4,7 @@
  * Exports registerBuiltInProviders() for daemon lifecycle integration
  * and individual provider classes for direct usage.
  */
-import type { IActionProvider, NetworkType } from '@waiaas/core';
+import type { IActionProvider, ILogger, NetworkType } from '@waiaas/core';
 import { deriveEnvironment } from '@waiaas/core';
 import { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
 import { ZeroExSwapActionProvider } from './providers/zerox-swap/index.js';
@@ -165,11 +165,12 @@ interface ProviderRegistry {
 export function registerBuiltInProviders(
   registry: ProviderRegistry,
   settingsReader: SettingsReader,
-  options?: { rpcCaller?: IRpcCaller },
+  options?: { rpcCaller?: IRpcCaller; logger?: ILogger },
 ): { loaded: string[]; skipped: string[]; hyperliquidMarketData?: HyperliquidMarketData } {
   const loaded: string[] = [];
   const skipped: string[] = [];
   let hyperliquidMarketData: HyperliquidMarketData | undefined;
+  const logger = options?.logger;
 
   const providers: Array<{
     key: string;
@@ -190,7 +191,7 @@ export function registerBuiltInProviders(
           jitoTipLamports: Number(settingsReader.get('actions.jupiter_swap_jito_tip_lamports')),
           requestTimeoutMs: Number(settingsReader.get('actions.jupiter_swap_request_timeout_ms')),
         };
-        return new JupiterSwapActionProvider(config);
+        return new JupiterSwapActionProvider(config, logger);
       },
     },
     {
@@ -204,7 +205,7 @@ export function registerBuiltInProviders(
           maxSlippageBps: Number(settingsReader.get('actions.zerox_swap_max_slippage_bps')),
           requestTimeoutMs: Number(settingsReader.get('actions.zerox_swap_request_timeout_ms')),
         };
-        return new ZeroExSwapActionProvider(config);
+        return new ZeroExSwapActionProvider(config, logger);
       },
     },
     {
@@ -219,7 +220,7 @@ export function registerBuiltInProviders(
           maxSlippagePct: Number(settingsReader.get('actions.lifi_max_slippage_pct')),
           requestTimeoutMs: 15_000,
         };
-        return new LiFiActionProvider(config);
+        return new LiFiActionProvider(config, logger);
       },
     },
     {
@@ -285,7 +286,7 @@ export function registerBuiltInProviders(
           hfThreshold: Number(settingsReader.get('actions.kamino_hf_threshold')) || 1.2,
           rpcUrl: kaminoRpcUrl,
         };
-        return new KaminoLendingProvider(config, new KaminoSdkWrapper(kaminoRpcUrl));
+        return new KaminoLendingProvider(config, new KaminoSdkWrapper(kaminoRpcUrl, logger));
       },
     },
     {
@@ -300,7 +301,7 @@ export function registerBuiltInProviders(
           maxSlippageBps: Number(settingsReader.get('actions.pendle_yield_max_slippage_bps')) || 500,
           requestTimeoutMs: Number(settingsReader.get('actions.pendle_yield_request_timeout_ms')) || 10_000,
         };
-        return new PendleYieldProvider(config);
+        return new PendleYieldProvider(config, logger);
       },
     },
     {
@@ -313,7 +314,7 @@ export function registerBuiltInProviders(
           subAccount: 0,
           rpcUrl: driftRpcUrl,
         };
-        return new DriftPerpProvider(config, new DriftSdkWrapper(driftRpcUrl, config.subAccount));
+        return new DriftPerpProvider(config, new DriftSdkWrapper(driftRpcUrl, config.subAccount, logger));
       },
     },
     {
@@ -374,7 +375,7 @@ export function registerBuiltInProviders(
           maxSlippageBps: Number(settingsReader.get('actions.dcent_swap_max_slippage_bps')),
           currencyCacheTtlMs: Number(settingsReader.get('actions.dcent_swap_currency_cache_ttl_ms')),
         };
-        return new DcentSwapActionProvider(dcentConfig);
+        return new DcentSwapActionProvider(dcentConfig, logger);
       },
     },
     {
@@ -390,7 +391,7 @@ export function registerBuiltInProviders(
           maxSlippagePct: Number(settingsReader.get('actions.across_bridge_max_slippage_pct')) || ACROSS_DEFAULTS.maxSlippagePct,
           requestTimeoutMs: Number(settingsReader.get('actions.across_bridge_request_timeout_ms')) || ACROSS_DEFAULTS.requestTimeoutMs,
         };
-        return new AcrossBridgeActionProvider(acrossConfig);
+        return new AcrossBridgeActionProvider(acrossConfig, logger);
       },
     },
   ];

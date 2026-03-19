@@ -22,7 +22,7 @@
 |---|-----|-------|--------|-------|
 | 1 | defi-01 | Jupiter Swap SOL→USDC | FAIL | Jupiter V6 프로그램 오류 6025 (Issue #396) |
 | 2 | defi-06 | Jito SOL Staking | FAIL | "Invalid manager fee account" (Issue #397) |
-| 3 | defi-07 | Aave V3 USDC Supply | **PASS** | dryRun 시뮬레이션 성공! Gas: 67,633, Fee: ~$0.013 |
+| 3 | defi-07 | Aave V3 USDC Supply | **PASS** | dryRun 시뮬레이션 + 실제 supply 온체인 확정 (1.000012 USDC aave_v3 포지션 확인) |
 | 4 | defi-08 | Kamino USDC Supply | FAIL | SDK 미설치: @kamino-finance/klend-sdk (Issue #399) |
 | 5 | defi-09 | Pendle Buy PT | FAIL | API 응답 스키마 불일치 회귀 (Issue #398) |
 | 6 | defi-10 | Drift USDC Deposit | FAIL | SDK 미설치: @drift-labs/sdk (Issue #399) |
@@ -30,12 +30,11 @@
 
 ## Passed Scenarios
 
-### defi-07: Aave V3 USDC Supply (dryRun)
+### defi-07: Aave V3 USDC Supply
 - **Policy**: `INSTANT` 허용
-- **Simulation**: 성공
-- **Gas**: 67,633 units
-- **Fee**: ~$0.013 (5,876,111,109,910 wei)
-- **Note**: asset 파라미터에 USDC 심볼 대신 ERC-20 주소 사용 필요 (`0xA0b8...eB48`). 실제 supply 실행은 사용자 승인 보류 중
+- **Simulation**: 성공 (Gas: 67,633, Fee: ~$0.013)
+- **실제 실행**: 온체인 확정 — DeFi 포지션 대시보드에서 aave_v3 LENDING 1.000012 USDC ($1.00) 확인
+- **Note**: asset 파라미터에 USDC 심볼 대신 ERC-20 주소 사용 필요 (`0xA0b8...eB48`)
 
 ## Failed Scenarios
 

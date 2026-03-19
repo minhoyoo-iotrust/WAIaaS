@@ -20,6 +20,7 @@ import type {
   ActionContext,
   ContractCallRequest,
   ApiDirectResult,
+  ILogger,
 } from '@waiaas/core';
 import { encodeFunctionData } from 'viem';
 import { AcrossApiClient } from './across-api-client.js';
@@ -218,9 +219,11 @@ export class AcrossBridgeActionProvider implements IActionProvider {
   readonly metadata: ActionProviderMetadata;
   readonly actions: readonly ActionDefinition[];
   private readonly config: AcrossConfig;
+  private readonly logger?: ILogger;
 
-  constructor(config?: Partial<AcrossConfig>) {
+  constructor(config?: Partial<AcrossConfig>, logger?: ILogger) {
     this.config = { ...ACROSS_DEFAULTS, ...config };
+    this.logger = logger;
 
     this.metadata = {
       name: 'across_bridge',
@@ -315,7 +318,7 @@ export class AcrossBridgeActionProvider implements IActionProvider {
     const originChainId = getAcrossChainId(input.fromChain);
     const destChainId = getAcrossChainId(input.toChain);
 
-    const apiClient = new AcrossApiClient(this.config);
+    const apiClient = new AcrossApiClient(this.config, this.logger);
     const fees = await apiClient.getSuggestedFees({
       inputToken: input.inputToken,
       outputToken: input.outputToken,
@@ -376,7 +379,7 @@ export class AcrossBridgeActionProvider implements IActionProvider {
     const destChainId = getAcrossChainId(input.toChain);
 
     // 1. Get fresh suggested fees (no caching -- DS-04 late-bind)
-    const apiClient = new AcrossApiClient(this.config);
+    const apiClient = new AcrossApiClient(this.config, this.logger);
     const fees = await apiClient.getSuggestedFees({
       inputToken: input.inputToken,
       outputToken: input.outputToken,
@@ -470,7 +473,7 @@ export class AcrossBridgeActionProvider implements IActionProvider {
     params: Record<string, unknown>,
   ): Promise<ApiDirectResult> {
     const input = AcrossStatusInputSchema.parse(params);
-    const apiClient = new AcrossApiClient(this.config);
+    const apiClient = new AcrossApiClient(this.config, this.logger);
     const result = await apiClient.getDepositStatus({
       depositTxnRef: input.depositTxHash,
       originChainId: input.originChainId,
@@ -500,7 +503,7 @@ export class AcrossBridgeActionProvider implements IActionProvider {
     params: Record<string, unknown>,
   ): Promise<ApiDirectResult> {
     const input = AcrossRoutesInputSchema.parse(params);
-    const apiClient = new AcrossApiClient(this.config);
+    const apiClient = new AcrossApiClient(this.config, this.logger);
 
     const apiParams: {
       originChainId?: number;
@@ -535,7 +538,7 @@ export class AcrossBridgeActionProvider implements IActionProvider {
     const originChainId = getAcrossChainId(input.fromChain);
     const destChainId = getAcrossChainId(input.toChain);
 
-    const apiClient = new AcrossApiClient(this.config);
+    const apiClient = new AcrossApiClient(this.config, this.logger);
     const result = await apiClient.getLimits({
       inputToken: input.inputToken,
       outputToken: input.outputToken,

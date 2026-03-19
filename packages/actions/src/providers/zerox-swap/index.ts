@@ -15,6 +15,7 @@ import type {
   ActionDefinition,
   ActionContext,
   ContractCallRequest,
+  ILogger,
 } from '@waiaas/core';
 import { ZeroExApiClient } from './zerox-api-client.js';
 import {
@@ -58,9 +59,11 @@ export class ZeroExSwapActionProvider implements IActionProvider {
   readonly actions: readonly ActionDefinition[];
 
   private readonly config: ZeroExSwapConfig;
+  private readonly logger?: ILogger;
 
-  constructor(config?: Partial<ZeroExSwapConfig>) {
+  constructor(config?: Partial<ZeroExSwapConfig>, logger?: ILogger) {
     this.config = { ...ZEROX_SWAP_DEFAULTS, ...config };
+    this.logger = logger;
 
     this.metadata = {
       name: 'zerox_swap',
@@ -122,7 +125,7 @@ export class ZeroExSwapActionProvider implements IActionProvider {
     );
 
     // Create API client with resolved chainId
-    const apiClient = new ZeroExApiClient(this.config, chainId);
+    const apiClient = new ZeroExApiClient(this.config, chainId, this.logger);
 
     // Get quote from 0x API
     const quote = await apiClient.getQuote({

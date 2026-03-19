@@ -12,6 +12,7 @@ import type {
   ActionDefinition,
   ActionContext,
   ContractCallRequest,
+  ILogger,
 } from '@waiaas/core';
 import { JupiterApiClient } from './jupiter-api-client.js';
 import { type JupiterSwapConfig, JUPITER_SWAP_DEFAULTS, JUPITER_PROGRAM_ID } from './config.js';
@@ -43,10 +44,12 @@ export class JupiterSwapActionProvider implements IActionProvider {
 
   private readonly config: JupiterSwapConfig;
   private readonly apiClient: JupiterApiClient;
+  private readonly logger?: ILogger;
 
-  constructor(config?: Partial<JupiterSwapConfig>) {
+  constructor(config?: Partial<JupiterSwapConfig>, logger?: ILogger) {
     this.config = { ...JUPITER_SWAP_DEFAULTS, ...config };
-    this.apiClient = new JupiterApiClient(this.config);
+    this.logger = logger;
+    this.apiClient = new JupiterApiClient(this.config, this.logger);
 
     this.metadata = {
       name: 'jupiter_swap',
