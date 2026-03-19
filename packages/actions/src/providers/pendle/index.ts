@@ -23,6 +23,7 @@ import type {
   PositionUpdate,
   PositionCategory,
   PositionQueryContext,
+  ILogger,
 } from '@waiaas/core';
 import { PendleApiClient } from './pendle-api-client.js';
 import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId, PENDLE_POSITION_NETWORKS } from './config.js';
@@ -44,9 +45,11 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
   readonly actions: readonly ActionDefinition[];
 
   private readonly config: PendleConfig;
+  private readonly logger?: ILogger;
 
-  constructor(config?: Partial<PendleConfig>) {
+  constructor(config?: Partial<PendleConfig>, logger?: ILogger) {
     this.config = { ...PENDLE_DEFAULTS, ...config };
+    this.logger = logger;
 
     this.metadata = {
       name: 'pendle_yield',
@@ -254,7 +257,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
   async getMarkets(chain: string, network?: string): Promise<YieldMarketInfo[]> {
     const net = network ?? `${chain}-mainnet`;
     const chainId = getPendleChainId(net);
-    const client = new PendleApiClient(this.config, chainId);
+    const client = new PendleApiClient(this.config, chainId, this.logger);
     const markets = await client.getMarkets();
 
     return markets.map((m) => ({
@@ -276,7 +279,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
 
   async getYieldForecast(marketId: string, context: ActionContext): Promise<YieldForecast> {
     const chainId = getPendleChainId(`${context.chain}-mainnet`);
-    const client = new PendleApiClient(this.config, chainId);
+    const client = new PendleApiClient(this.config, chainId, this.logger);
     const markets = await client.getMarkets();
     const market = markets.find((m) => m.address.toLowerCase() === marketId.toLowerCase());
 
@@ -337,7 +340,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
     const positions: PositionUpdate[] = [];
     const now = Math.floor(Date.now() / 1000);
     const chainId = getPendleChainId(network);
-    const client = new PendleApiClient(this.config, chainId);
+    const client = new PendleApiClient(this.config, chainId, this.logger);
     const markets = await client.getMarkets();
 
     for (const market of markets) {
@@ -419,7 +422,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
   ): Promise<{ client: PendleApiClient; market: PendleMarket; chainId: number }> {
     const network = `${context.chain}-mainnet`;
     const chainId = getPendleChainId(network);
-    const client = new PendleApiClient(this.config, chainId);
+    const client = new PendleApiClient(this.config, chainId, this.logger);
 
     const markets = await client.getMarkets();
     const market = markets.find(

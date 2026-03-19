@@ -2,18 +2,19 @@
  * Jupiter REST API client (v1).
  * Wraps /swap/v1/quote and /swap/v1/swap-instructions endpoints.
  */
+import type { ILogger } from '@waiaas/core';
 import { ActionApiClient } from '../../common/action-api-client.js';
 import { QuoteResponseSchema, SwapInstructionsResponseSchema } from './schemas.js';
 import type { QuoteResponse, SwapInstructionsResponse } from './schemas.js';
 import type { JupiterSwapConfig } from './config.js';
 
 export class JupiterApiClient extends ActionApiClient {
-  constructor(config: JupiterSwapConfig) {
+  constructor(config: JupiterSwapConfig, logger?: ILogger) {
     const headers: Record<string, string> = {};
     if (config.apiKey) {
       headers['x-api-key'] = config.apiKey;
     }
-    super(config.apiBaseUrl, config.requestTimeoutMs, headers);
+    super(config.apiBaseUrl, config.requestTimeoutMs, headers, logger);
   }
 
   async getQuote(params: {

@@ -4,6 +4,7 @@
  *
  * Auth is via Authorization Bearer header (optional).
  */
+import type { ILogger } from '@waiaas/core';
 import { ActionApiClient } from '../../common/action-api-client.js';
 import {
   PendleMarketsResponseSchema,
@@ -20,12 +21,12 @@ import type { PendleConfig } from './config.js';
 export class PendleApiClient extends ActionApiClient {
   private readonly chainId: number;
 
-  constructor(config: PendleConfig, chainId: number) {
+  constructor(config: PendleConfig, chainId: number, logger?: ILogger) {
     const headers: Record<string, string> = {};
     if (config.apiKey) {
       headers['Authorization'] = `Bearer ${config.apiKey}`;
     }
-    super(config.apiBaseUrl, config.requestTimeoutMs, headers);
+    super(config.apiBaseUrl, config.requestTimeoutMs, headers, logger);
     this.chainId = chainId;
   }
 

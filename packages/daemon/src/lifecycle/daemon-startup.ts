@@ -1042,7 +1042,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
 
     // Register built-in action providers from @waiaas/actions (reads from SettingsService)
     const { registerBuiltInProviders } = await import('@waiaas/actions');
-    const builtIn = registerBuiltInProviders(state.actionProviderRegistry, state._settingsService!, { rpcCaller });
+    const { ConsoleLogger } = await import('@waiaas/core');
+    const actionLogger = new ConsoleLogger('actions');
+    const builtIn = registerBuiltInProviders(state.actionProviderRegistry, state._settingsService!, { rpcCaller, logger: actionLogger });
     // Capture HyperliquidMarketData for HTTP routes (Phase 349)
     if (builtIn.hyperliquidMarketData) {
       state.hyperliquidMarketData = builtIn.hyperliquidMarketData;

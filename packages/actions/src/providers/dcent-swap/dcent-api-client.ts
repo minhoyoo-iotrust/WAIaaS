@@ -8,6 +8,7 @@
  * Design source: doc 77 sections 1, 6.2 (caching strategy), 7.5 (error mapping).
  */
 import { ChainError } from '@waiaas/core';
+import type { ILogger } from '@waiaas/core';
 import { ActionApiClient } from '../../common/action-api-client.js';
 import {
   DcentCurrenciesResponseSchema,
@@ -55,9 +56,9 @@ export class DcentSwapApiClient extends ActionApiClient {
   private currencyCache: Map<string, DcentCurrency> | null = null;
   private cacheExpiry = 0;
 
-  constructor(config?: Partial<DcentSwapConfig>) {
+  constructor(config?: Partial<DcentSwapConfig>, logger?: ILogger) {
     const merged = { ...DCENT_SWAP_DEFAULTS, ...config };
-    super(merged.apiBaseUrl, merged.requestTimeoutMs);
+    super(merged.apiBaseUrl, merged.requestTimeoutMs, {}, logger);
     this.config = merged;
   }
 

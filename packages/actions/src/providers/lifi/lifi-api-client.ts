@@ -4,18 +4,19 @@
  *
  * Auth is via x-lifi-api-key header (optional, relaxes rate limits).
  */
+import type { ILogger } from '@waiaas/core';
 import { ActionApiClient } from '../../common/action-api-client.js';
 import { LiFiQuoteResponseSchema, LiFiStatusResponseSchema } from './schemas.js';
 import type { LiFiQuoteResponse, LiFiStatusResponse } from './schemas.js';
 import type { LiFiConfig } from './config.js';
 
 export class LiFiApiClient extends ActionApiClient {
-  constructor(config: LiFiConfig) {
+  constructor(config: LiFiConfig, logger?: ILogger) {
     const headers: Record<string, string> = {};
     if (config.apiKey) {
       headers['x-lifi-api-key'] = config.apiKey;
     }
-    super(config.apiBaseUrl, config.requestTimeoutMs, headers);
+    super(config.apiBaseUrl, config.requestTimeoutMs, headers, logger);
   }
 
   async getQuote(params: {

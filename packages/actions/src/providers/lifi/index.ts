@@ -17,6 +17,7 @@ import type {
   ActionDefinition,
   ActionContext,
   ContractCallRequest,
+  ILogger,
 } from '@waiaas/core';
 import { LiFiApiClient } from './lifi-api-client.js';
 import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
@@ -48,9 +49,11 @@ export class LiFiActionProvider implements IActionProvider {
   readonly metadata: ActionProviderMetadata;
   readonly actions: readonly ActionDefinition[];
   private readonly config: LiFiConfig;
+  private readonly logger?: ILogger;
 
-  constructor(config?: Partial<LiFiConfig>) {
+  constructor(config?: Partial<LiFiConfig>, logger?: ILogger) {
     this.config = { ...LIFI_DEFAULTS, ...config };
+    this.logger = logger;
 
     this.metadata = {
       name: 'lifi',
@@ -122,7 +125,7 @@ export class LiFiActionProvider implements IActionProvider {
     const slippage = this.clampSlippage(input.slippage);
 
     // Create API client
-    const apiClient = new LiFiApiClient(this.config);
+    const apiClient = new LiFiApiClient(this.config, this.logger);
 
     // Get quote from LI.FI /quote
     const quote = await apiClient.getQuote({
