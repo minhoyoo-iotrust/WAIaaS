@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0...v2.12.0-rc) (2026-03-19)
+
+
+### Features
+
+* add debug logging to Action Provider API clients ([#412](https://github.com/minhoyoo-iotrust/WAIaaS/issues/412)) ([9d71a26](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9d71a264941d468c141a0a9103b3885db7723a8d))
+
 ## [2.11.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.27...v2.11.0) (2026-03-19)
 
 
