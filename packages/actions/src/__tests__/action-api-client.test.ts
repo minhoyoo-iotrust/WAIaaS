@@ -146,6 +146,69 @@ describe('ActionApiClient logging (#412)', () => {
     });
   });
 
+  describe('POST rate limit', () => {
+    it('logs on rate limit (429) with request body', async () => {
+      server.use(
+        http.post(`${BASE_URL}/limited`, () =>
+          new HttpResponse('Too Many Requests', { status: 429 }),
+        ),
+      );
+      const logger = createMockLogger();
+      const client = new ActionApiClient(BASE_URL, 5000, {}, logger);
+      await expect(client.post('limited', { x: 1 }, TestSchema)).rejects.toThrow(/Rate limited/);
+
+      expect(logger.calls.debug[1]![0]).toContain('429');
+      expect(logger.calls.debug[1]![1]).toHaveProperty('request', { x: 1 });
+    });
+  });
+
+  describe('timeout', () => {
+    it('GET logs timeout', async () => {
+      server.use(
+        http.get(`${BASE_URL}/slow`, async () => {
+          await new Promise((r) => setTimeout(r, 200));
+          return HttpResponse.json({ id: 1, name: 'late' });
+        }),
+      );
+      const logger = createMockLogger();
+      const client = new ActionApiClient(BASE_URL, 50, {}, logger);
+      await expect(client.get('slow', TestSchema)).rejects.toThrow(/timeout/i);
+
+      expect(logger.calls.debug.some(([msg]) => msg.includes('TIMEOUT'))).toBe(true);
+    });
+
+    it('POST logs timeout with request body', async () => {
+      server.use(
+        http.post(`${BASE_URL}/slow`, async () => {
+          await new Promise((r) => setTimeout(r, 200));
+          return HttpResponse.json({ id: 1, name: 'late' });
+        }),
+      );
+      const logger = createMockLogger();
+      const client = new ActionApiClient(BASE_URL, 50, {}, logger);
+      await expect(client.post('slow', { data: 'z' }, TestSchema)).rejects.toThrow(/timeout/i);
+
+      const timeoutLog = logger.calls.debug.find(([msg]) => msg.includes('TIMEOUT'));
+      expect(timeoutLog).toBeDefined();
+      expect(timeoutLog![1]).toHaveProperty('request', { data: 'z' });
+    });
+  });
+
+  describe('GET without params', () => {
+    it('logs without params object', async () => {
+      server.use(
+        http.get(`${BASE_URL}/plain`, () =>
+          HttpResponse.json({ id: 1, name: 'plain' }),
+        ),
+      );
+      const logger = createMockLogger();
+      const client = new ActionApiClient(BASE_URL, 5000, {}, logger);
+      await client.get('plain', TestSchema);
+
+      expect(logger.calls.debug[0]![1]).toBeUndefined();
+    });
+  });
+
   describe('without logger', () => {
     it('GET works without logger (backward compatible)', async () => {
       server.use(
