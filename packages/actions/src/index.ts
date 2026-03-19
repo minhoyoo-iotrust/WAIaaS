@@ -278,12 +278,14 @@ export function registerBuiltInProviders(
       key: 'kamino',
       enabledKey: 'actions.kamino_enabled',
       factory: () => {
+        const kaminoRpcUrl = settingsReader.get('rpc.solana_mainnet') || '';
         const config: KaminoConfig = {
           enabled: true,
           market: settingsReader.get('actions.kamino_market') || 'main',
           hfThreshold: Number(settingsReader.get('actions.kamino_hf_threshold')) || 1.2,
+          rpcUrl: kaminoRpcUrl,
         };
-        return new KaminoLendingProvider(config, new KaminoSdkWrapper(''));
+        return new KaminoLendingProvider(config, new KaminoSdkWrapper(kaminoRpcUrl));
       },
     },
     {
@@ -305,11 +307,13 @@ export function registerBuiltInProviders(
       key: 'drift_perp',
       enabledKey: 'actions.drift_enabled',
       factory: () => {
+        const driftRpcUrl = settingsReader.get('rpc.solana_mainnet') || '';
         const config: DriftConfig = {
           enabled: true,
           subAccount: 0,
+          rpcUrl: driftRpcUrl,
         };
-        return new DriftPerpProvider(config, new DriftSdkWrapper('', config.subAccount));
+        return new DriftPerpProvider(config, new DriftSdkWrapper(driftRpcUrl, config.subAccount));
       },
     },
     {

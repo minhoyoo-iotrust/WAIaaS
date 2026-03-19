@@ -57,7 +57,7 @@ export type PendleMarketsResponse = z.infer<typeof PendleMarketsResponseSchema>;
 // Convert Response (/v2/sdk/{chainId}/convert) — unified for all actions
 // ---------------------------------------------------------------------------
 
-export const PendleConvertResponseSchema = z.object({
+const PendleConvertObjectSchema = z.object({
   tx: z.object({
     to: z.string(),
     data: z.string().describe('hex-encoded calldata'),
@@ -66,7 +66,13 @@ export const PendleConvertResponseSchema = z.object({
   amountOut: z.string(),
 }).passthrough();
 
-export type PendleConvertResponse = z.infer<typeof PendleConvertResponseSchema>;
+/** Accept both object and single-element array — Pendle API alternates formats across versions. */
+export const PendleConvertResponseSchema = z.union([
+  PendleConvertObjectSchema,
+  z.array(PendleConvertObjectSchema).min(1),
+]);
+
+export type PendleConvertResponse = z.infer<typeof PendleConvertObjectSchema>;
 
 // ---------------------------------------------------------------------------
 // Swapping Prices (/v1/sdk/{chainId}/markets/{market}/swapping-prices)

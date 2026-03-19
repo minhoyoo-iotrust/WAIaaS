@@ -49,6 +49,9 @@
 | 399 | BUG | HIGH | Kamino/Drift SDK 런타임 미설치로 Solana DeFi 기능 사용 불가 — #374/#375 후속 | — | FIXED | 2026-03-19 |
 | 400 | BUG | CRITICAL | Aave V3 포지션 formatWei 18 decimals 하드코딩으로 USDC 등 비-18 토큰 표시 오류 — amount/USD 0 표시 | — | FIXED | 2026-03-19 |
 | 401 | BUG | HIGH | PositionTracker 시작 시 STAKING 즉시 동기화 누락 — 최대 15분간 Lido 포지션 미표시 | — | FIXED | 2026-03-19 |
+| 402 | BUG | HIGH | Kamino/Drift SDK RPC URL 미설정으로 Action 실행 전면 실패 — Endpoint URL must start with http | — | FIXED | 2026-03-19 |
+| 403 | BUG | HIGH | Pendle API 응답 스키마 불일치 재발 — buy_pt array vs object (#373/#398 3회차) | — | FIXED | 2026-03-19 |
+| 404 | BUG | MEDIUM | DCent Swap dex_swap fromDecimals/toDecimals 필수인데 시나리오/문서 누락 — 파라미터 없이 호출 시 검증 실패 | — | FIXED | 2026-03-19 |
 
 ## Type Legend
 
@@ -61,7 +64,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 401
+- **FIXED:** 404
 - **WONTFIX:** 1
-- **Total:** 402
+- **Total:** 405
 - **Archived:** 366 (001–366)

@@ -15,6 +15,8 @@ export interface KaminoConfig {
   market: string;
   /** Health factor warning threshold. Default 1.2. */
   hfThreshold: number;
+  /** Solana RPC URL for SDK calls. */
+  rpcUrl?: string;
 }
 
 // ---------------------------------------------------------------------------

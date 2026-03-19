@@ -50,7 +50,9 @@ curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=tru
       "fromAsset": "eip155:1/slip44:60",
       "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "amount": "1000000000000000",
-      "slippageBps": 50
+      "slippageBps": 50,
+      "fromDecimals": 18,
+      "toDecimals": 6
     }
   }'
 ```
@@ -79,7 +81,9 @@ curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/dex_swap \
       "fromAsset": "eip155:1/slip44:60",
       "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "amount": "1000000000000000",
-      "slippageBps": 50
+      "slippageBps": 50,
+      "fromDecimals": 18,
+      "toDecimals": 6
     }
   }'
 ```
@@ -145,7 +149,9 @@ curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=tru
       "fromAsset": "eip155:1/erc20:0x6B175474E89094C44Da98b954EedeAC495271d0F",
       "toAsset": "eip155:1/erc20:0x514910771AF9Ca656af840dff83E8264EcF986CA",
       "amount": "10000000000000000000",
-      "slippageBps": 100
+      "slippageBps": 100,
+      "fromDecimals": 18,
+      "toDecimals": 18
     }
   }'
 ```
@@ -164,7 +170,9 @@ curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/get_quotes \
     "params": {
       "fromAsset": "eip155:1/slip44:60",
       "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "amount": "1000000000000000"
+      "amount": "1000000000000000",
+      "fromDecimals": 18,
+      "toDecimals": 6
     }
   }'
 ```
@@ -199,6 +207,8 @@ curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=tru
       "toAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       "amount": "1000000000000000",
       "slippageBps": 100,
+      "fromDecimals": 18,
+      "toDecimals": 6,
       "toWalletAddress": "<SOLANA_WALLET_ADDRESS>"
     }
   }'
@@ -232,7 +242,9 @@ curl -s -X POST 'http://localhost:3100/v1/actions/dcent_swap/dex_swap?dryRun=tru
       "fromAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501",
       "toAsset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       "amount": "10000000",
-      "slippageBps": 50
+      "slippageBps": 50,
+      "fromDecimals": 9,
+      "toDecimals": 6
     }
   }'
 ```

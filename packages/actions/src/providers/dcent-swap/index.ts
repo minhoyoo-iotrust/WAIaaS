@@ -21,7 +21,7 @@ import type {
 import { DcentSwapApiClient } from './dcent-api-client.js';
 import { type DcentSwapConfig, DCENT_SWAP_DEFAULTS } from './config.js';
 import { getDcentQuotes, executeDexSwap, type DcentQuoteResult, type GetQuotesParams } from './dex-swap.js';
-import { findTwoHopRoutes, executeTwoHopSwap, type TwoHopQuoteResult } from './auto-router.js';
+import { findTwoHopRoutes, executeTwoHopSwap, INTERMEDIATE_TOKENS, type TwoHopQuoteResult } from './auto-router.js';
 import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 
 // ---------------------------------------------------------------------------
@@ -36,8 +36,10 @@ const GetQuotesInputSchema = z.object({
     .describe('Human-readable amount (e.g., "1.5" for 1.5 tokens). Requires decimals field. Mutually exclusive with amount.'),
   decimals: z.number().int().min(0).max(24).optional()
     .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
-  fromDecimals: z.number().int().min(0).max(18),
-  toDecimals: z.number().int().min(0).max(18),
+  fromDecimals: z.number().int().min(0).max(18).optional()
+    .describe('Source token decimals. Auto-resolved from well-known tokens when omitted.'),
+  toDecimals: z.number().int().min(0).max(18).optional()
+    .describe('Destination token decimals. Auto-resolved from well-known tokens when omitted.'),
 });
 
 const DexSwapInputSchema = z.object({
@@ -48,15 +50,37 @@ const DexSwapInputSchema = z.object({
     .describe('Human-readable amount (e.g., "1.5" for 1.5 tokens). Requires decimals field. Mutually exclusive with amount.'),
   decimals: z.number().int().min(0).max(24).optional()
     .describe('Token decimals for humanAmount conversion. Required when using humanAmount. Note: this is separate from fromDecimals/toDecimals.'),
-  fromDecimals: z.number().int().min(0).max(18),
-  toDecimals: z.number().int().min(0).max(18),
+  fromDecimals: z.number().int().min(0).max(18).optional()
+    .describe('Source token decimals. Auto-resolved from well-known tokens when omitted.'),
+  toDecimals: z.number().int().min(0).max(18).optional()
+    .describe('Destination token decimals. Auto-resolved from well-known tokens when omitted.'),
   providerId: z.string().optional(),
   slippageBps: z.number().int().optional(),
 });
 
 // ---------------------------------------------------------------------------
-// Helper
+// Helpers
 // ---------------------------------------------------------------------------
+
+/** Build flat CAIP-19 → decimals lookup from INTERMEDIATE_TOKENS. */
+const KNOWN_DECIMALS: Map<string, number> = new Map();
+for (const tokens of Object.values(INTERMEDIATE_TOKENS)) {
+  for (const t of tokens) {
+    KNOWN_DECIMALS.set(t.caip19.toLowerCase(), t.decimals);
+  }
+}
+
+/**
+ * Resolve token decimals from CAIP-19 asset ID.
+ * Uses well-known tokens from INTERMEDIATE_TOKENS map.
+ */
+function resolveDecimals(caip19: string, label: string): number {
+  const d = KNOWN_DECIMALS.get(caip19.toLowerCase());
+  if (d !== undefined) return d;
+  throw new ChainError('INVALID_INSTRUCTION', 'ethereum', {
+    message: `${label} is required for asset ${caip19} — not a well-known token. Provide ${label} explicitly (e.g., 18 for ETH, 6 for USDC).`,
+  });
+}
 
 /** Check if a ChainError indicates no swap route available. */
 function isNoRouteError(err: ChainError): boolean {
@@ -128,7 +152,9 @@ export class DcentSwapActionProvider implements IActionProvider {
         // DS-07: get_quotes is informational. Use queryQuotes() for direct access.
         const input = GetQuotesInputSchema.parse(rp);
         if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
-        const result = await getDcentQuotes(this.getClient(), { ...input, fromWalletAddress: context.walletAddress } as GetQuotesParams);
+        const fromDec = input.fromDecimals ?? resolveDecimals(input.fromAsset, 'fromDecimals');
+        const toDec = input.toDecimals ?? resolveDecimals(input.toAsset, 'toDecimals');
+        const result = await getDcentQuotes(this.getClient(), { ...input, fromDecimals: fromDec, toDecimals: toDec, fromWalletAddress: context.walletAddress } as GetQuotesParams);
         throw new ChainError('INVALID_INSTRUCTION', context.chain, {
           message: `get_quotes is informational. Use queryQuotes() query method. Result: ${JSON.stringify({
             dexProviders: result.dexProviders.length,
@@ -140,7 +166,9 @@ export class DcentSwapActionProvider implements IActionProvider {
       case 'dex_swap': {
         const input = DexSwapInputSchema.parse(rp);
         if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
-        const swapParams = { fromAsset: input.fromAsset, toAsset: input.toAsset, amount: input.amount, fromDecimals: input.fromDecimals, toDecimals: input.toDecimals, walletAddress: context.walletAddress, providerId: input.providerId, slippageBps: input.slippageBps };
+        const swapFromDec = input.fromDecimals ?? resolveDecimals(input.fromAsset, 'fromDecimals');
+        const swapToDec = input.toDecimals ?? resolveDecimals(input.toAsset, 'toDecimals');
+        const swapParams = { fromAsset: input.fromAsset, toAsset: input.toAsset, amount: input.amount, fromDecimals: swapFromDec, toDecimals: swapToDec, walletAddress: context.walletAddress, providerId: input.providerId, slippageBps: input.slippageBps };
         try {
           return await executeDexSwap(
             this.getClient(),
