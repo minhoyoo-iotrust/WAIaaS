@@ -19,7 +19,7 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const PROVIDER_SCENARIO_MAP: Record<string, string> = {
   'aave-v3': 'defi/aave-lending.md',
   'across': 'defi/across-bridge.md',
-  'dcent-swap': 'defi/dcent-swap.md',
+  'dcent-swap': 'defi/dcent-swap-evm.md',
   'drift': 'defi/drift-perp.md',
   'erc8004': 'advanced/smart-account.md',
   'hyperliquid': 'defi/hyperliquid-mainnet.md',
