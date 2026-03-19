@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.0-rc.27](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.26...v2.11.0-rc.27) (2026-03-19)
+
+
+### Bug Fixes
+
+* resolve 7 open issues ([#405](https://github.com/minhoyoo-iotrust/WAIaaS/issues/405)-[#411](https://github.com/minhoyoo-iotrust/WAIaaS/issues/411)) from Agent UAT ([2af859e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2af859eb35c7233a98a77210a34aa578fbe4cded))
+* resolve 7 open issues ([#405](https://github.com/minhoyoo-iotrust/WAIaaS/issues/405)-[#411](https://github.com/minhoyoo-iotrust/WAIaaS/issues/411)) from Agent UAT ([8a567e5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8a567e5371fc6b350987ede1944e6581c4d7957d))
+
 ## [2.11.0-rc.26](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.25...v2.11.0-rc.26) (2026-03-19)
 
 
