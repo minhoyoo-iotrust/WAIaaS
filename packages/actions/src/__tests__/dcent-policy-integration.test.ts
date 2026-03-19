@@ -108,8 +108,9 @@ describe('DCent Swap policy integration', () => {
         toDecimals: 6,
       }, CONTEXT);
 
+      expect('__apiDirect' in (result as object)).toBe(false);
       const requests = Array.isArray(result) ? result : [result];
-      const swap = requests[0]!;
+      const swap = requests[0] as { to: string; calldata: string; value: string };
 
       // to = DEX router address (subject to CONTRACT_WHITELIST)
       expect(swap.to.toLowerCase()).toBe(SUSHI_SPENDER.toLowerCase());
@@ -165,18 +166,19 @@ describe('DCent Swap policy integration', () => {
         toDecimals: 18,
       }, CONTEXT);
 
+      expect('__apiDirect' in (result as object)).toBe(false);
       const requests = Array.isArray(result) ? result : [result];
       expect(requests.length).toBe(2);
 
       // First request: approve (to = ERC-20 token contract)
-      const approve = requests[0]!;
+      const approve = requests[0] as { to: string; calldata: string; value: string };
       expect(approve.to.toLowerCase()).toBe(USDC_ADDRESS);
       // approve(address,uint256) selector = 0x095ea7b3
       expect(approve.calldata).toContain('0x095ea7b3');
       expect(approve.value).toBe('0');
 
       // Second request: swap (to = DEX router, subject to CONTRACT_WHITELIST)
-      const swap = requests[1]!;
+      const swap = requests[1] as { to: string; calldata: string };
       expect(swap.to.toLowerCase()).toBe(SUSHI_SPENDER.toLowerCase());
       expect(swap.calldata).toBeDefined();
     });

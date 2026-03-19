@@ -4,7 +4,7 @@
 - **심각도:** MEDIUM
 - **발견일:** 2026-03-19
 - **발견 경로:** Agent UAT defi-14 (DCent 2-hop Auto-Routing)
-- **상태:** OPEN
+- **상태:** FIXED
 
 ## 증상
 

@@ -62,7 +62,7 @@ const PendleConvertObjectSchema = z.object({
     to: z.string(),
     data: z.string().describe('hex-encoded calldata'),
     value: z.string().describe('native token value (wei)'),
-  }),
+  }).passthrough(),
   amountOut: z.string(),
 }).passthrough();
 

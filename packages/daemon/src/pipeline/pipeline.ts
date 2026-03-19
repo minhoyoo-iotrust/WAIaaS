@@ -153,6 +153,7 @@ export class TransactionPipeline {
         policyEngine: this.deps.policyEngine,
         priceOracle: this.deps.priceOracle,
         settingsService: this.deps.settingsService,
+        rpcUrl: this.deps.resolvedRpcUrl,
       },
       walletId,
       request,

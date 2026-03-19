@@ -343,7 +343,7 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
     const wallet = new sdk.PublicKey(params.walletAddress);
     const mint = new sdk.PublicKey(params.asset);
     const action = await sdk.KaminoAction.buildDepositTxns(
-      market, params.amount.toString(), mint, wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID),
+      market, params.amount.toString(), mint, wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)),
     );
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
     return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
@@ -360,7 +360,7 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
     const wallet = new sdk.PublicKey(params.walletAddress);
     const mint = new sdk.PublicKey(params.asset);
     const action = await sdk.KaminoAction.buildBorrowTxns(
-      market, params.amount.toString(), mint, wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID),
+      market, params.amount.toString(), mint, wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)),
     );
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
     return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
@@ -378,7 +378,7 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
     const mint = new sdk.PublicKey(params.asset);
     const amountStr = params.amount === 'max' ? 'max' : params.amount.toString();
     const action = await sdk.KaminoAction.buildRepayTxns(
-      market, amountStr, mint, wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID),
+      market, amountStr, mint, wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)),
     );
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
     return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
@@ -396,7 +396,7 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
     const mint = new sdk.PublicKey(params.asset);
     const amountStr = params.amount === 'max' ? 'max' : params.amount.toString();
     const action = await sdk.KaminoAction.buildWithdrawTxns(
-      market, amountStr, mint, wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID),
+      market, amountStr, mint, wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)),
     );
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
     return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
@@ -410,7 +410,7 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
     const { market } = await this.loadMarket(params.market);
     const wallet = new sdk.PublicKey(params.walletAddress);
     await market.loadReserves();
-    const obligations = await market.getObligationByWallet(wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID));
+    const obligations = await market.getObligationByWallet(wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)));
     if (!obligations) return null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

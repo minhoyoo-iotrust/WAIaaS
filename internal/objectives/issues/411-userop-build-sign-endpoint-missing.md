@@ -4,7 +4,7 @@
 - **심각도:** MEDIUM (MISSING → BUG로 변경)
 - **발견일:** 2026-03-19
 - **발견 경로:** Agent UAT advanced-01 (Smart Account UserOp Build/Sign)
-- **상태:** OPEN
+- **상태:** FIXED
 
 ## 증상
 

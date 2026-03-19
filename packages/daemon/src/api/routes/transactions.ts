@@ -788,6 +788,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       masterPassword: deps.passwordRef?.password ?? deps.masterPassword,
       priceOracle: deps.priceOracle,
       settingsService: deps.settingsService,
+      resolvedRpcUrl: rpcUrl,
     });
 
     const result = await pipeline.executeDryRun(walletId, request);

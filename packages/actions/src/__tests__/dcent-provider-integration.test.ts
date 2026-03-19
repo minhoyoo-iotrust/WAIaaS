@@ -134,11 +134,13 @@ describe('DcentSwapActionProvider resolve()', () => {
       }, CONTEXT);
 
       // Native sell returns single ContractCallRequest (no approve needed)
+      expect('__apiDirect' in (result as object)).toBe(false);
       const requests = Array.isArray(result) ? result : [result];
       expect(requests.length).toBe(1);
-      expect(requests[0]!.to.toLowerCase()).toBe(SUSHI_SPENDER.toLowerCase());
-      expect(requests[0]!.calldata).toContain('0x');
-      expect(requests[0]!.value).toBe('1000000000000000000');
+      const req0 = requests[0] as { to: string; calldata: string; value: string };
+      expect(req0.to.toLowerCase()).toBe(SUSHI_SPENDER.toLowerCase());
+      expect(req0.calldata).toContain('0x');
+      expect(req0.value).toBe('1000000000000000000');
     });
 
     it('returns two ContractCallRequests for ERC-20 sell (USDC -> ETH)', async () => {
@@ -188,15 +190,18 @@ describe('DcentSwapActionProvider resolve()', () => {
         toDecimals: 18,
       }, CONTEXT);
 
+      expect('__apiDirect' in (result as object)).toBe(false);
       const requests = Array.isArray(result) ? result : [result];
       expect(requests.length).toBe(2);
 
       // First = approve
-      expect(requests[0]!.to.toLowerCase()).toBe('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48');
-      expect(requests[0]!.calldata).toContain('0x095ea7b3'); // approve selector
+      const approve = requests[0] as { to: string; calldata: string };
+      expect(approve.to.toLowerCase()).toBe('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48');
+      expect(approve.calldata).toContain('0x095ea7b3'); // approve selector
 
       // Second = swap
-      expect(requests[1]!.to.toLowerCase()).toBe(SUSHI_SPENDER.toLowerCase());
+      const swap = requests[1] as { to: string };
+      expect(swap.to.toLowerCase()).toBe(SUSHI_SPENDER.toLowerCase());
     });
 
     it('attempts 2-hop routing fallback when no direct route', async () => {
@@ -222,31 +227,24 @@ describe('DcentSwapActionProvider resolve()', () => {
   });
 
   describe('resolve informational actions', () => {
-    it('resolve get_quotes throws INVALID_INSTRUCTION with quote data', async () => {
+    it('resolve get_quotes returns ApiDirectResult with quote data', async () => {
       const provider = createProvider();
-      await expect(
-        provider.resolve('get_quotes', {
-          fromAsset: ETH_CAIP19,
-          toAsset: USDC_CAIP19,
-          amount: '1000000000000000000',
-          fromDecimals: 18,
-          toDecimals: 6,
-        }, CONTEXT),
-      ).rejects.toThrow(ChainError);
+      const result = await provider.resolve('get_quotes', {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+      }, CONTEXT);
 
-      try {
-        await provider.resolve('get_quotes', {
-          fromAsset: ETH_CAIP19,
-          toAsset: USDC_CAIP19,
-          amount: '1000000000000000000',
-          fromDecimals: 18,
-          toDecimals: 6,
-        }, CONTEXT);
-      } catch (err) {
-        expect(err).toBeInstanceOf(ChainError);
-        expect((err as ChainError).message).toContain('informational');
-        expect((err as ChainError).message).toContain('queryQuotes');
-      }
+      // Should return ApiDirectResult, not throw
+      expect(result).toBeDefined();
+      expect((result as any).__apiDirect).toBe(true);
+      expect((result as any).status).toBe('success');
+      expect((result as any).externalId).toMatch(/^dcent-quotes-/);
+      expect((result as any).data.totalProviders).toBeGreaterThanOrEqual(1);
+      expect((result as any).data.bestDexProvider).toBeDefined();
+      expect((result as any).data.dexProviders).toBeInstanceOf(Array);
     });
 
     it('resolve unknown_action throws INVALID_INSTRUCTION', async () => {

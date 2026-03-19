@@ -316,7 +316,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
   readonly subAccount: number;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _sdk: { Connection: any; PublicKey: any; Wallet: any; BN: any; DriftClient: any; PositionDirection: any; OrderType: any; MarketType: any; PRICE_PRECISION: any; BASE_PRECISION: any; QUOTE_PRECISION: any; convertToNumber: any; getMarketOrderParams: any; getLimitOrderParams: any } | null = null;
+  private _sdk: { Connection: any; PublicKey: any; Keypair: any; Wallet: any; BN: any; DriftClient: any; PositionDirection: any; OrderType: any; MarketType: any; PRICE_PRECISION: any; BASE_PRECISION: any; QUOTE_PRECISION: any; convertToNumber: any; getMarketOrderParams: any; getLimitOrderParams: any } | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _client: any = null;
 
@@ -325,7 +325,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     this.subAccount = subAccount;
   }
 
-  private async loadSdk() {
+  private async loadSdk(): Promise<NonNullable<typeof this._sdk>> {
     if (this._sdk) return this._sdk;
     try {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -337,6 +337,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
       this._sdk = {
         Connection: solana.Connection,
         PublicKey: solana.PublicKey,
+        Keypair: solana.Keypair,
         Wallet: drift.Wallet,
         BN: drift.BN,
         DriftClient: drift.DriftClient,
@@ -367,7 +368,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
     const client = new sdk.DriftClient({
       connection,
-      wallet: sdk.Wallet.local(), // read-only dummy wallet for queries
+      wallet: new sdk.Wallet(sdk.Keypair.generate()), // read-only dummy wallet for queries
       programID: new sdk.PublicKey(DRIFT_PROGRAM_ID),
       activeSubAccountId: this.subAccount,
     });

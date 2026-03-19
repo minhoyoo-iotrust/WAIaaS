@@ -19,6 +19,7 @@ import type {
   TransactionRequest,
 } from '@waiaas/core';
 import { executeDryRun, type DryRunDeps } from '../pipeline/dry-run.js';
+import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -394,5 +395,169 @@ describe('executeDryRun', () => {
     expect(warningCodes).toContain('SIMULATION_FAILED');
     // fee should be null since build failed
     expect(result.fee).toBeNull();
+  });
+
+  // =====================================================================
+  // Gas Condition Evaluation Tests (#405)
+  // =====================================================================
+
+  describe('gasCondition evaluation', () => {
+    // Clear gas price cache before each test to avoid cross-test contamination
+    beforeEach(async () => {
+      const { gasPriceCache } = await import('../pipeline/gas-condition-tracker.js');
+      gasPriceCache.clear();
+    });
+
+    // Helper to create a mock SettingsService
+    function mockSettingsService(overrides?: Record<string, string>): SettingsService {
+      const settings: Record<string, string> = {
+        'gas_condition.enabled': 'true',
+        ...overrides,
+      };
+      return {
+        get: vi.fn((key: string) => {
+          if (key in settings) return settings[key];
+          throw new Error(`Setting '${key}' not found`);
+        }),
+      } as unknown as SettingsService;
+    }
+
+    const transferWithGasCondition: TransactionRequest = {
+      type: 'TRANSFER',
+      to: '0x742d35Cc6634C0532925a3b844Bc9e7595f6E8f0',
+      amount: '1000000000000000000',
+      gasCondition: {
+        maxGasPrice: '50000000000', // 50 gwei
+      },
+    } as TransactionRequest;
+
+    // ---------- gasCondition met (current < max) ----------
+    it('returns gasCondition.met=true when current gas price is below threshold', async () => {
+      // Mock the gas price query -- we need to mock fetch globally
+      const mockFetch = vi.fn()
+        // eth_gasPrice response: 30 gwei (below 50 gwei threshold)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            jsonrpc: '2.0',
+            id: 1,
+            result: '0x6FC23AC00', // 30000000000 (30 gwei)
+          }),
+        })
+        // eth_maxPriorityFeePerGas response: 1 gwei
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            jsonrpc: '2.0',
+            id: 1,
+            result: '0x3B9ACA00', // 1000000000 (1 gwei)
+          }),
+        });
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = mockFetch;
+
+      try {
+        const deps = makeDeps({
+          rpcUrl: 'http://localhost:8545',
+          settingsService: mockSettingsService(),
+        });
+        const result = await executeDryRun(deps, 'wallet-1', transferWithGasCondition, 'ethereum-mainnet', defaultWalletInfo);
+
+        expect(result.gasCondition).toBeDefined();
+        expect(result.gasCondition!.met).toBe(true);
+        expect(result.gasCondition!.currentGasPrice).toBe('30000000000');
+        expect(result.gasCondition!.maxGasPrice).toBe('50000000000');
+        // No GAS_CONDITION_NOT_MET warning
+        const warningCodes = result.warnings.map((w) => w.code);
+        expect(warningCodes).not.toContain('GAS_CONDITION_NOT_MET');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    // ---------- gasCondition NOT met (current > max) ----------
+    it('returns gasCondition.met=false and warning when current gas price exceeds threshold', async () => {
+      const mockFetch = vi.fn()
+        // eth_gasPrice response: 80 gwei (above 50 gwei threshold)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            jsonrpc: '2.0',
+            id: 1,
+            result: '0x12A05F2000', // 80000000000 (80 gwei -- intentionally exceeds)
+          }),
+        })
+        // eth_maxPriorityFeePerGas response
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            jsonrpc: '2.0',
+            id: 1,
+            result: '0x3B9ACA00', // 1 gwei
+          }),
+        });
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = mockFetch;
+
+      try {
+        const deps = makeDeps({
+          rpcUrl: 'http://localhost:8545',
+          settingsService: mockSettingsService(),
+        });
+
+        const result = await executeDryRun(deps, 'wallet-1', transferWithGasCondition, 'ethereum-mainnet', defaultWalletInfo);
+
+        expect(result.gasCondition).toBeDefined();
+        expect(result.gasCondition!.met).toBe(false);
+        expect(result.gasCondition!.maxGasPrice).toBe('50000000000');
+        // Should have GAS_CONDITION_NOT_MET warning
+        const warningCodes = result.warnings.map((w) => w.code);
+        expect(warningCodes).toContain('GAS_CONDITION_NOT_MET');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    // ---------- No gasCondition -- regression test ----------
+    it('does not include gasCondition field when request has no gasCondition', async () => {
+      const deps = makeDeps({
+        rpcUrl: 'http://localhost:8545',
+        settingsService: mockSettingsService(),
+      });
+      const result = await executeDryRun(deps, 'wallet-1', transferRequest, 'ethereum-mainnet', defaultWalletInfo);
+
+      expect(result.gasCondition).toBeUndefined();
+      const warningCodes = result.warnings.map((w) => w.code);
+      expect(warningCodes).not.toContain('GAS_CONDITION_NOT_MET');
+      expect(warningCodes).not.toContain('GAS_CONDITION_DISABLED');
+    });
+
+    // ---------- gas_condition.enabled=false ----------
+    it('skips gas condition evaluation and adds warning when gas_condition.enabled=false', async () => {
+      const deps = makeDeps({
+        rpcUrl: 'http://localhost:8545',
+        settingsService: mockSettingsService({ 'gas_condition.enabled': 'false' }),
+      });
+      const result = await executeDryRun(deps, 'wallet-1', transferWithGasCondition, 'ethereum-mainnet', defaultWalletInfo);
+
+      // gasCondition should NOT be present (evaluation was skipped)
+      expect(result.gasCondition).toBeUndefined();
+      // Should have GAS_CONDITION_DISABLED warning
+      const warningCodes = result.warnings.map((w) => w.code);
+      expect(warningCodes).toContain('GAS_CONDITION_DISABLED');
+    });
+
+    // ---------- No RPC URL ----------
+    it('adds warning when gasCondition is present but no rpcUrl is available', async () => {
+      const deps = makeDeps({
+        // rpcUrl intentionally omitted
+        settingsService: mockSettingsService(),
+      });
+      const result = await executeDryRun(deps, 'wallet-1', transferWithGasCondition, 'ethereum-mainnet', defaultWalletInfo);
+
+      expect(result.gasCondition).toBeUndefined();
+      const warningCodes = result.warnings.map((w) => w.code);
+      expect(warningCodes).toContain('GAS_CONDITION_NOT_MET');
+    });
   });
 });

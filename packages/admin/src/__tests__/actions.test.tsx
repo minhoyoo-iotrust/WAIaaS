@@ -548,12 +548,12 @@ describe('ActionsPage', () => {
   describe("D'CENT Swap advanced settings", () => {
     const mockDcentProvider = {
       providers: [
-        { name: 'dcent_swap', description: "D'CENT Swap Aggregator multi-chain DEX", version: '1.0.0', chains: ['evm', 'solana'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'dcent_swap', category: 'Swap', isEnabled: true, actions: [] },
+        { name: 'dcent_swap', description: "D'CENT Swap Aggregator multi-chain DEX", version: '1.0.0', chains: ['evm'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'dcent_swap', category: 'Swap', isEnabled: true, actions: [] },
       ],
     };
     const mockDcentProviderDisabled = {
       providers: [
-        { name: 'dcent_swap', description: "D'CENT Swap Aggregator multi-chain DEX", version: '1.0.0', chains: ['evm', 'solana'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'dcent_swap', category: 'Swap', isEnabled: false, actions: [] },
+        { name: 'dcent_swap', description: "D'CENT Swap Aggregator multi-chain DEX", version: '1.0.0', chains: ['evm'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'dcent_swap', category: 'Swap', isEnabled: false, actions: [] },
       ],
     };
 

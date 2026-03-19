@@ -2,7 +2,7 @@
 id: "advanced-01"
 title: "Smart Account UserOp Build/Sign"
 category: "advanced"
-auth: "session"
+auth: "master"
 network: ["ethereum-sepolia"]
 requires_funds: true
 estimated_cost_usd: "0.02"
@@ -22,7 +22,7 @@ tags: ["smart-account", "userop", "erc-4337", "sepolia"]
 
 ## Prerequisites
 - [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
-- [ ] 세션 토큰 보유 (sessionAuth)
+- [ ] 마스터 비밀번호 인증 가능 (masterAuth)
 - [ ] Smart Account 지갑 보유 (accountType=smart)
 - [ ] Sepolia ETH 보유 (가스비용, 최소 0.01 ETH)
 - [ ] AA Provider 설정 완료 (Lite 또는 Full 모드)
@@ -50,11 +50,10 @@ curl -s http://localhost:3100/v1/connect-info \
 ### Step 3: UserOp Build
 **Action**: ETH self-transfer UserOp를 빌드한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/userop/build \
+curl -s -X POST http://localhost:3100/v1/wallets/<SMART_WALLET_ID>/userop/build \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <session-token>' \
+  -H 'Authorization: Bearer <master-token>' \
   -d '{
-    "walletId": "<SMART_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
     "amount": "1000000000000000",
@@ -67,9 +66,9 @@ curl -s -X POST http://localhost:3100/v1/userop/build \
 ### Step 4: UserOp Sign
 **Action**: 빌드된 UserOp에 서명한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/userop/sign \
+curl -s -X POST http://localhost:3100/v1/wallets/<SMART_WALLET_ID>/userop/sign \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <session-token>' \
+  -H 'Authorization: Bearer <master-token>' \
   -d '{
     "buildId": "<BUILD_ID>"
   }'
@@ -80,8 +79,8 @@ curl -s -X POST http://localhost:3100/v1/userop/sign \
 ### Step 5: UserOp 빌드 상태 확인
 **Action**: 빌드 상태를 조회한다 (TTL 10분 이내).
 ```bash
-curl -s http://localhost:3100/v1/userop/builds/<BUILD_ID> \
-  -H 'Authorization: Bearer <session-token>'
+curl -s http://localhost:3100/v1/wallets/<SMART_WALLET_ID>/userop/builds/<BUILD_ID> \
+  -H 'Authorization: Bearer <master-token>'
 ```
 **Expected**: 200 OK, 빌드 상태가 `signed` 또는 `submitted`로 표시된다
 **Check**: `status` 필드 확인

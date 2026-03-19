@@ -114,7 +114,8 @@ function createMockSdk() {
   const sdk = {
     Connection: vi.fn().mockReturnValue({}),
     PublicKey: vi.fn().mockImplementation((addr: string) => mockPubkey(addr)),
-    Wallet: { local: vi.fn().mockReturnValue({}) },
+    Keypair: { generate: vi.fn().mockReturnValue({}) },
+    Wallet: vi.fn().mockReturnValue({}),
     BN: vi.fn().mockImplementation((n: number) => n),
     DriftClient: vi.fn().mockReturnValue(mockClient),
     PositionDirection: { LONG: 'long', SHORT: 'short' },
