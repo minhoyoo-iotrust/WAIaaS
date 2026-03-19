@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.11.0-rc.25](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.24...v2.11.0-rc.25) (2026-03-19)
+
+
+### Bug Fixes
+
+* add eslint-disable for [@ts-ignore](https://github.com/ts-ignore) on optional SDK imports ([0fbd32b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0fbd32b4cd9b1bc819e0733403e8d4bc3fa2d08a))
+* pass rpcUrl to Jito provider via registerBuiltInProviders and fix fetch mock reuse ([6b904fd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6b904fd2b9ec088ff3ba292f278d063501653429))
+* resolve issues [#395](https://github.com/minhoyoo-iotrust/WAIaaS/issues/395)-401 — DeFi providers, positions, UAT scenarios ([c6c2767](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c6c2767b786c08eb8789a58af0df336f78384254))
+* resolve issues [#395](https://github.com/minhoyoo-iotrust/WAIaaS/issues/395)-401 — DeFi UAT, Jupiter ALT, Jito accounts, Pendle schema, SDK install, Aave decimals, PositionTracker sync ([c202e4e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c202e4eacb9f205871621d93bd4d663b47ea59e9))
+* use [@ts-ignore](https://github.com/ts-ignore) for optional SDK imports to support CI without optional deps ([c9a5dd4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c9a5dd440f0972142bbc98f7df5cabaf91da2e2c))
+
 ## [2.11.0-rc.24](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.23...v2.11.0-rc.24) (2026-03-19)
 
 
