@@ -116,8 +116,10 @@ export class PositionTracker {
       timer.unref();
       this.timers.set(category, timer);
     }
-    // Immediate first sync for LENDING
-    void this.syncCategory('LENDING');
+    // Immediate first sync for all categories
+    for (const category of POSITION_CATEGORIES) {
+      void this.syncCategory(category);
+    }
   }
 
   /** Stop all polling timers. */

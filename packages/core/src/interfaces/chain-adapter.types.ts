@@ -186,6 +186,21 @@ export interface ContractCallParams {
     data: Uint8Array;
     accounts: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
   }>;
+  /**
+   * Solana-only: Additional instructions to append after the main instruction.
+   * Used for cleanup operations (e.g., Jupiter cleanupInstruction).
+   */
+  postInstructions?: Array<{
+    programId: string;
+    data: Uint8Array;
+    accounts: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+  }>;
+  /**
+   * Solana-only: Address Lookup Table (ALT) addresses for v0 transactions.
+   * When provided, the transaction message will be compressed using these lookup tables,
+   * allowing more accounts to fit in a single transaction.
+   */
+  addressLookupTableAddresses?: string[];
 }
 
 /** Approve request for buildApprove(). */

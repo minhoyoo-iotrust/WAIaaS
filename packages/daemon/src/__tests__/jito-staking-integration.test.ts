@@ -11,13 +11,46 @@
  * 7. Stake instructionData encodes correct amount in lamports
  * 8. Large amount encoding for INSUFFICIENT_BALANCE pipeline check (JITO-04)
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ActionProviderRegistry } from '../infrastructure/action/action-provider-registry.js';
 import {
   registerBuiltInProviders,
   JITO_MAINNET_ADDRESSES,
 } from '@waiaas/actions';
 import type { ActionContext } from '@waiaas/core';
+
+// ---------------------------------------------------------------------------
+// Mock RPC for dynamic stake pool account lookup
+// ---------------------------------------------------------------------------
+
+const TEST_RPC_URL = 'https://api.mainnet-beta.solana.com';
+
+function buildFakeStakePoolBuffer(): Buffer {
+  const buf = Buffer.alloc(300, 0);
+  // Write total_lamports at offset 258 and pool_token_supply at offset 266
+  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  view.setBigUint64(258, 1_000_000_000_000n, true);
+  view.setBigUint64(266, 1_000_000_000_000n, true);
+  return buf;
+}
+
+function buildStakePoolRpcResponse(): object {
+  const buf = buildFakeStakePoolBuffer();
+  return {
+    jsonrpc: '2.0',
+    id: 1,
+    result: { value: { data: [buf.toString('base64'), 'base64'], executable: false, lamports: 100000000, owner: 'SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy', rentEpoch: 0 } },
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let fetchSpy: any;
+beforeEach(() => {
+  fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+    new Response(JSON.stringify(buildStakePoolRpcResponse()), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+  );
+});
+afterEach(() => { fetchSpy?.mockRestore(); });
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -28,6 +61,7 @@ const makeSettingsReader = (overrides: Record<string, string> = {}) => {
     'actions.jito_staking_enabled': 'false',
     'actions.jito_staking_stake_pool_address': '',
     'actions.jito_staking_jitosol_mint': '',
+    'rpc.solana_mainnet': TEST_RPC_URL,
     // Disable other providers to prevent interference
     'actions.jupiter_swap_enabled': 'false',
     'actions.zerox_swap_enabled': 'false',

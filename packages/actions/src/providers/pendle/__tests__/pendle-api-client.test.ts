@@ -118,6 +118,20 @@ describe('PendleApiClient', () => {
       expect(market.details?.impliedApy).toBe(0.045);
     });
 
+    it('returns markets from paginated response with data key', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v1/markets/all`, () => {
+          return HttpResponse.json({ data: [MOCK_MARKET], total: 1 });
+        }),
+      );
+
+      const client = new PendleApiClient(makeConfig(), 1);
+      const result = await client.getMarkets();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]!.address).toBe('0xMarketAddress123');
+    });
+
     it('validates response schema (rejects invalid data)', async () => {
       server.use(
         http.get(`${BASE_URL}/v1/markets/all`, () => {

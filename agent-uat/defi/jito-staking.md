@@ -24,7 +24,7 @@ tags: ["defi", "staking", "jito", "solana", "liquid-staking"]
 - [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
 - [ ] 세션 토큰 보유 (sessionAuth)
 - [ ] Solana Mainnet 지갑 보유
-- [ ] SOL 보유 (최소 0.01 SOL -- 스테이킹 금액 + tx fee)
+- [ ] SOL 보유 (최소 0.05 SOL -- 스테이킹 최소 금액 + tx fee)
 
 ## Scenario Steps
 
@@ -40,17 +40,16 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=sol
 ### Step 2: Jito 스테이킹 Simulate
 **Action**: SOL -> JitoSOL 스테이킹을 simulate으로 실행하여 예상 JitoSOL 수령량을 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST http://localhost:3100/v1/actions/jito_staking/stake?dryRun=true \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "jito-stake",
+    "network": "solana-mainnet",
     "params": {
-      "amount": "0.005"
-    },
-    "network": "solana-mainnet"
+      "humanAmount": "0.05",
+      "decimals": 9
+    }
   }'
 ```
 **Expected**: 200 OK, 예상 JitoSOL 수령량과 현재 환율이 반환된다
@@ -58,22 +57,21 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
 
 ### Step 3: 사용자 승인 후 실제 스테이킹
 **Action**: 사용자에게 스테이킹 조건을 표시하고 승인 후 실행한다.
-- 스테이킹: 0.005 SOL -> {outputAmount} JitoSOL
+- 스테이킹: 0.05 SOL -> {outputAmount} JitoSOL
 - 환율: 1 SOL = {exchangeRate} JitoSOL
 - JitoSOL mint: `J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn`
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/send \
+curl -s -X POST http://localhost:3100/v1/actions/jito_staking/stake \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "jito-stake",
+    "network": "solana-mainnet",
     "params": {
-      "amount": "0.005"
-    },
-    "network": "solana-mainnet"
+      "humanAmount": "0.05",
+      "decimals": 9
+    }
   }'
 ```
 **Expected**: 200 OK, 트랜잭션 ID와 tx signature가 반환된다
@@ -94,23 +92,22 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
-**Expected**: SOL 잔액이 ~0.005 SOL + tx fee만큼 감소, JitoSOL 토큰이 잔액에 표시
+**Expected**: SOL 잔액이 ~0.05 SOL + tx fee만큼 감소, JitoSOL 토큰이 잔액에 표시
 **Check**: SOL 감소 확인, JitoSOL (mint: `J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn`) 잔액 증가 확인
 
 ### Step 6: (선택) 언스테이킹 Simulate
 **Action**: JitoSOL -> SOL 언스테이킹을 simulate으로 확인한다. 실제 실행은 사용자 선택.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST http://localhost:3100/v1/actions/jito_staking/unstake?dryRun=true \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "jito-unstake",
+    "network": "solana-mainnet",
     "params": {
-      "amount": "0.005"
-    },
-    "network": "solana-mainnet"
+      "humanAmount": "0.05",
+      "decimals": 9
+    }
   }'
 ```
 **Expected**: 200 OK, 예상 SOL 반환량이 표시된다
@@ -131,7 +128,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
 | Priority fee | solana-mainnet | variable | ~$0.005 |
 | **Total** | | | **~$0.01** |
 
-> **Note**: 0.005 SOL이 JitoSOL로 변환된다. JitoSOL은 스테이킹 보상이 자동 누적되어 시간이 지나면 SOL 대비 가치가 상승한다.
+> **Note**: 0.05 SOL이 JitoSOL로 변환된다. 최소 스테이킹 금액은 0.05 SOL이다. JitoSOL은 스테이킹 보상이 자동 누적되어 시간이 지나면 SOL 대비 가치가 상승한다.
 
 ## Troubleshooting
 | Symptom | Cause | Resolution |

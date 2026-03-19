@@ -50,18 +50,17 @@ curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=
 ### Step 3: Kamino USDC Supply Simulate
 **Action**: USDC 1.0을 Kamino에 공급하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST http://localhost:3100/v1/actions/kamino/kamino_supply?dryRun=true \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "kamino-supply",
+    "network": "solana-mainnet",
     "params": {
-      "reserve": "USDC",
-      "amount": "1.0"
-    },
-    "network": "solana-mainnet"
+      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "humanAmount": "1.0",
+      "decimals": 6
+    }
   }'
 ```
 **Expected**: 200 OK, 예상 kToken 수령량과 tx fee가 반환된다
@@ -74,18 +73,17 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
 - tx fee: ~0.000005 SOL
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/send \
+curl -s -X POST http://localhost:3100/v1/actions/kamino/kamino_supply \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "kamino-supply",
+    "network": "solana-mainnet",
     "params": {
-      "reserve": "USDC",
-      "amount": "1.0"
-    },
-    "network": "solana-mainnet"
+      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "humanAmount": "1.0",
+      "decimals": 6
+    }
   }'
 ```
 **Expected**: 200 OK, 트랜잭션 ID와 tx signature가 반환된다
@@ -112,18 +110,17 @@ curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=
 ### Step 7: (선택) Withdraw Simulate
 **Action**: Kamino에서 USDC를 인출하는 simulate을 확인한다. 실제 실행은 사용자 선택.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST http://localhost:3100/v1/actions/kamino/kamino_withdraw?dryRun=true \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "kamino-withdraw",
+    "network": "solana-mainnet",
     "params": {
-      "reserve": "USDC",
-      "amount": "1.0"
-    },
-    "network": "solana-mainnet"
+      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "humanAmount": "1.0",
+      "decimals": 6
+    }
   }'
 ```
 **Expected**: 200 OK, 예상 USDC 반환량이 표시된다
@@ -150,7 +147,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
 ## Troubleshooting
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
-| Reserve not found | Kamino reserve 식별자 오류 | `USDC` 대신 정확한 reserve 주소 사용 |
+| Asset not found | Kamino asset 식별자 오류 | `asset` 파라미터에 SPL 토큰 mint 주소 사용 (예: USDC mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`) |
 | Insufficient USDC | USDC 잔액 부족 | 최소 1 USDC 확보 필요 |
 | Kamino program error | 프로그램 업그레이드/점검 | Kamino 상태 확인 후 재시도 |
 | kToken not showing | 토큰 계정 미생성 | 첫 supply 시 자동 생성됨, 잔액 조회 재시도 |

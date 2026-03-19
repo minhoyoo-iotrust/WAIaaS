@@ -2112,6 +2112,16 @@ export type paths = {
                                     isWritable: boolean;
                                 }[];
                             }[];
+                            postInstructions?: {
+                                programId: string;
+                                data: string;
+                                accounts: {
+                                    pubkey: string;
+                                    isSigner: boolean;
+                                    isWritable: boolean;
+                                }[];
+                            }[];
+                            addressLookupTableAddresses?: string[];
                             /** @enum {string} */
                             network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
                             actionProvider?: string;
@@ -2204,6 +2214,16 @@ export type paths = {
                                         isWritable: boolean;
                                     }[];
                                 }[];
+                                postInstructions?: {
+                                    programId: string;
+                                    data: string;
+                                    accounts: {
+                                        pubkey: string;
+                                        isSigner: boolean;
+                                        isWritable: boolean;
+                                    }[];
+                                }[];
+                                addressLookupTableAddresses?: string[];
                                 /** @enum {string} */
                                 network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
                                 actionProvider?: string;
@@ -7563,6 +7583,16 @@ export type components = {
                     isWritable: boolean;
                 }[];
             }[];
+            postInstructions?: {
+                programId: string;
+                data: string;
+                accounts: {
+                    pubkey: string;
+                    isSigner: boolean;
+                    isWritable: boolean;
+                }[];
+            }[];
+            addressLookupTableAddresses?: string[];
             /** @enum {string} */
             network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
             actionProvider?: string;
@@ -7657,6 +7687,16 @@ export type components = {
                         isWritable: boolean;
                     }[];
                 }[];
+                postInstructions?: {
+                    programId: string;
+                    data: string;
+                    accounts: {
+                        pubkey: string;
+                        isSigner: boolean;
+                        isWritable: boolean;
+                    }[];
+                }[];
+                addressLookupTableAddresses?: string[];
                 /** @enum {string} */
                 network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
                 actionProvider?: string;

@@ -37,7 +37,9 @@ export class PendleApiClient extends ActionApiClient {
     const raw = await this.get('v1/markets/all', PendleMarketsResponseSchema, {
       chainId: String(this.chainId),
     });
-    return Array.isArray(raw) ? raw : raw.results;
+    if (Array.isArray(raw)) return raw;
+    if ('results' in raw) return raw.results as PendleMarket[];
+    return (raw as { data: PendleMarket[] }).data;
   }
 
   /**

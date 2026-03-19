@@ -195,6 +195,30 @@ export const ContractCallRequestSchema = z.object({
       }),
     )
     .optional(),
+  /**
+   * Solana-only: Additional instructions to append after the main instruction.
+   * Used for cleanup operations (e.g., Jupiter cleanupInstruction).
+   */
+  postInstructions: z
+    .array(
+      z.object({
+        programId: z.string(),
+        data: z.string(), // base64-encoded
+        accounts: z.array(
+          z.object({
+            pubkey: z.string(),
+            isSigner: z.boolean(),
+            isWritable: z.boolean(),
+          }),
+        ),
+      }),
+    )
+    .optional(),
+  /**
+   * Solana-only: Address Lookup Table (ALT) addresses for v0 transactions.
+   * Passed through from Jupiter API response to allow compact account encoding.
+   */
+  addressLookupTableAddresses: z.array(z.string()).optional(),
   network: NetworkTypeEnumWithLegacy.optional(),
   /** Provider name tag for provider-trust policy bypass. Set by ActionProviderRegistry. */
   actionProvider: z.string().optional(),

@@ -40,20 +40,18 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=sol
 ### Step 2: Jupiter 스왑 Simulate
 **Action**: SOL -> USDC 스왑을 simulate으로 실행하여 예상 수령량과 가스비를 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST http://localhost:3100/v1/actions/jupiter_swap/swap?dryRun=true \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "jupiter-swap",
+    "network": "solana-mainnet",
     "params": {
       "inputMint": "So11111111111111111111111111111111111111112",
       "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       "amount": "5000000",
       "slippageBps": 50
-    },
-    "network": "solana-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, 예상 USDC 수령량, 스왑 경로, 가스비가 반환된다
@@ -71,20 +69,18 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
 ### Step 4: 실제 스왑 실행
 **Action**: 사용자 승인 후 실제 Jupiter 스왑을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/send \
+curl -s -X POST http://localhost:3100/v1/actions/jupiter_swap/swap \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "jupiter-swap",
+    "network": "solana-mainnet",
     "params": {
       "inputMint": "So11111111111111111111111111111111111111112",
       "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       "amount": "5000000",
       "slippageBps": 50
-    },
-    "network": "solana-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, 트랜잭션 ID와 tx signature가 반환된다

@@ -17,8 +17,6 @@ import { parseTokenAmount } from '../../common/amount-parser.js';
 import {
   type JitoStakingConfig,
   JITO_WITHDRAW_AUTHORITY,
-  JITO_RESERVE_STAKE,
-  JITO_MANAGER_FEE,
   SPL_TOKEN_PROGRAM,
   SYSTEM_PROGRAM,
 } from './config.js';
@@ -342,18 +340,14 @@ export async function getJitoSolBalance(
 }
 
 /**
- * Fetch the SPL Stake Pool exchange rate (total_lamports / pool_token_supply).
+ * Fetch the raw stake pool account data buffer from the RPC.
  *
- * SPL Stake Pool account layout:
- * - total_lamports: u64 LE at byte offset 258
- * - pool_token_supply: u64 LE at byte offset 266
- *
- * @returns Exchange rate as floating point (SOL per pool token)
+ * @returns Buffer containing the Borsh-serialized stake pool account data
  */
-export async function getStakePoolExchangeRate(
+async function fetchStakePoolAccountData(
   rpcUrl: string,
   stakePoolAddress: string,
-): Promise<number> {
+): Promise<Buffer> {
   const resp = await fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -369,12 +363,32 @@ export async function getStakePoolExchangeRate(
     result: {
       value: {
         data: [string, string]; // [base64_data, encoding]
-      };
+      } | null;
     };
   };
 
+  if (!json.result?.value?.data) {
+    throw new Error(`Stake pool account not found: ${stakePoolAddress}`);
+  }
+
   const base64Data = json.result.value.data[0];
-  const buffer = Buffer.from(base64Data, 'base64');
+  return Buffer.from(base64Data, 'base64');
+}
+
+/**
+ * Fetch the SPL Stake Pool exchange rate (total_lamports / pool_token_supply).
+ *
+ * SPL Stake Pool account layout:
+ * - total_lamports: u64 LE at byte offset 258
+ * - pool_token_supply: u64 LE at byte offset 266
+ *
+ * @returns Exchange rate as floating point (SOL per pool token)
+ */
+export async function getStakePoolExchangeRate(
+  rpcUrl: string,
+  stakePoolAddress: string,
+): Promise<number> {
+  const buffer = await fetchStakePoolAccountData(rpcUrl, stakePoolAddress);
   const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 
   const totalLamports = view.getBigUint64(258, true);
@@ -382,6 +396,36 @@ export async function getStakePoolExchangeRate(
 
   if (poolTokenSupply === 0n) return 1.0;
   return Number(totalLamports) / Number(poolTokenSupply);
+}
+
+/**
+ * Fetch and parse key accounts from the on-chain SPL Stake Pool account data.
+ *
+ * SPL Stake Pool Borsh layout (relevant offsets):
+ * - reserve_stake:       32 bytes at offset 130
+ * - manager_fee_account: 32 bytes at offset 194
+ *
+ * @returns Parsed stake pool accounts as base58-encoded public keys
+ */
+export async function getStakePoolAccounts(
+  rpcUrl: string,
+  stakePoolAddress: string,
+): Promise<{ managerFeeAccount: string; reserveStake: string }> {
+  const buffer = await fetchStakePoolAccountData(rpcUrl, stakePoolAddress);
+
+  if (buffer.length < 226) {
+    throw new Error(
+      `Stake pool account data too short: ${buffer.length} bytes (expected at least 226)`,
+    );
+  }
+
+  const reserveStakeBytes = new Uint8Array(buffer.buffer, buffer.byteOffset + 130, 32);
+  const managerFeeBytes = new Uint8Array(buffer.buffer, buffer.byteOffset + 194, 32);
+
+  return {
+    reserveStake: base58Encode(reserveStakeBytes),
+    managerFeeAccount: base58Encode(managerFeeBytes),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -477,7 +521,7 @@ function buildCreateAtaIdempotentInstruction(
  * 2. reserveStake (writable)
  * 3. fundingAccount (signer, writable) = wallet
  * 4. destTokenAccount (writable) = wallet's JitoSOL ATA
- * 5. managerFeeAccount (writable)
+ * 5. managerFeeAccount (writable) — read dynamically from on-chain stake pool data
  * 6. referralFeeAccount (writable) = same as managerFeeAccount (no referral)
  * 7. poolMint (writable) = JitoSOL mint
  * 8. systemProgram (read-only)
@@ -487,6 +531,7 @@ export async function buildDepositSolRequest(
   config: JitoStakingConfig,
   amountLamports: bigint,
   walletAddress: string,
+  rpcUrl: string,
 ): Promise<{
   type: 'CONTRACT_CALL';
   to: string;
@@ -496,11 +541,12 @@ export async function buildDepositSolRequest(
   value: string;
   preInstructions: PreInstruction[];
 }> {
-  const destTokenAccount = await getAssociatedTokenAddress(
-    walletAddress,
-    config.jitosolMint,
-    SPL_TOKEN_PROGRAM,
-  );
+  const [destTokenAccount, stakePoolAccounts] = await Promise.all([
+    getAssociatedTokenAddress(walletAddress, config.jitosolMint, SPL_TOKEN_PROGRAM),
+    getStakePoolAccounts(rpcUrl, config.stakePoolAddress),
+  ]);
+
+  const { managerFeeAccount, reserveStake } = stakePoolAccounts;
 
   // Pre-instruction: Create JitoSOL ATA if it doesn't exist (idempotent).
   // Without this, DepositSol fails with Custom(1) when the ATA is missing.
@@ -515,11 +561,11 @@ export async function buildDepositSolRequest(
   const accounts: AccountMeta[] = [
     { pubkey: config.stakePoolAddress, isSigner: false, isWritable: true },
     { pubkey: JITO_WITHDRAW_AUTHORITY, isSigner: false, isWritable: false },
-    { pubkey: JITO_RESERVE_STAKE, isSigner: false, isWritable: true },
+    { pubkey: reserveStake, isSigner: false, isWritable: true },
     { pubkey: walletAddress, isSigner: true, isWritable: true },
     { pubkey: destTokenAccount, isSigner: false, isWritable: true },
-    { pubkey: JITO_MANAGER_FEE, isSigner: false, isWritable: true },
-    { pubkey: JITO_MANAGER_FEE, isSigner: false, isWritable: true }, // referral = manager (no referral)
+    { pubkey: managerFeeAccount, isSigner: false, isWritable: true },
+    { pubkey: managerFeeAccount, isSigner: false, isWritable: true }, // referral = manager (no referral)
     { pubkey: config.jitosolMint, isSigner: false, isWritable: true },
     { pubkey: SYSTEM_PROGRAM, isSigner: false, isWritable: false },
     { pubkey: SPL_TOKEN_PROGRAM, isSigner: false, isWritable: false },
@@ -544,9 +590,9 @@ export async function buildDepositSolRequest(
  * 1. withdrawAuthority (PDA, read-only)
  * 2. userTransferAuthority (signer) = wallet
  * 3. sourceTokenAccount (writable) = wallet's JitoSOL ATA
- * 4. reserveStake (writable)
+ * 4. reserveStake (writable) — read dynamically from on-chain stake pool data
  * 5. destSolAccount (writable) = wallet (receives SOL)
- * 6. managerFeeAccount (writable)
+ * 6. managerFeeAccount (writable) — read dynamically from on-chain stake pool data
  * 7. poolMint (writable) = JitoSOL mint
  * 8. clock (read-only)
  * 9. stakeHistory (read-only)
@@ -557,6 +603,7 @@ export async function buildWithdrawSolRequest(
   config: JitoStakingConfig,
   amountLamports: bigint,
   walletAddress: string,
+  rpcUrl: string,
 ): Promise<{
   type: 'CONTRACT_CALL';
   to: string;
@@ -564,20 +611,21 @@ export async function buildWithdrawSolRequest(
   instructionData: string;
   accounts: AccountMeta[];
 }> {
-  const sourceTokenAccount = await getAssociatedTokenAddress(
-    walletAddress,
-    config.jitosolMint,
-    SPL_TOKEN_PROGRAM,
-  );
+  const [sourceTokenAccount, stakePoolAccounts] = await Promise.all([
+    getAssociatedTokenAddress(walletAddress, config.jitosolMint, SPL_TOKEN_PROGRAM),
+    getStakePoolAccounts(rpcUrl, config.stakePoolAddress),
+  ]);
+
+  const { managerFeeAccount, reserveStake } = stakePoolAccounts;
 
   const accounts: AccountMeta[] = [
     { pubkey: config.stakePoolAddress, isSigner: false, isWritable: true },
     { pubkey: JITO_WITHDRAW_AUTHORITY, isSigner: false, isWritable: false },
     { pubkey: walletAddress, isSigner: true, isWritable: false },
     { pubkey: sourceTokenAccount, isSigner: false, isWritable: true },
-    { pubkey: JITO_RESERVE_STAKE, isSigner: false, isWritable: true },
+    { pubkey: reserveStake, isSigner: false, isWritable: true },
     { pubkey: walletAddress, isSigner: false, isWritable: true },
-    { pubkey: JITO_MANAGER_FEE, isSigner: false, isWritable: true },
+    { pubkey: managerFeeAccount, isSigner: false, isWritable: true },
     { pubkey: config.jitosolMint, isSigner: false, isWritable: true },
     { pubkey: CLOCK_SYSVAR, isSigner: false, isWritable: false },
     { pubkey: STAKE_HISTORY_SYSVAR, isSigner: false, isWritable: false },

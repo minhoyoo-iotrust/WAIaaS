@@ -136,7 +136,37 @@ export class JupiterSwapActionProvider implements IActionProvider {
       );
     }
 
-    // SWAP-03: Convert to ContractCallRequest
+    // SWAP-03: Convert to ContractCallRequest, including all Jupiter instruction groups.
+    // computeBudgetInstructions + setupInstructions go into preInstructions (prepended before swap).
+    // cleanupInstruction (if present) goes into postInstructions (appended after swap).
+    // addressLookupTableAddresses are passed through for v0 transaction ALT compression.
+    const preInstructions = [
+      ...instructions.computeBudgetInstructions,
+      ...instructions.setupInstructions,
+    ].map((ix) => ({
+      programId: ix.programId,
+      data: ix.data,
+      accounts: ix.accounts.map((a) => ({
+        pubkey: a.pubkey,
+        isSigner: a.isSigner,
+        isWritable: a.isWritable,
+      })),
+    }));
+
+    const postInstructions = instructions.cleanupInstruction
+      ? [
+          {
+            programId: instructions.cleanupInstruction.programId,
+            data: instructions.cleanupInstruction.data,
+            accounts: instructions.cleanupInstruction.accounts.map((a) => ({
+              pubkey: a.pubkey,
+              isSigner: a.isSigner,
+              isWritable: a.isWritable,
+            })),
+          },
+        ]
+      : [];
+
     const request: ContractCallRequest = {
       type: 'CONTRACT_CALL',
       to: JUPITER_PROGRAM_ID,
@@ -147,6 +177,12 @@ export class JupiterSwapActionProvider implements IActionProvider {
         isSigner: a.isSigner,
         isWritable: a.isWritable,
       })),
+      preInstructions: preInstructions.length > 0 ? preInstructions : undefined,
+      postInstructions: postInstructions.length > 0 ? postInstructions : undefined,
+      addressLookupTableAddresses:
+        instructions.addressLookupTableAddresses.length > 0
+          ? instructions.addressLookupTableAddresses
+          : undefined,
       network: context.chain === 'solana' ? undefined : undefined,
     };
 

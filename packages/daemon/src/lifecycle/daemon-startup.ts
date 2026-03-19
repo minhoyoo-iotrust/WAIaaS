@@ -1234,9 +1234,12 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         }
       }
       console.debug(`Step 4f-5: PositionTracker has ${state.positionTracker.providerCount} providers`);
-      // Trigger immediate LENDING sync now that providers are registered
+      // Trigger immediate sync for all categories now that providers are registered
       if (state.positionTracker.providerCount > 0) {
         void state.positionTracker.syncCategory('LENDING');
+        void state.positionTracker.syncCategory('STAKING');
+        void state.positionTracker.syncCategory('YIELD');
+        void state.positionTracker.syncCategory('PERP');
       }
     } catch (err) {
       console.warn('Step 4f-5 (fail-soft): PositionTracker provider registration warning:', err);

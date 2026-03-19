@@ -122,6 +122,12 @@ export class JitoStakingActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest> {
+    if (!this.rpcUrl) {
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message: 'rpcUrl is required for Jito staking (needed to read on-chain stake pool accounts)',
+      });
+    }
+
     const rp = { ...params };
     resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
     const input = JitoStakeInputSchema.parse(rp);
@@ -135,7 +141,7 @@ export class JitoStakingActionProvider implements IActionProvider {
       });
     }
 
-    return buildDepositSolRequest(this.config, amountLamports, context.walletAddress);
+    return buildDepositSolRequest(this.config, amountLamports, context.walletAddress, this.rpcUrl);
   }
 
   // -------------------------------------------------------------------------
@@ -146,6 +152,12 @@ export class JitoStakingActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest> {
+    if (!this.rpcUrl) {
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message: 'rpcUrl is required for Jito unstaking (needed to read on-chain stake pool accounts)',
+      });
+    }
+
     const rp = { ...params };
     resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
     const input = JitoUnstakeInputSchema.parse(rp);
@@ -153,7 +165,7 @@ export class JitoStakingActionProvider implements IActionProvider {
     const amountLamports = migrateAmount(input.amount, 9);
     if (amountLamports === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
-    return buildWithdrawSolRequest(this.config, amountLamports, context.walletAddress);
+    return buildWithdrawSolRequest(this.config, amountLamports, context.walletAddress, this.rpcUrl);
   }
 
   // -------------------------------------------------------------------------

@@ -50,19 +50,17 @@ curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=
 ### Step 3: PT 매수 Simulate
 **Action**: PT(Principal Token) 매수를 simulate으로 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST http://localhost:3100/v1/actions/pendle_yield/buy_pt?dryRun=true \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "pendle-buy-pt",
+    "network": "ethereum-mainnet",
     "params": {
       "market": "<MARKET_ADDRESS>",
-      "tokenIn": "<stETH_CONTRACT_ADDRESS>",
+      "tokenIn": "<stETH_ADDRESS>",
       "amountIn": "5000000000000000"
-    },
-    "network": "ethereum-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, 예상 PT 수령량, 내재 APY, 가스비가 반환된다
@@ -80,19 +78,17 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
 ### Step 5: 실제 PT 매수 실행
 **Action**: 사용자 승인 후 실제 PT 매수를 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/send \
+curl -s -X POST http://localhost:3100/v1/actions/pendle_yield/buy_pt \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "pendle-buy-pt",
+    "network": "ethereum-mainnet",
     "params": {
       "market": "<MARKET_ADDRESS>",
-      "tokenIn": "<stETH_CONTRACT_ADDRESS>",
+      "tokenIn": "<stETH_ADDRESS>",
       "amountIn": "5000000000000000"
-    },
-    "network": "ethereum-mainnet"
+    }
   }'
 ```
 **Expected**: 200 OK, 트랜잭션 ID와 tx hash가 반환된다
@@ -119,18 +115,17 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=eth
 ### Step 8: (선택) PT 매도 Simulate
 **Action**: PT를 다시 기초 자산으로 매도하는 simulate을 확인한다. 실제 실행은 사용자 선택.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+curl -s -X POST http://localhost:3100/v1/actions/pendle_yield/redeem_pt?dryRun=true \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
-    "type": "CONTRACT_CALL",
-    "action": "pendle-redeem-pt",
+    "network": "ethereum-mainnet",
     "params": {
       "market": "<MARKET_ADDRESS>",
-      "amount": "<PT_AMOUNT_IN_SMALLEST_UNITS>"
-    },
-    "network": "ethereum-mainnet"
+      "tokenIn": "<stETH_ADDRESS>",
+      "amountIn": "<PT_AMOUNT_IN_SMALLEST_UNITS>"
+    }
   }'
 ```
 **Expected**: 200 OK, 예상 stETH 반환량이 표시된다
