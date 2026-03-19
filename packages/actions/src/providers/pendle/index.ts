@@ -304,7 +304,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
 
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'ethereum') return [];
-    const walletId = ctx.walletId;
+    const walletAddress = ctx.walletAddress;
 
     // Filter ctx.networks to only Pendle position-supported networks (MCHN-03)
     const supportedNetworks = ctx.networks.filter(
@@ -317,7 +317,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
       supportedNetworks.map(network => {
         const rpcUrl = ctx.rpcUrls[network];
         if (!rpcUrl) return Promise.resolve([] as PositionUpdate[]);
-        return this.queryNetworkPendlePositions(walletId, network, rpcUrl);
+        return this.queryNetworkPendlePositions(ctx.walletId, walletAddress, network, rpcUrl);
       }),
     );
 
@@ -330,6 +330,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
    */
   private async queryNetworkPendlePositions(
     walletId: string,
+    walletAddress: string,
     network: string,
     rpcUrl: string,
   ): Promise<PositionUpdate[]> {
@@ -346,7 +347,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
       const underlyingAsset = market.underlyingAsset.symbol;
 
       // Check PT balance
-      const ptBalance = await this.ethCallUint256WithRpc(rpcUrl, market.pt, this.encodeBalanceOfCalldata(walletId));
+      const ptBalance = await this.ethCallUint256WithRpc(rpcUrl, market.pt, this.encodeBalanceOfCalldata(walletAddress));
       if (ptBalance > 0n) {
         positions.push({
           walletId,
@@ -370,7 +371,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
       }
 
       // Check YT balance
-      const ytBalance = await this.ethCallUint256WithRpc(rpcUrl, market.yt, this.encodeBalanceOfCalldata(walletId));
+      const ytBalance = await this.ethCallUint256WithRpc(rpcUrl, market.yt, this.encodeBalanceOfCalldata(walletAddress));
       if (ytBalance > 0n) {
         positions.push({
           walletId,

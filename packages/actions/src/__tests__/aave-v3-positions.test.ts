@@ -152,6 +152,7 @@ const MOCK_ETH_RPC = 'https://mock-eth-rpc.example.com';
 function makeEvmCtx(walletId: string = WALLET_ADDRESS, chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
   return {
     walletId,
+    walletAddress: walletId,
     chain,
     networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
     environment: 'mainnet',
@@ -343,6 +344,7 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     const provider = new AaveV3LendingProvider({});
     const ctx: PositionQueryContext = {
       walletId: WALLET_ADDRESS,
+      walletAddress: WALLET_ADDRESS,
       chain: 'ethereum',
       networks: ['ethereum-mainnet'],
       environment: 'mainnet',
@@ -420,6 +422,7 @@ describe('AaveV3LendingProvider Multichain Positions', () => {
   }): PositionQueryContext {
     return {
       walletId: WALLET_ADDRESS,
+      walletAddress: WALLET_ADDRESS,
       chain: 'ethereum',
       networks: (opts?.networks ?? ['ethereum-mainnet', 'base-mainnet']) as any,
       environment: opts?.environment ?? 'mainnet',

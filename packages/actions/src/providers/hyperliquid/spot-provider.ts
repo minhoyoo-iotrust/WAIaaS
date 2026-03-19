@@ -363,10 +363,10 @@ export class HyperliquidSpotProvider implements IActionProvider {
 
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'ethereum') return [];
-    const walletId = ctx.walletId;
+    const walletAddress = ctx.walletAddress;
     try {
       const [balances, mids] = await Promise.all([
-        this.marketData.getSpotBalances(walletId as Hex),
+        this.marketData.getSpotBalances(walletAddress as Hex),
         this.marketData.getAllMidPrices(),
       ]);
 
@@ -388,7 +388,7 @@ export class HyperliquidSpotProvider implements IActionProvider {
           }
 
           return {
-            walletId,
+            walletId: ctx.walletId,
             category: 'PERP' as PositionCategory,
             provider: 'hyperliquid_spot',
             chain: 'ethereum',

@@ -256,12 +256,22 @@ export async function executeDexSwap(
     requests.push(approveRequest);
   }
 
-  // Swap request
+  // Swap request — for native sells, DCent API may return only protocol fees
+  // in txdata.value instead of the full swap amount; correct to params.amount
+  let swapValue = txdata.value ? BigInt(txdata.value).toString() : '0';
+  if (isNativeSell) {
+    const apiValue = BigInt(swapValue);
+    const swapAmount = BigInt(params.amount);
+    if (apiValue < swapAmount) {
+      swapValue = swapAmount.toString();
+    }
+  }
+
   const swapRequest: ContractCallRequest = {
     type: 'CONTRACT_CALL',
     to: txdata.to,
     calldata: txdata.data,
-    value: txdata.value ? BigInt(txdata.value).toString() : '0',
+    value: swapValue,
   };
   requests.push(swapRequest);
 

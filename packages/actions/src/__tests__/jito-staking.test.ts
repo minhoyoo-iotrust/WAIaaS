@@ -10,7 +10,7 @@ import { JITO_MAINNET_ADDRESSES, getJitoAddresses } from '../providers/jito-stak
 import type { ActionContext, ContractCallRequest, PositionQueryContext } from '@waiaas/core';
 
 function makeSolCtx(walletId: string, chain: 'solana' | 'ethereum' = 'solana'): PositionQueryContext {
-  return { walletId, chain, networks: chain === 'solana' ? ['solana-mainnet'] : ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
+  return { walletId, walletAddress: walletId, chain, networks: chain === 'solana' ? ['solana-mainnet'] : ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
 }
 
 // ---------------------------------------------------------------------------
@@ -404,6 +404,7 @@ describe('JitoStakingActionProvider IPositionProvider', () => {
 
     const ctx: PositionQueryContext = {
       walletId: WALLET_ID,
+      walletAddress: WALLET_ID,
       chain: 'solana',
       networks: ['solana-devnet'],
       environment: 'testnet',

@@ -153,8 +153,8 @@ export class PositionTracker {
 
       // Get active wallets with chain/environment metadata
       const wallets = this.sqlite
-        .prepare("SELECT id, chain, environment FROM wallets WHERE status = 'ACTIVE'")
-        .all() as Array<{ id: string; chain: string; environment: string }>;
+        .prepare("SELECT id, public_key, chain, environment FROM wallets WHERE status = 'ACTIVE'")
+        .all() as Array<{ id: string; public_key: string; chain: string; environment: string }>;
 
       for (const provider of categoryProviders) {
         for (const wallet of wallets) {
@@ -178,6 +178,7 @@ export class PositionTracker {
             }
             const ctx: PositionQueryContext = {
               walletId: wallet.id,
+              walletAddress: wallet.public_key,
               chain,
               networks,
               environment,

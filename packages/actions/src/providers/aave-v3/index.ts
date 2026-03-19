@@ -445,7 +445,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
 
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'ethereum') return [];
-    const walletId = ctx.walletId;
+    const walletAddress = ctx.walletAddress;
 
     // Filter ctx.networks to only AAVE_V3_ADDRESSES-supported networks (MCHN-02)
     const supportedNetworks = ctx.networks.filter(n => AAVE_V3_ADDRESSES[n]);
@@ -456,7 +456,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
       supportedNetworks.map(network => {
         const rpcUrl = ctx.rpcUrls[network];
         if (!rpcUrl) return Promise.resolve([] as PositionUpdate[]);
-        return this.queryNetworkAavePositions(walletId, network, rpcUrl);
+        return this.queryNetworkAavePositions(ctx.walletId, walletAddress, network, rpcUrl);
       }),
     );
 
@@ -469,6 +469,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
    */
   private async queryNetworkAavePositions(
     walletId: string,
+    walletAddress: string,
     network: string,
     rpcUrl: string,
   ): Promise<PositionUpdate[]> {
@@ -487,7 +488,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const prices = decodeUint256Array(pricesHex); // 8 decimals USD
 
     // 3. Get user account data (for Health Factor)
-    const accountDataHex = await this.rpcCall(rpcUrl, addresses.pool, encodeGetUserAccountDataCalldata(walletId));
+    const accountDataHex = await this.rpcCall(rpcUrl, addresses.pool, encodeGetUserAccountDataCalldata(walletAddress));
     const accountData = decodeGetUserAccountData(accountDataHex);
     const healthFactor = hfToNumber(accountData.healthFactor);
 
@@ -499,10 +500,10 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
       const tokensHex = await this.rpcCall(rpcUrl, addresses.dataProvider, encodeGetReserveTokensAddressesCalldata(asset));
       const tokens = decodeReserveTokensAddresses(tokensHex);
 
-      const aBalHex = await this.rpcCall(rpcUrl, tokens.aToken, encodeBalanceOfCalldata(walletId));
+      const aBalHex = await this.rpcCall(rpcUrl, tokens.aToken, encodeBalanceOfCalldata(walletAddress));
       const aBalance = BigInt(aBalHex.length > 2 ? aBalHex : '0x0');
 
-      const vBalHex = await this.rpcCall(rpcUrl, tokens.variableDebtToken, encodeBalanceOfCalldata(walletId));
+      const vBalHex = await this.rpcCall(rpcUrl, tokens.variableDebtToken, encodeBalanceOfCalldata(walletAddress));
       const vBalance = BigInt(vBalHex.length > 2 ? vBalHex : '0x0');
 
       if (aBalance === 0n && vBalance === 0n) continue;

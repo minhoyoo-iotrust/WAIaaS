@@ -186,7 +186,7 @@ export class LidoStakingActionProvider implements IActionProvider {
    */
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'ethereum') return [];
-    const walletId = ctx.walletId;
+    const walletAddress = ctx.walletAddress;
 
     // Select config map based on environment (MCHN-10)
     const networkConfig = ctx.environment === 'testnet'
@@ -202,7 +202,7 @@ export class LidoStakingActionProvider implements IActionProvider {
       supportedNetworks.map(network => {
         const rpcUrl = ctx.rpcUrls[network];
         if (!rpcUrl) return Promise.resolve([] as PositionUpdate[]);
-        return this.queryNetworkPositions(walletId, network, networkConfig[network]!, rpcUrl);
+        return this.queryNetworkPositions(ctx.walletId, walletAddress, network, networkConfig[network]!, rpcUrl);
       }),
     );
 
@@ -215,6 +215,7 @@ export class LidoStakingActionProvider implements IActionProvider {
    */
   private async queryNetworkPositions(
     walletId: string,
+    walletAddress: string,
     network: string,
     config: LidoNetworkContracts,
     rpcUrl: string,
@@ -227,7 +228,7 @@ export class LidoStakingActionProvider implements IActionProvider {
       const stethBalance = await this.ethCallUint256WithRpc(
         rpcUrl,
         config.stethAddress,
-        encodeBalanceOfCalldata(walletId),
+        encodeBalanceOfCalldata(walletAddress),
       );
 
       if (stethBalance > 0n) {
@@ -252,7 +253,7 @@ export class LidoStakingActionProvider implements IActionProvider {
     const wstethBalance = await this.ethCallUint256WithRpc(
       rpcUrl,
       config.wstethAddress,
-      encodeBalanceOfCalldata(walletId),
+      encodeBalanceOfCalldata(walletAddress),
     );
 
     if (wstethBalance > 0n) {

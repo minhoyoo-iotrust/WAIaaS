@@ -38,6 +38,10 @@
 | 388 | BUG | MEDIUM | defi-12 DCent Swap UAT 시나리오 API 엔드포인트 오류 — /v1/transactions/* 대신 /v1/actions/dcent_swap/* 사용 필요 | v32.9 | FIXED | 2026-03-18 |
 | 389 | ENHANCEMENT | LOW | Agent UAT 시나리오 환경(Environment) 분류 누락 — Env 컬럼 및 --env 필터 추가 필요 | v32.9 | FIXED | 2026-03-18 |
 | 390 | BUG | CRITICAL | Migration v60 CHECK 제약조건 미갱신으로 sdk_push UPDATE 실패 — 기존 DB 업그레이드 시 데몬 시작 불가 | v32.10 | FIXED | 2026-03-18 |
+| 391 | BUG | MEDIUM | Polygon Amoy 빌트인 토큰 3개(AAVE/DAI/USDT) 컨트랙트 미존재로 매 요청마다 에러 로그 발생 | — | FIXED | 2026-03-19 |
+| 392 | BUG | CRITICAL | PositionTracker가 지갑 UUID를 온체인 주소로 사용하여 모든 DeFi 포지션 조회 실패 | — | FIXED | 2026-03-19 |
+| 393 | BUG | HIGH | DCent Swap 네이티브 ETH 스왑 시 txdata.value 불일치로 온체인 revert — API가 프로토콜 수수료만 반환, 스왑 금액 누락 | — | FIXED | 2026-03-19 |
+| 394 | BUG | HIGH | DCent Swap Solana 트랜잭션 스키마 불일치로 Solana 체인 스왑 전면 실패 — EVM 전용 txdata 스키마, 체인 분기 없음 | — | FIXED | 2026-03-19 |
 
 ## Type Legend
 
@@ -50,7 +54,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 390
+- **FIXED:** 394
 - **WONTFIX:** 1
-- **Total:** 391
+- **Total:** 395
 - **Archived:** 366 (001–366)

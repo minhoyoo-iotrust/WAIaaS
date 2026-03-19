@@ -309,6 +309,7 @@ describe('PendleYieldProvider', () => {
           : {};
       return {
         walletId: WALLET_ADDRESS,
+        walletAddress: WALLET_ADDRESS,
         chain,
         networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
         environment: 'mainnet',

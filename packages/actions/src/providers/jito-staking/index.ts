@@ -167,13 +167,13 @@ export class JitoStakingActionProvider implements IActionProvider {
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'solana') return [];
     if (!this.rpcUrl) return [];
-    const walletId = ctx.walletId;
+    const walletAddress = ctx.walletAddress;
     const network = ctx.networks[0] ?? 'solana-mainnet';
 
     try {
       const balance = await getJitoSolBalance(
         this.rpcUrl,
-        walletId,
+        walletAddress,
         this.config.jitosolMint,
       );
 
@@ -192,7 +192,7 @@ export class JitoStakingActionProvider implements IActionProvider {
 
       return [
         {
-          walletId,
+          walletId: ctx.walletId,
           category: 'STAKING' as PositionCategory,
           provider: 'jito_staking',
           chain: 'solana',

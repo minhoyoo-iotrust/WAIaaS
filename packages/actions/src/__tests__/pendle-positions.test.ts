@@ -33,6 +33,7 @@ function makeMultiCtx(opts?: {
 }): PositionQueryContext {
   return {
     walletId: WALLET_ID,
+    walletAddress: WALLET_ID,
     chain: 'ethereum',
     networks: (opts?.networks ?? ['ethereum-mainnet', 'arbitrum-mainnet']) as any,
     environment: 'mainnet',
