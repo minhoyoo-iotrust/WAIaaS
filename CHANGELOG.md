@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.12.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc...v2.12.0-rc.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* resolve 5 open issues ([#413](https://github.com/minhoyoo-iotrust/WAIaaS/issues/413)-[#417](https://github.com/minhoyoo-iotrust/WAIaaS/issues/417)) ([dc15212](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dc15212298a8bafa4dfbc76181cae997ce98a207))
+* resolve 5 open issues ([#413](https://github.com/minhoyoo-iotrust/WAIaaS/issues/413)-[#417](https://github.com/minhoyoo-iotrust/WAIaaS/issues/417)) ([10313e0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/10313e0accde7ba3ca495fe451364fe67e5be21c))
+
 ## [2.12.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0...v2.12.0-rc) (2026-03-19)
 
 
