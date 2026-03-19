@@ -344,7 +344,9 @@ describe('KaminoSdkWrapper with mocked SDK', () => {
   let wrapper: KaminoSdkWrapper;
 
   beforeEach(() => {
-    wrapper = new KaminoSdkWrapper('https://api.mainnet-beta.solana.com');
+    wrapper = new KaminoSdkWrapper('https://api.mainnet-beta.solana.com', {
+      debug: () => {}, info: () => {}, warn: () => {}, error: () => {},
+    });
 
     // Inject mocked SDK via private field access
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

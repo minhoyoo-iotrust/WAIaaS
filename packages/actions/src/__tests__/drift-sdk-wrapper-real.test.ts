@@ -141,7 +141,9 @@ describe('DriftSdkWrapper with mocked SDK', () => {
   let mockClient: ReturnType<typeof createMockSdk>['mockClient'];
 
   beforeEach(() => {
-    wrapper = new DriftSdkWrapper(RPC_URL, 0);
+    wrapper = new DriftSdkWrapper(RPC_URL, 0, {
+      debug: () => {}, info: () => {}, warn: () => {}, error: () => {},
+    });
     const mocks = createMockSdk();
     mockClient = mocks.mockClient;
     // Inject mocked SDK via private field access
