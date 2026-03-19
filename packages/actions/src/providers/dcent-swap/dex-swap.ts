@@ -7,7 +7,7 @@
  *
  * Design source: doc 77 sections 7.1-7.5 (DEX Swap pipeline mapping).
  */
-import { ChainError, parseCaip19 } from '@waiaas/core';
+import { ChainError, parseCaip19, parseCaip2 } from '@waiaas/core';
 import type { ContractCallRequest } from '@waiaas/core';
 import { caip19ToDcentId } from './currency-mapper.js';
 import { DcentSwapApiClient } from './dcent-api-client.js';
@@ -237,16 +237,30 @@ export async function executeDexSwap(
 
   const { txdata } = txDataResponse;
 
-  // Determine if native sell by checking CAIP-19 asset namespace
-  const { assetNamespace, assetReference } = parseCaip19(params.fromAsset);
-  const isNativeSell = assetNamespace === 'slip44';
+  // Determine chain namespace from CAIP-19
+  const { chainId: fromChainId, assetNamespace, assetReference } = parseCaip19(params.fromAsset);
+  const { namespace: chainNamespace } = parseCaip2(fromChainId);
 
-  // Build ContractCallRequest array
+  // Solana chain: pass-through serialized transaction data
+  if (chainNamespace === 'solana') {
+    const solTxData = txdata as Record<string, unknown>;
+    const instructionData = (solTxData.serializedTransaction ?? solTxData.data ?? '') as string;
+    const swapRequest: ContractCallRequest = {
+      type: 'CONTRACT_CALL',
+      to: (solTxData.programId as string) ?? 'dcent-swap',
+      instructionData,
+    };
+    return [swapRequest];
+  }
+
+  // EVM chain: approve + swap pattern
+  const evmTxData = txdata as { from: string; to: string; data: string; value?: string };
+  const isNativeSell = assetNamespace === 'slip44';
   const requests: ContractCallRequest[] = [];
 
   if (!isNativeSell) {
     // ERC-20 sell: prepend approve
-    const spender = selectedProvider.spenderContractAddress ?? txdata.to;
+    const spender = selectedProvider.spenderContractAddress ?? evmTxData.to;
     const approveRequest: ContractCallRequest = {
       type: 'CONTRACT_CALL',
       to: assetReference, // ERC-20 contract address from CAIP-19
@@ -258,7 +272,7 @@ export async function executeDexSwap(
 
   // Swap request — for native sells, DCent API may return only protocol fees
   // in txdata.value instead of the full swap amount; correct to params.amount
-  let swapValue = txdata.value ? BigInt(txdata.value).toString() : '0';
+  let swapValue = evmTxData.value ? BigInt(evmTxData.value).toString() : '0';
   if (isNativeSell) {
     const apiValue = BigInt(swapValue);
     const swapAmount = BigInt(params.amount);
@@ -269,8 +283,8 @@ export async function executeDexSwap(
 
   const swapRequest: ContractCallRequest = {
     type: 'CONTRACT_CALL',
-    to: txdata.to,
-    calldata: txdata.data,
+    to: evmTxData.to,
+    calldata: evmTxData.data,
     value: swapValue,
   };
   requests.push(swapRequest);

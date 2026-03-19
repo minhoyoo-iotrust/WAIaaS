@@ -5,7 +5,8 @@
 - **영향 시나리오**: defi-16
 - **컴포넌트**: `packages/actions/src/providers/dcent-swap/index.ts`
 - **관련**: #410 (txdata 스키마 회귀 — 체인 가드 추가로 선행 차단됨), #394, #384 (FIXED)
-- **상태**: OPEN
+- **상태**: FIXED
+- **수정일**: 2026-03-20
 - **발견일**: 2026-03-19
 
 ## 현상

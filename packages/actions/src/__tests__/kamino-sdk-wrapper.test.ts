@@ -554,6 +554,52 @@ describe('KaminoSdkWrapper with mocked SDK', () => {
     expect(result[0]!.availableLiquidity).toBe('0');
   });
 
+  it('filters out instructions with empty keys', async () => {
+    const emptyKeysIx = {
+      programId: mockPubkey(KAMINO_PROGRAM_ID),
+      data: Buffer.from('empty'),
+      keys: [],
+    };
+    const actionWithEmptyKeys = {
+      setupIxs: [emptyKeysIx],
+      lendingIxs: [mockIx],
+      cleanupIxs: [emptyKeysIx],
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (wrapper as any)._sdk.KaminoAction.buildDepositTxns.mockResolvedValueOnce(actionWithEmptyKeys);
+    const result = await wrapper.buildSupplyInstruction({
+      market: MARKET,
+      asset: ASSET,
+      amount: 1000000n,
+      walletAddress: WALLET,
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]!.programId).toBe(KAMINO_PROGRAM_ID);
+  });
+
+  it('throws when all instructions have empty keys', async () => {
+    const emptyKeysIx = {
+      programId: mockPubkey(KAMINO_PROGRAM_ID),
+      data: Buffer.from('empty'),
+      keys: [],
+    };
+    const allEmptyAction = {
+      setupIxs: [emptyKeysIx],
+      lendingIxs: [emptyKeysIx],
+      cleanupIxs: [],
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (wrapper as any)._sdk.KaminoAction.buildDepositTxns.mockResolvedValueOnce(allEmptyAction);
+    await expect(
+      wrapper.buildSupplyInstruction({
+        market: MARKET,
+        asset: ASSET,
+        amount: 1000000n,
+        walletAddress: WALLET,
+      }),
+    ).rejects.toThrow('no valid instructions with accounts');
+  });
+
   it('loadMarket throws when market not found', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (wrapper as any)._sdk.KaminoMarket.load.mockResolvedValueOnce(null);

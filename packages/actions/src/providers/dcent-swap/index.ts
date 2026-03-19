@@ -111,7 +111,7 @@ export class DcentSwapActionProvider implements IActionProvider {
       displayName: "D'CENT Swap",
       description: "D'CENT Swap Aggregator supporting multi-chain DEX swaps including cross-chain swaps",
       version: '1.0.0',
-      chains: ['ethereum'],
+      chains: ['ethereum', 'solana'],
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: [],
@@ -147,10 +147,10 @@ export class DcentSwapActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult> {
-    // Chain guard: D'CENT Swap only supports EVM chains
-    if (context.chain !== 'ethereum') {
+    // Chain guard: D'CENT Swap supports EVM and Solana chains
+    if (context.chain !== 'ethereum' && context.chain !== 'solana') {
       throw new ChainError('INVALID_INSTRUCTION', context.chain, {
-        message: `D'CENT Swap only supports EVM (ethereum) chains. Got: ${context.chain}`,
+        message: `D'CENT Swap supports EVM and Solana chains. Got: ${context.chain}`,
       });
     }
 

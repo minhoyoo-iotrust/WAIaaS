@@ -5,7 +5,8 @@
 - **영향 시나리오**: defi-10, (defi-08 Kamino도 동일 패턴)
 - **컴포넌트**: `packages/actions/src/providers/drift/drift-sdk-wrapper.ts`
 - **관련**: RpcPool (`packages/core/src/rpc/rpc-pool.ts`)
-- **상태**: OPEN
+- **상태**: FIXED
+- **수정일**: 2026-03-20
 - **재현 확인**: 2026-03-19 v2.12.0-rc (3회 재시도 모두 429)
 
 ## 현상

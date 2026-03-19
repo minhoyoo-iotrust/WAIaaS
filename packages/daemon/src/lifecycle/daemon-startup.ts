@@ -1043,7 +1043,10 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
     // Register built-in action providers from @waiaas/actions (reads from SettingsService)
     const { registerBuiltInProviders } = await import('@waiaas/actions');
     const { ConsoleLogger } = await import('@waiaas/core');
-    const actionLogger = new ConsoleLogger('actions');
+    const actionDebugEnv = process.env.WAIAAS_ACTION_DEBUG === 'true';
+    const configLogLevel = state._settingsService!.get('daemon.log_level') as 'debug' | 'info' | 'warn' | 'error' | undefined;
+    const actionLogLevel = actionDebugEnv ? 'debug' as const : (configLogLevel ?? 'info');
+    const actionLogger = new ConsoleLogger('actions', actionLogLevel);
     const builtIn = registerBuiltInProviders(state.actionProviderRegistry, state._settingsService!, { rpcCaller, logger: actionLogger });
     // Capture HyperliquidMarketData for HTTP routes (Phase 349)
     if (builtIn.hyperliquidMarketData) {

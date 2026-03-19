@@ -5,7 +5,8 @@
 - **영향 시나리오**: defi-09
 - **컴포넌트**: `packages/actions/src/providers/pendle/schemas.ts`, `pendle-api-client.ts`
 - **선행 이슈**: #373 → #398 → #403 → #407 (모두 FIXED, 모두 재발)
-- **상태**: OPEN
+- **상태**: FIXED
+- **수정일**: 2026-03-20
 - **재현 확인**: 2026-03-19 v2.12.0-rc (6회차 동일 패턴)
 
 ## 현상

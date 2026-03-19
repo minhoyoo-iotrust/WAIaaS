@@ -5,7 +5,8 @@
 - **영향 시나리오**: defi-08
 - **컴포넌트**: `packages/actions/src/providers/kamino/kamino-sdk-wrapper.ts`
 - **선행 이슈**: #406 (programId.toBuffer — FIXED, 불완전)
-- **상태**: OPEN
+- **상태**: FIXED
+- **수정일**: 2026-03-20
 - **재현 확인**: 2026-03-19 v2.12.0-rc (rc.27에서도 동일)
 
 ## 현상

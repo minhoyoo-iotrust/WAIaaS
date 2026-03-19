@@ -67,8 +67,21 @@ export class PendleApiClient extends ActionApiClient {
       slippage: params.slippage,
       receiver: params.receiver,
     });
-    // Normalize: Pendle API alternates between object and array responses
-    return Array.isArray(raw) ? raw[0]! : raw;
+    // Normalize: extract convert result from any wrapper format
+    return this.normalizeConvertResponse(raw);
+  }
+
+  /** Extract PendleConvertResponse from any wrapper format. */
+  private normalizeConvertResponse(data: unknown): PendleConvertResponse {
+    if (Array.isArray(data)) return data[0]!;
+    if (typeof data === 'object' && data !== null) {
+      const obj = data as Record<string, unknown>;
+      if ('data' in obj) return this.normalizeConvertResponse(obj.data);
+      if ('results' in obj && Array.isArray(obj.results)) return obj.results[0]!;
+      if ('result' in obj && typeof obj.result === 'object') return this.normalizeConvertResponse(obj.result);
+      if ('tx' in obj) return obj as unknown as PendleConvertResponse;
+    }
+    return data as PendleConvertResponse;
   }
 
   /**

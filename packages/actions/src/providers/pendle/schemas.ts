@@ -61,15 +61,42 @@ const PendleConvertObjectSchema = z.object({
   tx: z.object({
     to: z.string(),
     data: z.string().describe('hex-encoded calldata'),
-    value: z.string().describe('native token value (wei)'),
+    value: z.union([z.string(), z.number()]).transform(String).describe('native token value (wei)'),
   }).passthrough(),
-  amountOut: z.string(),
+  amountOut: z.union([z.string(), z.number()]).transform(String),
 }).passthrough();
 
-/** Accept both object and single-element array — Pendle API alternates formats across versions. */
+/** Alternative field names (transaction/outputAmount) observed in some API versions. */
+const PendleConvertAltSchema = z.object({
+  transaction: z.object({
+    to: z.string(),
+    data: z.string(),
+    value: z.union([z.string(), z.number()]).transform(String),
+  }).passthrough(),
+  outputAmount: z.union([z.string(), z.number()]).transform(String),
+}).passthrough().transform((d) => ({
+  ...d,
+  tx: d.transaction,
+  amountOut: d.outputAmount,
+}));
+
+/**
+ * Accept ALL observed Pendle API response formats:
+ * 1. Direct object: { tx, amountOut }
+ * 2. Array: [{ tx, amountOut }]
+ * 3. data wrapper: { data: { tx, amountOut } } or { data: [{ tx, amountOut }] }
+ * 4. results wrapper: { results: [{ tx, amountOut }] }
+ * 5. result wrapper: { result: { tx, amountOut } }
+ * 6. Alt field names: { transaction, outputAmount }
+ */
 export const PendleConvertResponseSchema = z.union([
   PendleConvertObjectSchema,
+  PendleConvertAltSchema,
   z.array(PendleConvertObjectSchema).min(1),
+  z.object({ data: PendleConvertObjectSchema }).passthrough(),
+  z.object({ data: z.array(PendleConvertObjectSchema).min(1) }).passthrough(),
+  z.object({ results: z.array(PendleConvertObjectSchema).min(1) }).passthrough(),
+  z.object({ result: PendleConvertObjectSchema }).passthrough(),
 ]);
 
 export type PendleConvertResponse = z.infer<typeof PendleConvertObjectSchema>;

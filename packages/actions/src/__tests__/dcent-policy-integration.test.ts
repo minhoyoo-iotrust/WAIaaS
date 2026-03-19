@@ -190,7 +190,7 @@ describe('DCent Swap policy integration', () => {
       expect(provider.metadata.name).toBe('dcent_swap');
       expect(provider.metadata.requiresApiKey).toBe(false);
       expect(provider.metadata.chains).toContain('ethereum');
-      expect(provider.metadata.chains).not.toContain('solana');
+      expect(provider.metadata.chains).toContain('solana');
     });
 
     it('provider has 2 actions defined (DEX-only)', () => {

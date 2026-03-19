@@ -310,21 +310,53 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async loadMarket(marketAddress: string): Promise<{ market: any; connection: any }> {
     const sdk = await this.loadSdk();
-    const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
-    const marketPubkey = new sdk.PublicKey(marketAddress);
-    const market = await sdk.KaminoMarket.load(connection, marketPubkey);
-    if (!market) {
-      const { ChainError } = await import('@waiaas/core');
-      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
-        message: `Kamino market not found: ${marketAddress}`,
-      });
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
+        const marketPubkey = new sdk.PublicKey(marketAddress);
+        const market = await sdk.KaminoMarket.load(connection, marketPubkey);
+        if (!market) {
+          const { ChainError } = await import('@waiaas/core');
+          throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+            message: `Kamino market not found: ${marketAddress}`,
+          });
+        }
+        return { market, connection };
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        const msg = lastError.message;
+        // Only retry on rate limit / network errors, not on market-not-found
+        if (msg.includes('market not found')) throw lastError;
+        this.logger?.warn(`KaminoSdkWrapper.loadMarket: attempt ${attempt + 1}/${maxRetries} failed`, {
+          error: msg,
+        });
+        if (attempt < maxRetries - 1) {
+          const backoff = Math.min(1000 * Math.pow(2, attempt), 10_000);
+          await new Promise((r) => setTimeout(r, backoff));
+        }
+      }
     }
-    return { market, connection };
+
+    const { ChainError } = await import('@waiaas/core');
+    throw new ChainError('RATE_LIMITED', 'solana', {
+      message: `Kamino market load failed after ${maxRetries} retries: ${lastError?.message}`,
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private convertInstructions(ixs: any[]): KaminoInstruction[] {
-    return ixs.map((ix) => ({
+    const validIxs = ixs.filter((ix) => ix.keys && ix.keys.length > 0);
+    const skipped = ixs.length - validIxs.length;
+    if (skipped > 0) {
+      this.logger?.warn('Kamino SDK returned instructions with empty keys — filtered out', {
+        skipped,
+        total: ixs.length,
+      });
+    }
+    return validIxs.map((ix) => ({
       programId: ix.programId.toBase58(),
       instructionData: Buffer.from(ix.data).toString('base64'),
       accounts: ix.keys.map((k: { pubkey: { toBase58(): string }; isSigner: boolean; isWritable: boolean }) => ({
@@ -354,6 +386,12 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
     const filtered = allIxs.filter((ix: unknown) => ix != null);
     const result = this.convertInstructions(filtered);
+    if (result.length === 0) {
+      const { ChainError } = await import('@waiaas/core');
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message: 'Kamino SDK returned no valid instructions with accounts for supply',
+      });
+    }
     this.logger?.debug('KaminoSdkWrapper.buildSupplyInstruction result', {
       setupIxs: action.setupIxs?.length ?? 0, lendingIxs: action.lendingIxs?.length ?? 0,
       cleanupIxs: action.cleanupIxs?.length ?? 0, totalFiltered: filtered.length,
@@ -376,7 +414,14 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
       market, params.amount.toString(), mint, wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)),
     );
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
-    return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
+    const result = this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
+    if (result.length === 0) {
+      const { ChainError } = await import('@waiaas/core');
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message: 'Kamino SDK returned no valid instructions with accounts for borrow',
+      });
+    }
+    return result;
   }
 
   async buildRepayInstruction(params: {
@@ -394,7 +439,14 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
       market, amountStr, mint, wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)),
     );
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
-    return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
+    const result = this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
+    if (result.length === 0) {
+      const { ChainError } = await import('@waiaas/core');
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message: 'Kamino SDK returned no valid instructions with accounts for repay',
+      });
+    }
+    return result;
   }
 
   async buildWithdrawInstruction(params: {
@@ -412,7 +464,14 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
       market, amountStr, mint, wallet, new sdk.VanillaObligation(new sdk.PublicKey(KAMINO_PROGRAM_ID)),
     );
     const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
-    return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
+    const result = this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
+    if (result.length === 0) {
+      const { ChainError } = await import('@waiaas/core');
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message: 'Kamino SDK returned no valid instructions with accounts for withdraw',
+      });
+    }
+    return result;
   }
 
   async getObligation(params: {

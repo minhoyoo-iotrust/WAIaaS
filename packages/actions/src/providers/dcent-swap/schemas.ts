@@ -68,14 +68,26 @@ export type DcentQuotesResponse = z.infer<typeof DcentQuotesResponseSchema>;
 // POST /api/swap/v3/get_dex_swap_transaction_data
 // ---------------------------------------------------------------------------
 
+/** EVM transaction data: from/to/data/value fields. */
+export const DcentEvmTxDataSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  data: z.string(),
+  value: z.string().optional(),
+});
+
+/** Solana transaction data: base64 serialized transaction or instruction data. */
+export const DcentSolanaTxDataSchema = z.object({
+  serializedTransaction: z.string().optional(),
+  data: z.string().optional(),
+}).passthrough();
+
+/** Union of EVM and Solana transaction data formats. */
+export const DcentTxDataSchema = z.union([DcentEvmTxDataSchema, DcentSolanaTxDataSchema]);
+
 export const DcentTxDataResponseSchema = z.object({
   status: z.string(),
-  txdata: z.object({
-    from: z.string(),
-    to: z.string(),
-    data: z.string(),
-    value: z.string().optional(),
-  }).optional(),
+  txdata: DcentTxDataSchema.optional(),
   networkFee: z.object({
     gas: z.string().optional(),
     gasPrice: z.string().optional(),
