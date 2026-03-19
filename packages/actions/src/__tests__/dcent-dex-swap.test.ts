@@ -588,7 +588,7 @@ describe('dcent-dex-swap', () => {
       expect(capturedQuoteBody!.fromWalletAddress).toBe('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045');
     });
 
-    it('handles txdata with no value (defaults to 0)', async () => {
+    it('corrects native sell value when API returns only protocol fees', async () => {
       server.use(
         http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () => {
           return HttpResponse.json({
@@ -597,7 +597,7 @@ describe('dcent-dex-swap', () => {
               from: '0xwallet',
               to: SUSHI_SPENDER,
               data: '0xdata',
-              // value omitted (optional field)
+              value: '10925036', // protocol fee only, not swap amount
             },
           });
         }),
@@ -607,13 +607,63 @@ describe('dcent-dex-swap', () => {
       const result = await executeDexSwap(client, {
         fromAsset: ETH_CAIP19,
         toAsset: USDC_CAIP19,
-        amount: '1000000000000000000',
+        amount: '5000000000000000', // 0.005 ETH
         fromDecimals: 18,
         toDecimals: 6,
         walletAddress: '0xwallet',
       }, DEFAULT_CONFIG);
 
-      expect(result[0]!.value).toBe('0');
+      // Value should be corrected to swap amount since API value < swap amount
+      expect(result[0]!.value).toBe('5000000000000000');
+    });
+
+    it('keeps API value for native sell when API value >= swap amount', async () => {
+      const client = createClient();
+      const result = await executeDexSwap(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+        walletAddress: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+      }, DEFAULT_CONFIG);
+
+      // Mock returns value: '1000000000000000000' which equals swap amount -> keep as-is
+      expect(result[0]!.value).toBe('1000000000000000000');
+    });
+
+    it('does not correct value for ERC-20 sell', async () => {
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () => {
+          return HttpResponse.json(makeQuotesResponse({
+            fromId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+            toId: 'ETHEREUM',
+          }));
+        }),
+        http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () => {
+          return HttpResponse.json(makeTxDataResponse({
+            txdata: {
+              from: '0xwallet',
+              to: SUSHI_SPENDER,
+              data: '0xswapdata',
+              value: '0',
+            },
+          }));
+        }),
+      );
+
+      const client = createClient();
+      const result = await executeDexSwap(client, {
+        fromAsset: USDC_CAIP19,
+        toAsset: ETH_CAIP19,
+        amount: '1000000',
+        fromDecimals: 6,
+        toDecimals: 18,
+        walletAddress: '0xwallet',
+      }, DEFAULT_CONFIG);
+
+      // ERC-20 sell: value stays as API returned ('0'), no correction
+      expect(result[1]!.value).toBe('0');
     });
   });
 });

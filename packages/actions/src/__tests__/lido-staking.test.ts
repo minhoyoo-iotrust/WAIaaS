@@ -224,6 +224,7 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
   function makeCtx(walletId: string = WALLET_ID, chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
     return {
       walletId,
+      walletAddress: walletId,
       chain,
       networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
       environment: 'mainnet',
@@ -403,6 +404,7 @@ describe('LidoStakingActionProvider Multichain Positions', () => {
   }): PositionQueryContext {
     return {
       walletId: WALLET_ID,
+      walletAddress: WALLET_ID,
       chain: 'ethereum',
       networks: (opts?.networks ?? ['ethereum-mainnet', 'base-mainnet']) as any,
       environment: opts?.environment ?? 'mainnet',

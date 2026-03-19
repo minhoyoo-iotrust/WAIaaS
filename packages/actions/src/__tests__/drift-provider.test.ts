@@ -13,7 +13,7 @@ import { DRIFT_PROGRAM_ID } from '../providers/drift/config.js';
 import type { ActionContext, ContractCallRequest, PositionQueryContext } from '@waiaas/core';
 
 function makeSolCtx(walletId: string, chain: 'solana' | 'ethereum' = 'solana'): PositionQueryContext {
-  return { walletId, chain, networks: chain === 'solana' ? ['solana-mainnet'] : ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
+  return { walletId, walletAddress: walletId, chain, networks: chain === 'solana' ? ['solana-mainnet'] : ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
 }
 
 // ---------------------------------------------------------------------------
@@ -510,6 +510,7 @@ describe('IPositionProvider compliance', () => {
   it('should use ctx.networks[0] for network field (MCHN-08)', async () => {
     const ctx: PositionQueryContext = {
       walletId: 'test-wallet',
+      walletAddress: 'test-wallet',
       chain: 'solana',
       networks: ['solana-devnet'],
       environment: 'testnet',

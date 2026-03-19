@@ -105,16 +105,13 @@ export const BUILTIN_TOKENS: Record<string, TokenEntry[]> = {
   ],
 
   // ---------------------------------------------------------------------------
-  // Polygon Amoy (7 tokens)
+  // Polygon Amoy (4 tokens — AAVE/DAI/USDT removed: contracts no longer exist after testnet reset)
   // ---------------------------------------------------------------------------
   'polygon-amoy': [
     { address: '0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582', symbol: 'USDC', name: 'USD Coin', decimals: 6 },
-    { address: '0x1fdE0eCc619726f4cD597887C9F3b4c8740e19e2', symbol: 'USDT', name: 'Tether USD', decimals: 6 },
     { address: '0x52eF3d68BaB452a294342DC3e5f464d7f610f72E', symbol: 'WETH', name: 'Wrapped Ether', decimals: 18 },
-    { address: '0xc8c0Cf9436F4862a8F60Ce680Ca5a9f0f99b5ded', symbol: 'DAI', name: 'Dai Stablecoin', decimals: 18 },
     { address: '0x0Fd9e8d3aF1aaee056EB9e802c3A762a667b1904', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
     { address: '0x360ad4f9a9A8EFe9A8DCB5f461c4Cc1047E1Dcf9', symbol: 'WPOL', name: 'Wrapped POL', decimals: 18 },
-    { address: '0x1558c6FadDe1bEaf0f6628BDd1DFf3461185eA24', symbol: 'AAVE', name: 'Aave Token', decimals: 18 },
   ],
 
   // ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ import type { HyperliquidMarketData } from '../market-data.js';
 import type { ActionContext, PositionQueryContext } from '@waiaas/core';
 
 function makeEvmCtx(walletId: string = 'wallet-001', chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
-  return { walletId, chain, networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'], environment: 'mainnet', rpcUrls: {} };
+  return { walletId, walletAddress: `0x${walletId}`, chain, networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'], environment: 'mainnet', rpcUrls: {} };
 }
 
 // ---------------------------------------------------------------------------

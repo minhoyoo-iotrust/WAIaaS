@@ -347,13 +347,13 @@ export class DriftPerpProvider implements IPerpProvider, IPositionProvider {
 
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'solana') return [];
-    const walletId = ctx.walletId;
+    const walletAddress = ctx.walletAddress;
     const network = ctx.networks[0] ?? 'solana-mainnet';
     try {
-      const positions = await this.sdkWrapper.getPositions(walletId);
+      const positions = await this.sdkWrapper.getPositions(walletAddress);
       const now = Math.floor(Date.now() / 1000);
       return positions.map((pos) => ({
-        walletId,
+        walletId: ctx.walletId,
         category: 'PERP' as PositionCategory,
         provider: 'drift_perp',
         chain: 'solana',

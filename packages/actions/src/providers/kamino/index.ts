@@ -421,13 +421,13 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
 
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'solana') return [];
-    const walletId = ctx.walletId;
+    const walletAddress = ctx.walletAddress;
     const network = ctx.networks[0] ?? 'solana-mainnet';
     try {
       const marketAddress = resolveMarketAddress(this.config.market);
       const obligation = await this.sdkWrapper.getObligation({
         market: marketAddress,
-        walletAddress: walletId,
+        walletAddress,
       });
       if (!obligation) return [];
 
@@ -436,7 +436,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
 
       for (const deposit of obligation.deposits) {
         updates.push({
-          walletId,
+          walletId: ctx.walletId,
           category: 'LENDING' as const,
           provider: 'kamino',
           chain: 'solana',
@@ -452,7 +452,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
 
       for (const borrow of obligation.borrows) {
         updates.push({
-          walletId,
+          walletId: ctx.walletId,
           category: 'LENDING' as const,
           provider: 'kamino',
           chain: 'solana',

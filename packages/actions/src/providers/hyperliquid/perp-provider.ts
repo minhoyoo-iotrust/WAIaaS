@@ -820,10 +820,10 @@ export class HyperliquidPerpProvider implements IPerpProvider {
 
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'ethereum') return [];
-    const walletId = ctx.walletId;
+    const walletAddress = ctx.walletAddress;
     try {
       const [positions, mids] = await Promise.all([
-        this.marketData.getPositions(walletId as Hex),
+        this.marketData.getPositions(walletAddress as Hex),
         this.marketData.getAllMidPrices(),
       ]);
 
@@ -836,7 +836,7 @@ export class HyperliquidPerpProvider implements IPerpProvider {
         const absSize = Math.abs(szi);
 
         return {
-          walletId,
+          walletId: ctx.walletId,
           category: 'PERP' as PositionCategory,
           provider: 'hyperliquid_perp',
           chain: 'ethereum',

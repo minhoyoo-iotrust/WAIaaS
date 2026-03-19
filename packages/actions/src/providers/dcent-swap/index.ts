@@ -83,7 +83,7 @@ export class DcentSwapActionProvider implements IActionProvider {
       displayName: "D'CENT Swap",
       description: "D'CENT Swap Aggregator supporting multi-chain DEX swaps including cross-chain swaps",
       version: '1.0.0',
-      chains: ['ethereum', 'solana'],
+      chains: ['ethereum'],
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: [],

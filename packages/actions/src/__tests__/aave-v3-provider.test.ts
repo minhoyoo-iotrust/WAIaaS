@@ -412,7 +412,7 @@ describe('IPositionProvider compliance', () => {
   });
 
   it('should return empty positions when no rpcCaller', async () => {
-    const ctx: PositionQueryContext = { walletId: 'test-wallet', chain: 'ethereum', networks: ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
+    const ctx: PositionQueryContext = { walletId: 'test-wallet', walletAddress: 'test-wallet', chain: 'ethereum', networks: ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
     const positions = await provider.getPositions(ctx);
     expect(positions).toEqual([]);
   });

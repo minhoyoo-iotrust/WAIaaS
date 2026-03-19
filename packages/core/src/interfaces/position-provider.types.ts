@@ -38,6 +38,7 @@ export interface PositionUpdate {
  */
 export interface PositionQueryContext {
   walletId: string;
+  walletAddress: string; // on-chain address (0x... or base58)
   chain: ChainType;
   networks: readonly NetworkType[];
   environment: EnvironmentType;
