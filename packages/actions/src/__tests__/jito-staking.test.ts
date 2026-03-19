@@ -7,10 +7,38 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JitoStakingActionProvider } from '../providers/jito-staking/index.js';
 import { JITO_MAINNET_ADDRESSES, getJitoAddresses } from '../providers/jito-staking/config.js';
+import { base58Decode } from '../providers/jito-staking/jito-stake-pool.js';
 import type { ActionContext, ContractCallRequest, PositionQueryContext } from '@waiaas/core';
 
 function makeSolCtx(walletId: string, chain: 'solana' | 'ethereum' = 'solana'): PositionQueryContext {
   return { walletId, walletAddress: walletId, chain, networks: chain === 'solana' ? ['solana-mainnet'] : ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
+}
+
+// ---------------------------------------------------------------------------
+// Test constants & mock RPC
+// ---------------------------------------------------------------------------
+
+const TEST_RPC_URL = 'https://api.mainnet-beta.solana.com';
+const MOCK_MANAGER_FEE = 'B1aLzaNMeFVAyQ6f3XbbUyKcH2YPHu2fqiEagmiF23VR';
+const MOCK_RESERVE_STAKE = 'BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL';
+
+function buildFakeStakePoolBuffer(): Buffer {
+  const buf = Buffer.alloc(300, 0);
+  buf.set(base58Decode(MOCK_RESERVE_STAKE), 130);
+  buf.set(base58Decode(MOCK_MANAGER_FEE), 194);
+  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  view.setBigUint64(258, 1_000_000_000_000n, true);
+  view.setBigUint64(266, 1_000_000_000_000n, true);
+  return buf;
+}
+
+function buildStakePoolRpcResponse(): object {
+  const buf = buildFakeStakePoolBuffer();
+  return {
+    jsonrpc: '2.0',
+    id: 1,
+    result: { value: { data: [buf.toString('base64'), 'base64'], executable: false, lamports: 100000000, owner: 'SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy', rentEpoch: 0 } },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -41,9 +69,18 @@ function readLEu64(bytes: Uint8Array, offset: number): bigint {
 // ---------------------------------------------------------------------------
 
 describe('JitoStakingActionProvider', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let fetchSpy: any;
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(buildStakePoolRpcResponse()), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+  });
+  afterEach(() => { fetchSpy?.mockRestore(); });
+
   describe('stake returns ContractCallRequest with Solana fields', () => {
     it('type=CONTRACT_CALL, programId=SPL_STAKE_POOL, instructionData and accounts present', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('stake', { amount: '1.0' }, CONTEXT);
 
       const req = result as ContractCallRequest;
@@ -58,7 +95,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('stake instructionData starts with DepositSol index (14)', () => {
     it('first byte of decoded base64 is 14', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('stake', { amount: '1.0' }, CONTEXT);
 
       const req = result as ContractCallRequest;
@@ -69,7 +106,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('unstake returns ContractCallRequest with Solana fields', () => {
     it('type=CONTRACT_CALL, programId, instructionData, accounts present', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('unstake', { amount: '1.0' }, CONTEXT);
 
       const req = result as ContractCallRequest;
@@ -84,7 +121,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('unstake instructionData starts with WithdrawSol index (16)', () => {
     it('first byte of decoded base64 is 16', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('unstake', { amount: '1.0' }, CONTEXT);
 
       const req = result as ContractCallRequest;
@@ -95,7 +132,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('stake amount "1.0" encodes 1000000000 lamports in instructionData', () => {
     it('decode LE u64 from bytes 1-8 = 1000000000', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('stake', { amount: '1.0' }, CONTEXT);
 
       const req = result as ContractCallRequest;
@@ -107,7 +144,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('zero amount throws', () => {
     it('amount "0" throws "Amount must be greater than 0"', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       await expect(
         provider.resolve('stake', { amount: '0' }, CONTEXT),
       ).rejects.toThrow('Amount must be greater than 0');
@@ -116,7 +153,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('unknown action throws', () => {
     it('throws for unknown action name', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       await expect(
         provider.resolve('unknown_action', { amount: '1.0' }, CONTEXT),
       ).rejects.toThrow('Unknown action');
@@ -125,7 +162,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('metadata', () => {
     it('has correct name, chains, mcpExpose', () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       expect(provider.metadata.name).toBe('jito_staking');
       expect(provider.metadata.chains).toEqual(['solana']);
       expect(provider.metadata.mcpExpose).toBe(true);
@@ -146,7 +183,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('stake decimal "0.5" SOL encodes 500000000 lamports', () => {
     it('verify precise conversion', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('stake', { amount: '0.5' }, CONTEXT);
 
       const req = result as ContractCallRequest;
@@ -158,7 +195,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('stake accounts include wallet as signer', () => {
     it('accounts array has wallet address as signer', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('stake', { amount: '1.0' }, CONTEXT);
 
       const req = result as ContractCallRequest;
@@ -172,7 +209,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('unstake accounts include wallet as signer', () => {
     it('accounts array has wallet address as signer', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('unstake', { amount: '1.0' }, CONTEXT);
 
       const req = result as ContractCallRequest;
@@ -185,7 +222,7 @@ describe('JitoStakingActionProvider', () => {
 
   describe('INSUFFICIENT_BALANCE: large amount is faithfully encoded', () => {
     it('999999999.0 SOL encodes faithfully for pipeline balance check', async () => {
-      const provider = new JitoStakingActionProvider({ enabled: true });
+      const provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: TEST_RPC_URL });
       const result = await provider.resolve('stake', { amount: '999999999.0' }, CONTEXT);
 
       const req = result as ContractCallRequest;

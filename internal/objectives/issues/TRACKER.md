@@ -42,11 +42,13 @@
 | 392 | BUG | CRITICAL | PositionTracker가 지갑 UUID를 온체인 주소로 사용하여 모든 DeFi 포지션 조회 실패 | — | FIXED | 2026-03-19 |
 | 393 | BUG | HIGH | DCent Swap 네이티브 ETH 스왑 시 txdata.value 불일치로 온체인 revert — API가 프로토콜 수수료만 반환, 스왑 금액 누락 | — | FIXED | 2026-03-19 |
 | 394 | BUG | HIGH | DCent Swap Solana 트랜잭션 스키마 불일치로 Solana 체인 스왑 전면 실패 — EVM 전용 txdata 스키마, 체인 분기 없음 | — | FIXED | 2026-03-19 |
-| 395 | BUG | HIGH | DeFi UAT 시나리오 6개 API 엔드포인트/파라미터 불일치로 전수 실행 불가 — 구 API 형식 사용 | — | OPEN | — |
-| 396 | BUG | HIGH | Jupiter Swap 프로그램 오류 6025로 시뮬레이션 실패 — V6 프로그램 라우트 오류 | — | OPEN | — |
-| 397 | BUG | HIGH | Jito Staking "Invalid manager fee account"로 DepositSol 실패 — 계정 주소 불일치 | — | OPEN | — |
-| 398 | BUG | HIGH | Pendle API 응답 스키마 불일치 회귀 — buy_pt 응답 array vs object (#373 재발) | — | OPEN | — |
-| 399 | BUG | HIGH | Kamino/Drift SDK 런타임 미설치로 Solana DeFi 기능 사용 불가 — #374/#375 후속 | — | OPEN | — |
+| 395 | BUG | HIGH | DeFi UAT 시나리오 6개 API 엔드포인트/파라미터 불일치로 전수 실행 불가 — 구 API 형식 사용 | — | FIXED | 2026-03-19 |
+| 396 | BUG | HIGH | Jupiter Swap 프로그램 오류 6025로 시뮬레이션 실패 — V6 프로그램 라우트 오류 | — | FIXED | 2026-03-19 |
+| 397 | BUG | HIGH | Jito Staking "Invalid manager fee account"로 DepositSol 실패 — 계정 주소 불일치 | — | FIXED | 2026-03-19 |
+| 398 | BUG | HIGH | Pendle API 응답 스키마 불일치 회귀 — buy_pt 응답 array vs object (#373 재발) | — | FIXED | 2026-03-19 |
+| 399 | BUG | HIGH | Kamino/Drift SDK 런타임 미설치로 Solana DeFi 기능 사용 불가 — #374/#375 후속 | — | FIXED | 2026-03-19 |
+| 400 | BUG | CRITICAL | Aave V3 포지션 formatWei 18 decimals 하드코딩으로 USDC 등 비-18 토큰 표시 오류 — amount/USD 0 표시 | — | FIXED | 2026-03-19 |
+| 401 | BUG | HIGH | PositionTracker 시작 시 STAKING 즉시 동기화 누락 — 최대 15분간 Lido 포지션 미표시 | — | FIXED | 2026-03-19 |
 
 ## Type Legend
 
@@ -58,8 +60,8 @@
 
 ## Summary
 
-- **OPEN:** 5
-- **FIXED:** 394
+- **OPEN:** 0
+- **FIXED:** 401
 - **WONTFIX:** 1
-- **Total:** 400
+- **Total:** 402
 - **Archived:** 366 (001–366)

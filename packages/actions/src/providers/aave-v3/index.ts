@@ -38,6 +38,7 @@ import {
   encodeGetUserAccountDataCalldata,
   encodeGetReservesListCalldata,
   encodeBalanceOfCalldata,
+  encodeDecimalsCalldata,
   encodeGetAssetsPricesCalldata,
   encodeGetReserveTokensAddressesCalldata,
   encodeGetReserveDataCalldata,
@@ -50,6 +51,7 @@ import {
   decodeUint256Array,
   decodeReserveTokensAddresses,
   decodeGetReserveData,
+  decodeDecimals,
   simulateHealthFactor,
   hfToNumber,
   rayToApy,
@@ -511,17 +513,23 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
       const reserveDataHex = await this.rpcCall(rpcUrl, addresses.dataProvider, encodeGetReserveDataCalldata(asset));
       const reserveData = decodeGetReserveData(reserveDataHex);
 
-      const formatWei = (val: bigint): string => {
+      const decimalsHex = await this.rpcCall(rpcUrl, asset, encodeDecimalsCalldata());
+      const decimals = decodeDecimals(decimalsHex) || 18;
+
+      const formatWei = (val: bigint, dec: number): string => {
         const str = val.toString();
-        if (str.length <= 18) return '0.' + str.padStart(18, '0');
-        const whole = str.slice(0, str.length - 18);
-        const frac = str.slice(str.length - 18);
+        if (str.length <= dec) {
+          const trimmed = str.padStart(dec, '0').replace(/0+$/, '');
+          return trimmed ? `0.${trimmed}` : '0';
+        }
+        const whole = str.slice(0, str.length - dec);
+        const frac = str.slice(str.length - dec);
         const trimmed = frac.replace(/0+$/, '');
         return trimmed ? `${whole}.${trimmed}` : whole;
       };
 
-      const calcUsd = (balance: bigint, price: bigint): number => {
-        return Number((balance * price) / 10n ** 18n) / 1e8;
+      const calcUsd = (balance: bigint, price: bigint, dec: number): number => {
+        return Number((balance * price) / 10n ** BigInt(dec)) / 1e8;
       };
 
       const assetId = formatCaip19(chainCaip2, 'erc20', asset.toLowerCase());
@@ -534,8 +542,8 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
           chain: 'ethereum',
           network,
           assetId,
-          amount: formatWei(aBalance),
-          amountUsd: calcUsd(aBalance, priceUsd8),
+          amount: formatWei(aBalance, decimals),
+          amountUsd: calcUsd(aBalance, priceUsd8, decimals),
           metadata: {
             positionType: 'SUPPLY',
             apy: rayToApy(reserveData.liquidityRate),
@@ -555,8 +563,8 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
           chain: 'ethereum',
           network,
           assetId,
-          amount: formatWei(vBalance),
-          amountUsd: calcUsd(vBalance, priceUsd8),
+          amount: formatWei(vBalance, decimals),
+          amountUsd: calcUsd(vBalance, priceUsd8, decimals),
           metadata: {
             positionType: 'BORROW',
             interestRateMode: 'variable',

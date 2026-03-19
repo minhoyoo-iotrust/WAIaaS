@@ -315,19 +315,19 @@ describe('DriftSdkWrapper (real stub)', () => {
     ).rejects.toThrow();
   });
 
-  it('should throw for getPositions', async () => {
+  it('should throw for getPositions without valid RPC', async () => {
     const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
-    await expect(wrapper.getPositions(WALLET)).rejects.toThrow('@drift-labs/sdk');
+    await expect(wrapper.getPositions(WALLET)).rejects.toThrow();
   });
 
-  it('should throw for getMarginInfo', async () => {
+  it('should throw for getMarginInfo without valid RPC', async () => {
     const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
-    await expect(wrapper.getMarginInfo(WALLET)).rejects.toThrow('@drift-labs/sdk');
+    await expect(wrapper.getMarginInfo(WALLET)).rejects.toThrow();
   });
 
-  it('should throw for getMarkets', async () => {
+  it('should throw for getMarkets without valid RPC', async () => {
     const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
-    await expect(wrapper.getMarkets()).rejects.toThrow('@drift-labs/sdk');
+    await expect(wrapper.getMarkets()).rejects.toThrow();
   });
 });
 

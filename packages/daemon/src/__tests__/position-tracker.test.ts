@@ -207,14 +207,18 @@ describe('PositionTracker', () => {
     expect(lendingProvider.getPositions).not.toHaveBeenCalled();
   });
 
-  it('starts immediate sync for LENDING on start()', () => {
-    const provider = makeMockProvider();
-    tracker.registerProvider(provider);
-
+  it('starts immediate sync for all categories on start()', () => {
+    const syncSpy = vi.spyOn(tracker, 'syncCategory');
     tracker.start();
 
-    // getPositions should have been called immediately for LENDING
-    expect(provider.getPositions).toHaveBeenCalled();
+    // All 4 categories should receive an immediate sync call
+    expect(syncSpy).toHaveBeenCalledWith('LENDING');
+    expect(syncSpy).toHaveBeenCalledWith('STAKING');
+    expect(syncSpy).toHaveBeenCalledWith('YIELD');
+    expect(syncSpy).toHaveBeenCalledWith('PERP');
+    expect(syncSpy).toHaveBeenCalledTimes(4);
+
+    syncSpy.mockRestore();
   });
 
   it('queueSize returns write queue size', () => {

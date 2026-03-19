@@ -62,5 +62,17 @@
     "vitest": "^3.0.0",
     "zod": "^3.24.0"
   },
-  "version": "2.11.0-rc.24"
+  "version": "2.11.0-rc.24",
+  "pnpm": {
+    "overrides": {
+      "uuid": "^11.1.0"
+    },
+    "packageExtensions": {
+      "jayson@*": {
+        "dependencies": {
+          "uuid": "^11.1.0"
+        }
+      }
+    }
+  }
 }

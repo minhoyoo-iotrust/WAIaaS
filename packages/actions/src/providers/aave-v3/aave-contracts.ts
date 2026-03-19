@@ -198,6 +198,21 @@ export function encodeBalanceOfCalldata(account: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// decimals() -- ERC-20 read
+// ---------------------------------------------------------------------------
+
+/**
+ * Encode ERC-20 decimals() calldata.
+ *
+ * No arguments -- just the 4-byte selector (keccak256("decimals()") = 0x313ce567).
+ *
+ * @returns ABI-encoded calldata with 0x prefix
+ */
+export function encodeDecimalsCalldata(): string {
+  return '0x313ce567'; // decimals() selector, no arguments
+}
+
+// ---------------------------------------------------------------------------
 // getAssetsPrices(address[]) -- Oracle read
 // ---------------------------------------------------------------------------
 

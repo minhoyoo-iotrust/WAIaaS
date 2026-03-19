@@ -150,6 +150,24 @@ export function decodeReserveTokensAddresses(hexResponse: string): ReserveTokens
 }
 
 // ---------------------------------------------------------------------------
+// decodeDecimals -- parse ERC-20 decimals() uint8 response
+// ---------------------------------------------------------------------------
+
+/**
+ * Decode ERC-20 decimals() response.
+ *
+ * Returns a uint8 value encoded as a 32-byte ABI slot. We read only the
+ * relevant byte (last byte of the 32-byte slot = first byte of the uint8).
+ *
+ * @param hex - Raw hex response from eth_call (with or without 0x prefix)
+ * @returns Token decimal places as a number (e.g. 18, 6, 8)
+ */
+export function decodeDecimals(hex: string): number {
+  const data = hex.startsWith('0x') ? hex.slice(2) : hex;
+  return parseInt(data.slice(0, 64), 16);
+}
+
+// ---------------------------------------------------------------------------
 // Health factor threshold constants (18-decimal bigints)
 // ---------------------------------------------------------------------------
 

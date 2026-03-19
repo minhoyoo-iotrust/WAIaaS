@@ -197,6 +197,12 @@ describe('AaveV3LendingProvider.getPositions()', () => {
         if (handlers[tokenKey]) result = handlers[tokenKey];
       } else if (selector === '0x35ea6a75') {
         if (handlers['reserveData']) result = handlers['reserveData'];
+      } else if (selector === '0x313ce567') {
+        // decimals() -- check per-asset override first, then global default
+        const decimalsKey = `${to}:decimals`;
+        if (handlers[decimalsKey]) result = handlers[decimalsKey];
+        else if (handlers['decimals']) result = handlers['decimals'];
+        else result = (18n).toString(16).padStart(64, '0'); // default 18
       }
 
       return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result }), {
@@ -204,6 +210,11 @@ describe('AaveV3LendingProvider.getPositions()', () => {
         headers: { 'Content-Type': 'application/json' },
       });
     });
+  }
+
+  /** Encode a uint8 (or any small uint) as a 32-byte ABI response. */
+  function encodeUint8Response(value: number): string {
+    return '0x' + value.toString(16).padStart(64, '0');
   }
 
   const ethMainAddresses = AAVE_V3_ADDRESSES['ethereum-mainnet']!;
@@ -398,6 +409,82 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     const provider = new AaveV3LendingProvider({});
     const positions = await provider.getPositions(makeEvmCtx(WALLET_ADDRESS, 'solana'));
     expect(positions).toEqual([]);
+  });
+
+  it('Test 18: USDC (6 decimals) supply position formats amount correctly as "1.0" not ~0', async () => {
+    // 1 USDC = 1_000_000 (6 decimals)
+    const usdcBalance = '0x' + (1_000_000n).toString(16).padStart(64, '0');
+    const priceUsd = 100000000n; // $1 in 8 decimals
+
+    setupFetchHandlers({
+      [`${ethMainAddresses.pool.toLowerCase()}:0xd1946dbc`]: encodeAddressArrayResponse([ASSET_A]),
+      [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([priceUsd]),
+      [`${ethMainAddresses.pool.toLowerCase()}:0xbf92857c`]: encodeUserAccountData({
+        totalCollateralBase: 100000000n,
+        totalDebtBase: 0n,
+        availableBorrowsBase: 80000000n,
+        currentLiquidationThreshold: 8250n,
+        ltv: 8000n,
+        healthFactor: BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'),
+      }),
+      [`tokens:${ASSET_A.toLowerCase()}`]: encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A),
+      [`${A_TOKEN_A.toLowerCase()}:balanceOf`]: usdcBalance,
+      [`${V_DEBT_TOKEN_A.toLowerCase()}:balanceOf`]: '0x' + '0'.repeat(64),
+      reserveData: encodeReserveData({
+        liquidityIndex: 10n ** 27n,
+        variableBorrowIndex: 10n ** 27n,
+        liquidityRate: 35n * 10n ** 24n,
+        variableBorrowRate: 50n * 10n ** 24n,
+      }),
+      // USDC has 6 decimals -- returned for the asset address
+      [`${ASSET_A.toLowerCase()}:decimals`]: encodeUint8Response(6),
+    });
+
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeEvmCtx());
+
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.amount).toBe('1');
+    // amountUsd: 1_000_000 * 100_000_000 / 10^6 / 1e8 = 1.0
+    expect(positions[0]!.amountUsd).toBeCloseTo(1.0, 4);
+  });
+
+  it('Test 19: WBTC (8 decimals) supply position formats amount correctly', async () => {
+    // 0.5 WBTC = 50_000_000 (8 decimals)
+    const wbtcBalance = '0x' + (50_000_000n).toString(16).padStart(64, '0');
+    const priceUsd = 6000000000000n; // $60_000 in 8 decimals
+
+    setupFetchHandlers({
+      [`${ethMainAddresses.pool.toLowerCase()}:0xd1946dbc`]: encodeAddressArrayResponse([ASSET_A]),
+      [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([priceUsd]),
+      [`${ethMainAddresses.pool.toLowerCase()}:0xbf92857c`]: encodeUserAccountData({
+        totalCollateralBase: 3000000000000n,
+        totalDebtBase: 0n,
+        availableBorrowsBase: 2400000000000n,
+        currentLiquidationThreshold: 8250n,
+        ltv: 8000n,
+        healthFactor: BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'),
+      }),
+      [`tokens:${ASSET_A.toLowerCase()}`]: encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A),
+      [`${A_TOKEN_A.toLowerCase()}:balanceOf`]: wbtcBalance,
+      [`${V_DEBT_TOKEN_A.toLowerCase()}:balanceOf`]: '0x' + '0'.repeat(64),
+      reserveData: encodeReserveData({
+        liquidityIndex: 10n ** 27n,
+        variableBorrowIndex: 10n ** 27n,
+        liquidityRate: 10n * 10n ** 24n,
+        variableBorrowRate: 30n * 10n ** 24n,
+      }),
+      // WBTC has 8 decimals
+      [`${ASSET_A.toLowerCase()}:decimals`]: encodeUint8Response(8),
+    });
+
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeEvmCtx());
+
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.amount).toBe('0.5');
+    // amountUsd: 50_000_000 * 6_000_000_000_000 / 10^8 / 1e8 = 30_000
+    expect(positions[0]!.amountUsd).toBeCloseTo(30000, 0);
   });
 });
 

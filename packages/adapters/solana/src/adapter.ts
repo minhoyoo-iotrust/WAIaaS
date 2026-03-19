@@ -27,6 +27,8 @@ import {
   createKeyPairFromBytes,
   createKeyPairFromPrivateKeyBytes,
   getAddressFromPublicKey,
+  fetchAddressesForLookupTables,
+  compressTransactionMessageUsingAddressLookupTables,
 } from '@solana/kit';
 import { getTransferSolInstruction } from '@solana-program/system';
 import {
@@ -723,37 +725,48 @@ export class SolanaAdapter implements IChainAdapter {
         data: dataBytes,
       };
 
-      // Build pre-instructions (e.g., ATA creation for Jito staking)
+      // Helper to map account role
+      const mapRole = (acc: { isSigner: boolean; isWritable: boolean }): AccountRole => {
+        if (acc.isSigner && acc.isWritable) return AccountRole.WRITABLE_SIGNER;
+        if (acc.isSigner && !acc.isWritable) return AccountRole.READONLY_SIGNER;
+        if (!acc.isSigner && acc.isWritable) return AccountRole.WRITABLE;
+        return AccountRole.READONLY;
+      };
+
+      // Helper to decode instruction data (Uint8Array or base64 string)
+      const decodeData = (data: Uint8Array | string): Uint8Array => {
+        if (data instanceof Uint8Array) return data;
+        return new Uint8Array(Buffer.from(data as string, 'base64'));
+      };
+
+      // Build pre-instructions (e.g., computeBudget + setup instructions from Jupiter)
       const preInstructions: Array<{
         programAddress: ReturnType<typeof address>;
-        accounts: typeof mappedAccounts;
+        accounts: Array<{ address: ReturnType<typeof address>; role: AccountRole }>;
         data: Uint8Array;
       }> = [];
       if (request.preInstructions && request.preInstructions.length > 0) {
         for (const pre of request.preInstructions) {
-          const preAccounts = pre.accounts.map((acc) => {
-            let role: AccountRole;
-            if (acc.isSigner && acc.isWritable) {
-              role = AccountRole.WRITABLE_SIGNER;
-            } else if (acc.isSigner && !acc.isWritable) {
-              role = AccountRole.READONLY_SIGNER;
-            } else if (!acc.isSigner && acc.isWritable) {
-              role = AccountRole.WRITABLE;
-            } else {
-              role = AccountRole.READONLY;
-            }
-            return { address: address(acc.pubkey), role };
-          });
-          let preData: Uint8Array;
-          if (pre.data instanceof Uint8Array) {
-            preData = pre.data;
-          } else {
-            preData = new Uint8Array(Buffer.from(pre.data as unknown as string, 'base64'));
-          }
           preInstructions.push({
             programAddress: address(pre.programId),
-            accounts: preAccounts,
-            data: preData,
+            accounts: pre.accounts.map((acc) => ({ address: address(acc.pubkey), role: mapRole(acc) })),
+            data: decodeData(pre.data),
+          });
+        }
+      }
+
+      // Build post-instructions (e.g., cleanup instruction from Jupiter)
+      const postInstructions: Array<{
+        programAddress: ReturnType<typeof address>;
+        accounts: Array<{ address: ReturnType<typeof address>; role: AccountRole }>;
+        data: Uint8Array;
+      }> = [];
+      if (request.postInstructions && request.postInstructions.length > 0) {
+        for (const post of request.postInstructions) {
+          postInstructions.push({
+            programAddress: address(post.programId),
+            accounts: post.accounts.map((acc) => ({ address: address(acc.pubkey), role: mapRole(acc) })),
+            data: decodeData(post.data),
           });
         }
       }
@@ -775,7 +788,7 @@ export class SolanaAdapter implements IChainAdapter {
           ),
       );
 
-      // Append pre-instructions first (e.g., ATA creation)
+      // Append pre-instructions first (e.g., computeBudget + ATA creation)
       for (const preIx of preInstructions) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         txMessage = appendTransactionMessageInstruction(preIx as any, txMessage) as unknown as typeof txMessage;
@@ -784,6 +797,27 @@ export class SolanaAdapter implements IChainAdapter {
       // Append main instruction
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       txMessage = appendTransactionMessageInstruction(instruction as any, txMessage) as unknown as typeof txMessage;
+
+      // Append post-instructions (e.g., cleanup)
+      for (const postIx of postInstructions) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        txMessage = appendTransactionMessageInstruction(postIx as any, txMessage) as unknown as typeof txMessage;
+      }
+
+      // Apply Address Lookup Table compression if ALT addresses are provided.
+      // This replaces full account pubkeys with compact ALT index references,
+      // allowing transactions with many accounts (like Jupiter swaps) to fit
+      // within the 1232-byte transaction size limit.
+      if (request.addressLookupTableAddresses && request.addressLookupTableAddresses.length > 0) {
+        const altAddresses = request.addressLookupTableAddresses.map((a) => address(a));
+        const addressesByLookupTable = await fetchAddressesForLookupTables(
+          altAddresses,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          rpc as any,
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        txMessage = compressTransactionMessageUsingAddressLookupTables(txMessage as any, addressesByLookupTable) as unknown as typeof txMessage;
+      }
 
       // Compile and encode
       const compiled = compileTransaction(txMessage);

@@ -30,10 +30,19 @@ export const JITO_MAINNET_ADDRESSES = {
 /** Stake Pool withdraw authority (PDA derived from stake pool address). */
 export const JITO_WITHDRAW_AUTHORITY = '6iQKfEyhr3bZMotVkW6beNZz5CPAkiwvgV2CTje9pVSS';
 
-/** Reserve stake account for the Jito Stake Pool. */
+/**
+ * @deprecated No longer used at runtime. The reserve_stake account is now read
+ * dynamically from the on-chain stake pool data (offset 130) via getStakePoolAccounts().
+ * Kept for historical reference only.
+ */
 export const JITO_RESERVE_STAKE = 'BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL';
 
-/** Manager fee account for the Jito Stake Pool. */
+/**
+ * @deprecated No longer used at runtime. The manager_fee_account is now read
+ * dynamically from the on-chain stake pool data (offset 194) via getStakePoolAccounts().
+ * The hardcoded value was causing "Invalid manager fee account" errors when the
+ * on-chain account changed. Kept for historical reference only.
+ */
 export const JITO_MANAGER_FEE = 'B1aLzaNMeFVAyQ6f3XbbUyKcH2YPHu2fqiEagmiF23VR';
 
 /** SPL Token Program. */
