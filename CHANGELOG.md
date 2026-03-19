@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.0-rc.24](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.23...v2.11.0-rc.24) (2026-03-19)
+
+
+### Bug Fixes
+
+* resolve issues [#391](https://github.com/minhoyoo-iotrust/WAIaaS/issues/391)-394 — DeFi position tracking, token registry, DCent Swap ([fe09ade](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fe09ade08fe61dcd0df29e29442afb37f1668866))
+* resolve issues [#391](https://github.com/minhoyoo-iotrust/WAIaaS/issues/391)-394 — DeFi positions, token registry, DCent Swap ([96d0003](https://github.com/minhoyoo-iotrust/WAIaaS/commit/96d00038fb6d2023b212122b448df8e37247341b))
+
 ## [2.11.0-rc.23](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.22...v2.11.0-rc.23) (2026-03-19)
 
 
