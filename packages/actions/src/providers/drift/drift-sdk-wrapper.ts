@@ -328,7 +328,9 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
   private async loadSdk() {
     if (this._sdk) return this._sdk;
     try {
+      // @ts-ignore — optional dependency, may not be installed in CI
       const solana = await import('@solana/web3.js');
+      // @ts-ignore — optional dependency, may not be installed in CI
       const drift = await import('@drift-labs/sdk');
       this._sdk = {
         Connection: solana.Connection,
