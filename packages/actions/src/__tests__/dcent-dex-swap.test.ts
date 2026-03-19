@@ -666,4 +666,41 @@ describe('dcent-dex-swap', () => {
       expect(result[1]!.value).toBe('0');
     });
   });
+
+  describe('Solana swap (#417)', () => {
+    const SOL_CAIP19 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501';
+    const SOL_USDC_CAIP19 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+
+    it('returns Solana ContractCallRequest with instructionData', async () => {
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () => {
+          return HttpResponse.json(makeQuotesResponse());
+        }),
+        http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () => {
+          return HttpResponse.json({
+            status: 'success',
+            txdata: {
+              serializedTransaction: 'AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbase64==',
+              programId: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
+            },
+          });
+        }),
+      );
+
+      const client = createClient();
+      const result = await executeDexSwap(client, {
+        fromAsset: SOL_CAIP19,
+        toAsset: SOL_USDC_CAIP19,
+        amount: '1000000000',
+        fromDecimals: 9,
+        toDecimals: 6,
+        walletAddress: 'SoLWaLLeTaDDreSS11111111111111111111111111',
+      }, DEFAULT_CONFIG);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]!.type).toBe('CONTRACT_CALL');
+      expect(result[0]!.instructionData).toBe('AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbase64==');
+      expect(result[0]!.to).toBe('JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4');
+    });
+  });
 });

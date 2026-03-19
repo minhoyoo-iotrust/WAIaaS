@@ -612,6 +612,40 @@ describe('KaminoSdkWrapper with mocked SDK', () => {
       }),
     ).rejects.toThrow('Kamino market not found');
   });
+
+  it('loadMarket retries on RPC 429 and succeeds (#415)', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const loadMock = (wrapper as any)._sdk.KaminoMarket.load;
+    loadMock
+      .mockRejectedValueOnce(new Error('429 Too Many Requests'))
+      .mockResolvedValueOnce(mockMarket);
+    const result = await wrapper.buildSupplyInstruction({
+      market: MARKET,
+      asset: ASSET,
+      amount: 1000000n,
+      walletAddress: WALLET,
+    });
+    expect(result.length).toBeGreaterThanOrEqual(1);
+    expect(loadMock).toHaveBeenCalledTimes(2);
+  }, 15_000);
+
+  it('loadMarket throws RATE_LIMITED after all retries fail (#415)', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const loadMock = (wrapper as any)._sdk.KaminoMarket.load;
+    loadMock
+      .mockRejectedValueOnce(new Error('429 Too Many Requests'))
+      .mockRejectedValueOnce(new Error('429 Too Many Requests'))
+      .mockRejectedValueOnce(new Error('429 Too Many Requests'));
+    await expect(
+      wrapper.buildSupplyInstruction({
+        market: MARKET,
+        asset: ASSET,
+        amount: 1000000n,
+        walletAddress: WALLET,
+      }),
+    ).rejects.toThrow('Kamino market load failed after 3 retries');
+    expect(loadMock).toHaveBeenCalledTimes(3);
+  }, 15_000);
 });
 
 // ---------------------------------------------------------------------------
