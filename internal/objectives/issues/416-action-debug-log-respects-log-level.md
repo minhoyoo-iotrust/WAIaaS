@@ -6,6 +6,9 @@
 - **컴포넌트**: `packages/daemon/src/lifecycle/daemon-startup.ts`, `packages/core/src/interfaces/logger.ts`
 - **선행 이슈**: #412 (Action Provider 디버그 로깅 추가)
 
+- **상태**: FIXED
+- **수정일**: 2026-03-20
+
 ## 현상
 
 Admin Settings `log_level`이 `info`로 설정되어 있는데도 Action Provider의 debug 로그가 콘솔에 출력된다:

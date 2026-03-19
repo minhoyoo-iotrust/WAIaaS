@@ -294,6 +294,68 @@ describe('PendleApiClient', () => {
       });
     });
 
+  describe('convert — wrapper format tolerance (#414)', () => {
+    it('accepts data wrapper with object', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v2/sdk/1/convert`, () => {
+          return HttpResponse.json({ data: CONVERT_RESPONSE });
+        }),
+      );
+      const client = new PendleApiClient(makeConfig(), 1);
+      const result = await client.convert({ tokensIn: '0xA', amountsIn: '100', tokensOut: '0xB', slippage: '0.01', receiver: '0xC' });
+      expect(result.tx.to).toBe('0xPendleRouter');
+      expect(result.amountOut).toBe('1000000000000000000');
+    });
+
+    it('accepts results wrapper with array', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v2/sdk/1/convert`, () => {
+          return HttpResponse.json({ results: [CONVERT_RESPONSE] });
+        }),
+      );
+      const client = new PendleApiClient(makeConfig(), 1);
+      const result = await client.convert({ tokensIn: '0xA', amountsIn: '100', tokensOut: '0xB', slippage: '0.01', receiver: '0xC' });
+      expect(result.tx.to).toBe('0xPendleRouter');
+    });
+
+    it('accepts result wrapper with object', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v2/sdk/1/convert`, () => {
+          return HttpResponse.json({ result: CONVERT_RESPONSE });
+        }),
+      );
+      const client = new PendleApiClient(makeConfig(), 1);
+      const result = await client.convert({ tokensIn: '0xA', amountsIn: '100', tokensOut: '0xB', slippage: '0.01', receiver: '0xC' });
+      expect(result.tx.to).toBe('0xPendleRouter');
+    });
+
+    it('accepts numeric tx.value and amountOut', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v2/sdk/1/convert`, () => {
+          return HttpResponse.json({
+            tx: { to: '0xRouter', data: '0x1234', value: 0 },
+            amountOut: 1000000,
+          });
+        }),
+      );
+      const client = new PendleApiClient(makeConfig(), 1);
+      const result = await client.convert({ tokensIn: '0xA', amountsIn: '100', tokensOut: '0xB', slippage: '0.01', receiver: '0xC' });
+      expect(result.tx.value).toBe('0');
+      expect(result.amountOut).toBe('1000000');
+    });
+
+    it('accepts data wrapper with array', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v2/sdk/1/convert`, () => {
+          return HttpResponse.json({ data: [CONVERT_RESPONSE] });
+        }),
+      );
+      const client = new PendleApiClient(makeConfig(), 1);
+      const result = await client.convert({ tokensIn: '0xA', amountsIn: '100', tokensOut: '0xB', slippage: '0.01', receiver: '0xC' });
+      expect(result.tx.to).toBe('0xPendleRouter');
+    });
+  });
+
     describe('getSwappingPrices', () => {
     it('returns validated swapping prices', async () => {
       const client = new PendleApiClient(makeConfig(), 1);

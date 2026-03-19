@@ -370,24 +370,39 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     if (this._client) return this._client;
     this.logger?.debug('DriftSdkWrapper.getClient: initializing', { rpcUrl: this.rpcUrl, subAccount: this.subAccount });
     const sdk = await this.loadSdk();
-    const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
-    const client = new sdk.DriftClient({
-      connection,
-      wallet: new sdk.Wallet(sdk.Keypair.generate()), // read-only dummy wallet for queries
-      programID: new sdk.PublicKey(DRIFT_PROGRAM_ID),
-      activeSubAccountId: this.subAccount,
-    });
-    try {
-      await client.subscribe();
-      this.logger?.debug('DriftSdkWrapper.getClient: subscribe succeeded');
-    } catch (err) {
-      this.logger?.error('DriftSdkWrapper.getClient: subscribe failed', {
-        error: err instanceof Error ? err.message : String(err),
+
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
+      const client = new sdk.DriftClient({
+        connection,
+        wallet: new sdk.Wallet(sdk.Keypair.generate()),
+        programID: new sdk.PublicKey(DRIFT_PROGRAM_ID),
+        activeSubAccountId: this.subAccount,
       });
-      throw err;
+      try {
+        await client.subscribe();
+        this.logger?.debug('DriftSdkWrapper.getClient: subscribe succeeded');
+        this._client = client;
+        return client;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        this.logger?.warn(`DriftSdkWrapper.getClient: subscribe attempt ${attempt + 1}/${maxRetries} failed`, {
+          error: lastError.message,
+        });
+        if (attempt < maxRetries - 1) {
+          const backoff = Math.min(1000 * Math.pow(2, attempt), 10_000);
+          await new Promise((r) => setTimeout(r, backoff));
+        }
+      }
     }
-    this._client = client;
-    return client;
+
+    const { ChainError } = await import('@waiaas/core');
+    throw new ChainError('RATE_LIMITED', 'solana', {
+      message: `Drift SDK initialization failed after ${maxRetries} retries: ${lastError?.message}`,
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
