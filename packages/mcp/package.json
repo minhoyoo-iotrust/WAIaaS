@@ -1,6 +1,6 @@
 {
   "name": "@waiaas/mcp",
-  "version": "2.11.0-rc.24",
+  "version": "2.11.0-rc.25",
   "description": "WAIaaS MCP server - Model Context Protocol integration for AI agents",
   "keywords": [
     "mcp",
