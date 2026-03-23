@@ -423,6 +423,21 @@ describe('DriftSdkWrapper with mocked SDK', () => {
   });
 
   describe('uninitialized user handling (#428)', () => {
+    it('sets _userInitialized=true when subscribe returns true', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._client = null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._clientAuthority = null;
+      const initClient = { ...mockClient, subscribe: vi.fn().mockResolvedValue(true) };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._sdk.DriftClient = vi.fn().mockReturnValue(initClient);
+      await wrapper.buildDepositInstruction({
+        amount: '500', asset: 'USDC', walletAddress: WALLET,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((wrapper as any)._userInitialized).toBe(true);
+    });
+
     it('handles subscribe "no user" error gracefully for first-time users', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (wrapper as any)._client = null;
