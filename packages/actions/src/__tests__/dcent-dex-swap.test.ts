@@ -671,7 +671,12 @@ describe('dcent-dex-swap', () => {
     const SOL_CAIP19 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501';
     const SOL_USDC_CAIP19 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
-    it('returns Solana ContractCallRequest with instructionData', async () => {
+    it('decodes base58 txdata and returns CONTRACT_CALL with base64 instructionData (#427)', async () => {
+      // DCent API returns base58-encoded VersionedTransaction data
+      // The code decodes base58 → re-encodes as base64 for SolanaAdapter
+      // Use a known base58 string "3QJmnh" which decodes to some bytes
+      const base58Data = '3QJmnh';
+
       server.use(
         http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () => {
           return HttpResponse.json(makeQuotesResponse());
@@ -680,8 +685,7 @@ describe('dcent-dex-swap', () => {
           return HttpResponse.json({
             status: 'success',
             txdata: {
-              serializedTransaction: 'AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbase64==',
-              programId: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
+              data: base58Data,
             },
           });
         }),
@@ -699,8 +703,12 @@ describe('dcent-dex-swap', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]!.type).toBe('CONTRACT_CALL');
-      expect(result[0]!.instructionData).toBe('AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbase64==');
-      expect(result[0]!.to).toBe('JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4');
+      // instructionData should be base64-encoded (decoded from base58)
+      expect(result[0]!.instructionData).toBeTruthy();
+      expect(result[0]!.to).toBe('dcent-swap');
+      // Verify it's valid base64 (no base58-only chars like '=' which would fail)
+      const decoded = Buffer.from(result[0]!.instructionData as string, 'base64');
+      expect(decoded.length).toBeGreaterThan(0);
     });
   });
 

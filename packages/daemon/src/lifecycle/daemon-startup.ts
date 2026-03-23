@@ -283,12 +283,30 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
           }
         }
 
-        // 3. Register built-in defaults (lower priority, appended after config URLs)
+        // 3. Seed Admin Settings rpc_pool.* URLs (higher priority than built-in defaults)
+        if (state._settingsService) {
+          const { SETTING_DEFINITIONS } = await import('../infrastructure/settings/setting-keys.js');
+          const rpcPoolKeys = SETTING_DEFINITIONS
+            .filter(d => d.category === 'rpc_pool')
+            .map(d => d.key);
+          for (const settingKey of rpcPoolKeys) {
+            const raw = state._settingsService.get(settingKey);
+            if (!raw || raw === '[]') continue;
+            try {
+              const parsed = JSON.parse(raw) as string[];
+              if (!Array.isArray(parsed) || parsed.length === 0) continue;
+              const network = settingKey.replace('rpc_pool.', '');
+              state.rpcPool.register(network, parsed);
+            } catch { /* skip invalid JSON */ }
+          }
+        }
+
+        // 4. Register built-in defaults (lower priority, appended after config + admin URLs)
         for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
           state.rpcPool.register(network, [...urls]);
         }
 
-        // 4. Create AdapterPool with RpcPool
+        // 5. Create AdapterPool with RpcPool
         state.adapterPool = new AdapterPool(state.rpcPool);
         state.logger.debug(`Step 4: AdapterPool created with RpcPool (${state.rpcPool.getNetworks().length} networks seeded)`);
       })(),

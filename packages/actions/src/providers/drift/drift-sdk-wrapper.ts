@@ -322,6 +322,8 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
   private _sdk: { Connection: any; PublicKey: any; Keypair: any; Wallet: any; BN: any; DriftClient: any; PositionDirection: any; OrderType: any; MarketType: any; PRICE_PRECISION: any; BASE_PRECISION: any; QUOTE_PRECISION: any; convertToNumber: any; getMarketOrderParams: any; getLimitOrderParams: any } | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _client: any = null;
+  private _clientAuthority: string | null = null;
+  private _userInitialized = false;
 
   private readonly logger?: ILogger;
 
@@ -370,9 +372,13 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async getClient(): Promise<any> {
+  private async getClient(walletAddress?: string): Promise<any> {
+    // Invalidate cached client if authority changed (different wallet)
+    if (this._client && walletAddress && this._clientAuthority !== walletAddress) {
+      this._client = null;
+    }
     if (this._client) return this._client;
-    this.logger?.debug('DriftSdkWrapper.getClient: initializing', { rpcUrl: this.resolveUrl(), subAccount: this.subAccount });
+    this.logger?.debug('DriftSdkWrapper.getClient: initializing', { rpcUrl: this.resolveUrl(), subAccount: this.subAccount, authority: walletAddress ?? 'random' });
     const sdk = await this.loadSdk();
 
     const maxRetries = 3;
@@ -381,19 +387,40 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const currentUrl = this.resolveUrl();
       const connection = new sdk.Connection(currentUrl, 'confirmed');
-      const client = new sdk.DriftClient({
+      // Use actual wallet address as authority so DriftClient subscribes
+      // to the correct user account. Wallet key is dummy (signing is done
+      // by WAIaaS pipeline, not the SDK).
+      const dummyWallet = new sdk.Wallet(sdk.Keypair.generate());
+      const clientOpts: Record<string, unknown> = {
         connection,
-        wallet: new sdk.Wallet(sdk.Keypair.generate()),
+        wallet: dummyWallet,
         programID: new sdk.PublicKey(DRIFT_PROGRAM_ID),
         activeSubAccountId: this.subAccount,
-      });
+      };
+      if (walletAddress) {
+        clientOpts.authority = new sdk.PublicKey(walletAddress);
+      }
+      const client = new sdk.DriftClient(clientOpts);
       try {
-        await client.subscribe();
-        this.logger?.debug('DriftSdkWrapper.getClient: subscribe succeeded');
+        const subscribed = await client.subscribe();
+        this.logger?.debug('DriftSdkWrapper.getClient: subscribe result', { subscribed });
         this._client = client;
+        this._clientAuthority = walletAddress ?? null;
+        // Mark whether user account exists (subscribe may succeed but user not found)
+        this._userInitialized = subscribed && client.getUser() != null;
         return client;
       } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
+        // #428: "no user" error means the wallet has no Drift sub-account yet.
+        // This is expected for first-time deposits — create client without user subscription.
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (errMsg.includes('has no user for user id')) {
+          this.logger?.debug('DriftSdkWrapper.getClient: no Drift account for this wallet (first-time user)');
+          this._client = client;
+          this._clientAuthority = walletAddress ?? null;
+          this._userInitialized = false;
+          return client;
+        }
+        lastError = err instanceof Error ? err : new Error(errMsg);
         // #420: Report failure to RpcPool so next resolve returns a different URL
         this.onRpcFailure?.(currentUrl);
         this.logger?.warn(`DriftSdkWrapper.getClient: subscribe attempt ${attempt + 1}/${maxRetries} failed`, {
@@ -441,7 +468,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
     const sdk = await this.loadSdk();
-    const client = await this.getClient();
+    const client = await this.getClient(params.walletAddress);
     const marketIndex = this.resolveMarketIndex(params.market);
     const direction = params.direction === 'LONG' ? sdk.PositionDirection.LONG : sdk.PositionDirection.SHORT;
     const baseAmount = new sdk.BN(parseFloat(params.size) * 1e9);
@@ -463,7 +490,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
     const sdk = await this.loadSdk();
-    const client = await this.getClient();
+    const client = await this.getClient(params.walletAddress);
     const marketIndex = this.resolveMarketIndex(params.market);
 
     if (!params.size) {
@@ -503,7 +530,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
     const sdk = await this.loadSdk();
-    const client = await this.getClient();
+    const client = await this.getClient(params.walletAddress);
     const marketIndex = this.resolveMarketIndex(params.market);
 
     const orderParams: Record<string, unknown> = {
@@ -526,9 +553,12 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
     const sdk = await this.loadSdk();
-    const client = await this.getClient();
+    const client = await this.getClient(params.walletAddress);
     const amount = new sdk.BN(parseFloat(params.amount) * 1e6);
-    const ix = await client.getDepositIx(amount, 0, new sdk.PublicKey(params.walletAddress));
+    const ix = await client.getDepositInstruction(
+      amount, 0, new sdk.PublicKey(params.walletAddress),
+      undefined, false, this._userInitialized,
+    );
     return [this.convertInstruction(ix)];
   }
 
@@ -538,7 +568,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
     const sdk = await this.loadSdk();
-    const client = await this.getClient();
+    const client = await this.getClient(params.walletAddress);
     const amount = new sdk.BN(parseFloat(params.amount) * 1e6);
     const ix = await client.getWithdrawIx(amount, 0);
     return [this.convertInstruction(ix)];
@@ -546,7 +576,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
 
   async getPositions(_walletAddress: string): Promise<DriftPosition[]> {
     const sdk = await this.loadSdk();
-    const client = await this.getClient();
+    const client = await this.getClient(_walletAddress);
     const user = client.getUser();
     const perpPositions = user.getActivePerpPositions();
 
@@ -582,7 +612,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
 
   async getMarginInfo(_walletAddress: string): Promise<DriftMarginInfo> {
     const sdk = await this.loadSdk();
-    const client = await this.getClient();
+    const client = await this.getClient(_walletAddress);
     const user = client.getUser();
 
     const totalCollateral = sdk.convertToNumber(user.getTotalCollateral(), sdk.QUOTE_PRECISION);

@@ -65,7 +65,7 @@ function createMockSdk() {
     subscribe: vi.fn().mockResolvedValue(undefined),
     getUser: vi.fn().mockReturnValue(mockUser),
     getPlacePerpOrderIx: vi.fn().mockResolvedValue(mockIx),
-    getDepositIx: vi.fn().mockResolvedValue(mockIx),
+    getDepositInstruction: vi.fn().mockResolvedValue(mockIx),
     getWithdrawIx: vi.fn().mockResolvedValue(mockIx),
     getPerpMarketAccount: vi.fn().mockImplementation((idx: number) => ({
       name: Buffer.from(`${['SOL', 'BTC', 'ETH'][idx] ?? 'UNK'}-PERP\0\0\0\0`),
@@ -245,7 +245,7 @@ describe('DriftSdkWrapper with mocked SDK', () => {
         walletAddress: WALLET,
       });
       expect(result.length).toBe(1);
-      expect(mockClient.getDepositIx).toHaveBeenCalled();
+      expect(mockClient.getDepositInstruction).toHaveBeenCalled();
     });
   });
 
@@ -406,6 +406,56 @@ describe('DriftSdkWrapper with mocked SDK', () => {
       // DriftClient constructor should only be called once (via getClient caching)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((wrapper as any)._sdk.DriftClient).toHaveBeenCalledTimes(1);
+    });
+
+    it('invalidates client when wallet address changes', async () => {
+      await wrapper.buildOpenPositionInstruction({
+        market: 'SOL-PERP', direction: 'LONG', size: '100', orderType: 'MARKET', walletAddress: WALLET,
+      });
+      // Different wallet triggers new client
+      const OTHER = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+      await wrapper.buildOpenPositionInstruction({
+        market: 'SOL-PERP', direction: 'LONG', size: '100', orderType: 'MARKET', walletAddress: OTHER,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((wrapper as any)._sdk.DriftClient).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('uninitialized user handling (#428)', () => {
+    it('sets _userInitialized=true when subscribe returns true', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._client = null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._clientAuthority = null;
+      const initClient = { ...mockClient, subscribe: vi.fn().mockResolvedValue(true) };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._sdk.DriftClient = vi.fn().mockReturnValue(initClient);
+      await wrapper.buildDepositInstruction({
+        amount: '500', asset: 'USDC', walletAddress: WALLET,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((wrapper as any)._userInitialized).toBe(true);
+    });
+
+    it('handles subscribe "no user" error gracefully for first-time users', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._client = null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._clientAuthority = null;
+      const noUserClient = {
+        ...mockClient,
+        subscribe: vi.fn().mockRejectedValue(new Error('DriftClient has no user for user id 0_TestAddr')),
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._sdk.DriftClient = vi.fn().mockReturnValue(noUserClient);
+      // Should not throw — gracefully handles first-time user
+      const result = await wrapper.buildDepositInstruction({
+        amount: '500', asset: 'USDC', walletAddress: WALLET,
+      });
+      expect(result.length).toBe(1);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((wrapper as any)._userInitialized).toBe(false);
     });
   });
 });

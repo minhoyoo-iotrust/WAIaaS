@@ -681,9 +681,31 @@ export class SolanaAdapter implements IChainAdapter {
           : request.instructionData instanceof Uint8Array
             ? request.instructionData
             : new Uint8Array(Buffer.from(request.instructionData as unknown as string, 'base64'));
+
+        // Refresh blockhash for pre-built transactions (#427):
+        // External providers (DCent) may return stale blockhashes. Decode the
+        // compiled message, replace lifetimeToken (blockhash), and re-serialize.
+        let refreshedSerialized = serialized;
+        try {
+          const { getCompiledTransactionMessageDecoder, getCompiledTransactionMessageEncoder } = await import('@solana/kit');
+          const msgDecoder = getCompiledTransactionMessageDecoder();
+          const msgEncoder = getCompiledTransactionMessageEncoder();
+          const decoded = txDecoder.decode(serialized);
+          const compiledMsg = msgDecoder.decode(decoded.messageBytes);
+          const { value: blockhashInfo } = await rpc.getLatestBlockhash().send();
+          const updatedMsg = { ...compiledMsg, lifetimeToken: blockhashInfo.blockhash };
+          const newMsgBytes = new Uint8Array(msgEncoder.encode(updatedMsg));
+          refreshedSerialized = new Uint8Array(txEncoder.encode({
+            messageBytes: newMsgBytes as unknown as typeof decoded.messageBytes,
+            signatures: decoded.signatures,
+          }));
+        } catch {
+          // If refresh fails, use original serialized bytes (best-effort)
+        }
+
         return {
           chain: 'solana',
-          serialized,
+          serialized: refreshedSerialized,
           estimatedFee: DEFAULT_SOL_TRANSFER_FEE,
           expiresAt: new Date(Date.now() + 60_000),
           metadata: {

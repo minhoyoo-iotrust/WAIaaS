@@ -58,6 +58,8 @@ const DexSwapInputSchema = z.object({
     .describe('Destination token decimals. Auto-resolved from well-known tokens when omitted.'),
   providerId: z.string().optional(),
   slippageBps: z.number().int().optional(),
+  toWalletAddress: z.string().optional()
+    .describe('Destination wallet address for cross-chain swaps. Required when source and destination chains differ (e.g., EVM→Solana).'),
 });
 
 // ---------------------------------------------------------------------------
@@ -185,7 +187,7 @@ export class DcentSwapActionProvider implements IActionProvider {
         if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
         const swapFromDec = input.fromDecimals ?? resolveDecimals(input.fromAsset, 'fromDecimals');
         const swapToDec = input.toDecimals ?? resolveDecimals(input.toAsset, 'toDecimals');
-        const swapParams = { fromAsset: input.fromAsset, toAsset: input.toAsset, amount: input.amount, fromDecimals: swapFromDec, toDecimals: swapToDec, walletAddress: context.walletAddress, providerId: input.providerId, slippageBps: input.slippageBps };
+        const swapParams = { fromAsset: input.fromAsset, toAsset: input.toAsset, amount: input.amount, fromDecimals: swapFromDec, toDecimals: swapToDec, walletAddress: context.walletAddress, toWalletAddress: input.toWalletAddress, providerId: input.providerId, slippageBps: input.slippageBps };
         try {
           return await executeDexSwap(
             this.getClient(),
