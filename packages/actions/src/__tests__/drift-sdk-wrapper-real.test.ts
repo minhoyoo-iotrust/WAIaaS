@@ -407,5 +407,40 @@ describe('DriftSdkWrapper with mocked SDK', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((wrapper as any)._sdk.DriftClient).toHaveBeenCalledTimes(1);
     });
+
+    it('invalidates client when wallet address changes', async () => {
+      await wrapper.buildOpenPositionInstruction({
+        market: 'SOL-PERP', direction: 'LONG', size: '100', orderType: 'MARKET', walletAddress: WALLET,
+      });
+      // Different wallet triggers new client
+      const OTHER = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+      await wrapper.buildOpenPositionInstruction({
+        market: 'SOL-PERP', direction: 'LONG', size: '100', orderType: 'MARKET', walletAddress: OTHER,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((wrapper as any)._sdk.DriftClient).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('uninitialized user handling (#428)', () => {
+    it('handles subscribe "no user" error gracefully for first-time users', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._client = null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._clientAuthority = null;
+      const noUserClient = {
+        ...mockClient,
+        subscribe: vi.fn().mockRejectedValue(new Error('DriftClient has no user for user id 0_TestAddr')),
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapper as any)._sdk.DriftClient = vi.fn().mockReturnValue(noUserClient);
+      // Should not throw — gracefully handles first-time user
+      const result = await wrapper.buildDepositInstruction({
+        amount: '500', asset: 'USDC', walletAddress: WALLET,
+      });
+      expect(result.length).toBe(1);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((wrapper as any)._userInitialized).toBe(false);
+    });
   });
 });
