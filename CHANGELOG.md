@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.2...v2.12.0-rc.3) (2026-03-23)
+
+
+### Bug Fixes
+
+* remove unused testBytes variable in dcent-dex-swap test ([8d8232c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8d8232c76377dbfccc947c4b7444b6c25b8f5fa5))
+* resolve issue [#428](https://github.com/minhoyoo-iotrust/WAIaaS/issues/428) — Drift SDK authority + uninitialized user handling ([466210a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/466210aa966f8db5de25f150c44c7df5131dd6f2))
+* resolve issues [#422](https://github.com/minhoyoo-iotrust/WAIaaS/issues/422)-[#427](https://github.com/minhoyoo-iotrust/WAIaaS/issues/427) — nightly CI, RPC pool seeding, Drift SDK compat, DCent swap fixes ([4210b24](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4210b2420405e84f19b7e8eacf9897c190f95f9c))
+* resolve issues [#422](https://github.com/minhoyoo-iotrust/WAIaaS/issues/422)-[#428](https://github.com/minhoyoo-iotrust/WAIaaS/issues/428) — DeFi UAT fixes, RPC pool seeding, DCent swap corrections ([885531d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/885531db15e06d379d0843280a401945379e96d6))
+
 ## [2.12.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.1...v2.12.0-rc.2) (2026-03-23)
 
 
