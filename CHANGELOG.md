@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.3...v2.12.0-rc.4) (2026-03-23)
+
+
+### Features
+
+* integrate Dev.to blog posts into waiaas.ai/blog ([f9e74bb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f9e74bb79a0e34885816ab091c89701f578f6c56))
+
 ## [2.12.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.2...v2.12.0-rc.3) (2026-03-23)
 
 
