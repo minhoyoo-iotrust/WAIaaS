@@ -65,7 +65,7 @@ function createMockSdk() {
     subscribe: vi.fn().mockResolvedValue(undefined),
     getUser: vi.fn().mockReturnValue(mockUser),
     getPlacePerpOrderIx: vi.fn().mockResolvedValue(mockIx),
-    getDepositIx: vi.fn().mockResolvedValue(mockIx),
+    getDepositInstruction: vi.fn().mockResolvedValue(mockIx),
     getWithdrawIx: vi.fn().mockResolvedValue(mockIx),
     getPerpMarketAccount: vi.fn().mockImplementation((idx: number) => ({
       name: Buffer.from(`${['SOL', 'BTC', 'ETH'][idx] ?? 'UNK'}-PERP\0\0\0\0`),
@@ -245,7 +245,7 @@ describe('DriftSdkWrapper with mocked SDK', () => {
         walletAddress: WALLET,
       });
       expect(result.length).toBe(1);
-      expect(mockClient.getDepositIx).toHaveBeenCalled();
+      expect(mockClient.getDepositInstruction).toHaveBeenCalled();
     });
   });
 

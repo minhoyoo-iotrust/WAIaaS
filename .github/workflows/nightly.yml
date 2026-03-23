@@ -87,7 +87,7 @@ jobs:
       - name: Start solana-test-validator
         run: |
           solana --version
-          solana-test-validator --reset --quiet &
+          nohup solana-test-validator --reset --quiet > /dev/null 2>&1 &
           sleep 10
           solana cluster-version
 
@@ -96,14 +96,14 @@ jobs:
 
       - name: Start Anvil
         run: |
-          anvil --silent &
+          nohup anvil --silent > /dev/null 2>&1 &
           sleep 3
 
       - name: Build
-        run: pnpm turbo run build
+        run: pnpm --filter='!@waiaas/admin' -r run build
 
       - name: Chain Tests
-        run: pnpm turbo run test:chain
+        run: pnpm -r run test:chain --if-present
 
   # Devnet integration tests (non-blocking)
   devnet:

@@ -2590,7 +2590,7 @@ function RpcEndpointsTab() {
       const { data: putResult } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
       const resultSettings = (putResult as unknown as { settings: SettingsData })?.settings ?? {};
       settings.value = resultSettings;
-      const newEntries = buildUrlEntries(resultSettings);
+      const newEntries = buildUrlEntries(resultSettings, builtinRpcUrls.value);
       originalUrls.value = newEntries;
       dirtyUrls.value = JSON.parse(JSON.stringify(newEntries));
       showToast('success', 'RPC settings saved and applied');

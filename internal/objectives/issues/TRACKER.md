@@ -69,10 +69,12 @@
 | 419 | BUG | HIGH | DeFi UAT 6시나리오 반복 검증 및 수정 루프 — 3/6 PASS(defi-09/14 코드수정, defi-08/10 RPC환경, defi-15/16 DCent API 제한) | — | FIXED | 2026-03-23 |
 | 420 | BUG | HIGH | Kamino/Drift SDK wrapper RPC Pool reportFailure 연동 — 로테이션 코드 수정 완료, public RPC 3개 전부 제한(429/403/freetier), 유료 RPC 필요 | — | FIXED | 2026-03-23 |
 | 421 | ENHANCEMENT | MEDIUM | RPC rate limit/access 에러 시 유료 RPC 설정 안내 hint 누락 — ACTION_RESOLVE_FAILED 응답에 설정 방법 안내 필요 | — | FIXED | 2026-03-23 |
-| 422 | BUG | HIGH | Nightly local-validator Turborepo ENXIO 에러 5일 연속 실패 — #352 수정이 nightly.yml에 미적용 | — | OPEN | — |
-| 423 | BUG | MEDIUM | Admin UI RPC Save 후 빌트인 fallback URL 사라짐 — buildUrlEntries 호출 시 builtinDefaults 미전달, 전 네트워크 영향 | — | OPEN | 2026-03-23 |
-| 424 | BUG | HIGH | Admin UI 등록 RPC URL이 RpcPool에 미시딩 — rpc_pool.* DB 키를 daemon-startup에서 pool에 등록하지 않음 | — | OPEN | 2026-03-23 |
-| 425 | BUG | HIGH | Drift SDK getDepositIx 호환성 에러 — 현재 @drift-labs/sdk 버전에서 메서드 제거/변경, defi-10 UAT 실패 | — | OPEN | 2026-03-23 |
+| 422 | BUG | HIGH | Nightly local-validator Turborepo ENXIO 에러 5일 연속 실패 — #352 수정이 nightly.yml에 미적용 | — | FIXED | 2026-03-23 |
+| 423 | BUG | MEDIUM | Admin UI RPC Save 후 빌트인 fallback URL 사라짐 — buildUrlEntries 호출 시 builtinDefaults 미전달, 전 네트워크 영향 | — | FIXED | 2026-03-23 |
+| 424 | BUG | HIGH | Admin UI 등록 RPC URL이 RpcPool에 미시딩 — rpc_pool.* DB 키를 daemon-startup에서 pool에 등록하지 않음 | — | FIXED | 2026-03-23 |
+| 425 | BUG | HIGH | Drift SDK getDepositIx 호환성 에러 — 현재 @drift-labs/sdk 버전에서 메서드 제거/변경, defi-10 UAT 실패 | — | FIXED | 2026-03-23 |
+| 426 | BUG | HIGH | DCent 크로스체인 스왑 toWalletAddress에 출발 체인 주소 사용 — 입력 스키마 미지원 + 하드코딩, defi-15 fail_internal_error 원인 | — | FIXED | 2026-03-23 |
+| 427 | BUG | CRITICAL | DCent Solana 스왑 3중 오류 — base58/base64 인코딩 불일치 + blockhash 미갱신 + CONTRACT_CALL 파이프라인 부적합 | — | FIXED | 2026-03-23 |
 
 ## Type Legend
 
@@ -84,8 +86,8 @@
 
 ## Summary
 
-- **OPEN:** 4
-- **FIXED:** 421
+- **OPEN:** 0
+- **FIXED:** 427
 - **WONTFIX:** 1
-- **Total:** 425
+- **Total:** 427
 - **Archived:** 366 (001–366)

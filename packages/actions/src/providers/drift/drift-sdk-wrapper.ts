@@ -528,7 +528,7 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     const sdk = await this.loadSdk();
     const client = await this.getClient();
     const amount = new sdk.BN(parseFloat(params.amount) * 1e6);
-    const ix = await client.getDepositIx(amount, 0, new sdk.PublicKey(params.walletAddress));
+    const ix = await client.getDepositInstruction(amount, 0, new sdk.PublicKey(params.walletAddress));
     return [this.convertInstruction(ix)];
   }
 

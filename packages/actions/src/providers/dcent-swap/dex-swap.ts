@@ -45,6 +45,7 @@ export interface ExecuteDexSwapParams {
   fromDecimals: number;
   toDecimals: number;
   walletAddress: string;
+  toWalletAddress?: string;  // destination chain address for cross-chain swaps
   providerId?: string;
   slippageBps?: number;
 }
@@ -223,7 +224,7 @@ export async function executeDexSwap(
     fromDecimals: params.fromDecimals,
     toDecimals: params.toDecimals,
     fromWalletAddress: params.walletAddress,
-    toWalletAddress: params.walletAddress,
+    toWalletAddress: params.toWalletAddress ?? params.walletAddress,
     providerId: selectedProvider.providerId,
     isAutoSlippage: false,
     slippage: slippagePercent,
@@ -241,14 +242,28 @@ export async function executeDexSwap(
   const { chainId: fromChainId, assetNamespace, assetReference } = parseCaip19(params.fromAsset);
   const { namespace: chainNamespace } = parseCaip2(fromChainId);
 
-  // Solana chain: pass-through serialized transaction data
+  // Solana chain: DCent API returns base58-encoded VersionedTransaction.
+  // Decode from base58, re-encode as base64 for the CONTRACT_CALL pre-built
+  // transaction bypass in SolanaAdapter (#427). The adapter will also refresh
+  // the blockhash before signing.
   if (chainNamespace === 'solana') {
     const solTxData = txdata as Record<string, unknown>;
-    const instructionData = (solTxData.serializedTransaction ?? solTxData.data ?? '') as string;
+    const rawData = ((solTxData.data ?? solTxData.serializedTransaction ?? '') as string).trim();
+    if (!rawData) {
+      throw new ChainError('ACTION_API_ERROR', 'solana', {
+        message: 'DCent API returned empty Solana transaction data',
+      });
+    }
+
+    // base58 decode → base64 re-encode for SolanaAdapter pre-built path
+    const { base58Decode } = await import('../jito-staking/jito-stake-pool.js');
+    const txBytes = base58Decode(rawData);
+    const base64Tx = Buffer.from(txBytes).toString('base64');
+
     const swapRequest: ContractCallRequest = {
       type: 'CONTRACT_CALL',
-      to: (solTxData.programId as string) ?? 'dcent-swap',
-      instructionData,
+      to: 'dcent-swap',
+      instructionData: base64Tx,
     };
     return [swapRequest];
   }
