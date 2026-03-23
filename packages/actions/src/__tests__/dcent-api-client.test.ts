@@ -602,7 +602,7 @@ describe('DcentSwapApiClient', () => {
       try {
         const client = new DcentSwapApiClient({ debugDumpDir: dir, apiBaseUrl: BASE_URL });
         await client.init();
-        await client.getDexSwapTransactionData({ fromId: 'ETHEREUM', toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', amount: '1000000000000000000', fromDecimals: 18, toDecimals: 6, provider: 'sushi_swap', walletAddress: '0x1234567890123456789012345678901234567890' });
+        await client.getDexSwapTransactionData({ fromId: 'ETHEREUM', toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', fromAmount: '1000000000000000000', fromDecimals: 18, toDecimals: 6, providerId: 'sushi_swap', fromWalletAddress: '0x1234567890123456789012345678901234567890', toWalletAddress: '0x1234567890123456789012345678901234567890', isAutoSlippage: true, slippage: 1 });
         const dump = JSON.parse(readFileSync(client['dumper']!.filePath, 'utf-8'));
         expect(dump.calls.length).toBeGreaterThanOrEqual(2); // init + getTxData
       } finally {
@@ -641,7 +641,7 @@ describe('DcentSwapApiClient', () => {
       try {
         const client = new DcentSwapApiClient({ debugDumpDir: dir, apiBaseUrl: BASE_URL });
         await client.init();
-        await client.getDexSwapTransactionData({ fromId: 'ETHEREUM', toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', amount: '1', fromDecimals: 18, toDecimals: 6, provider: 'sushi', walletAddress: '0x1234' }).catch(() => {});
+        await client.getDexSwapTransactionData({ fromId: 'ETHEREUM', toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', fromAmount: '1', fromDecimals: 18, toDecimals: 6, providerId: 'sushi', fromWalletAddress: '0x1234', toWalletAddress: '0x1234', isAutoSlippage: true, slippage: 1 }).catch(() => {});
         const dump = JSON.parse(readFileSync(client['dumper']!.filePath, 'utf-8'));
         const errCall = dump.calls.find((c: Record<string, unknown>) => c.error);
         expect(errCall).toBeDefined();
