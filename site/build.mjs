@@ -230,6 +230,93 @@ const LISTING_CSS = `
 `;
 
 /**
+ * Fetch published articles from Dev.to and generate blog pages.
+ * @param {string} template - HTML template
+ * @param {Array} blogPages - blog page list to append to
+ * @param {Array} builtPages - sitemap page list to append to
+ * @returns {Promise<number>} number of posts fetched
+ */
+async function fetchDevtoBlogPosts(template, blogPages, builtPages) {
+  const DEVTO_USERNAME = 'walletguy';
+  let articles;
+  try {
+    const res = await fetch(`https://dev.to/api/articles?username=${DEVTO_USERNAME}&per_page=100`);
+    if (!res.ok) {
+      console.warn(`  Dev.to API error: ${res.status}`);
+      return 0;
+    }
+    articles = await res.json();
+  } catch (err) {
+    console.warn(`  Dev.to fetch failed: ${err.message}`);
+    return 0;
+  }
+
+  let count = 0;
+  for (const article of articles) {
+    // Fetch full article with body_markdown
+    let full;
+    try {
+      const res = await fetch(`https://dev.to/api/articles/${article.id}`);
+      if (!res.ok) continue;
+      full = await res.json();
+    } catch {
+      continue;
+    }
+
+    const slug = article.slug.replace(/-[a-z0-9]{3,4}(-temp-slug-\d+)?$/, '');
+    const dateStr = article.published_at
+      ? article.published_at.split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    const description = article.description || '';
+    const bodyMarkdown = full.body_markdown || '';
+
+    // Skip if no content
+    if (!bodyMarkdown.trim()) continue;
+
+    // Check if a local blog post with the same slug already exists (local takes priority)
+    const localPath = path.join(SITE_DIR, 'blog', slug, 'index.html');
+    if (fs.existsSync(localPath)) {
+      console.log(`  Skipped (local exists): ${slug}`);
+      continue;
+    }
+
+    // Convert markdown to HTML
+    const htmlContent = await marked.parse(bodyMarkdown);
+
+    const frontmatter = {
+      title: article.title,
+      description,
+      date: dateStr,
+      og_title: article.title,
+      og_description: description,
+    };
+
+    const canonicalUrl = `${BASE_URL}/blog/${slug}/`;
+    const jsonLd = generateJsonLd(frontmatter, canonicalUrl, 'blog');
+    const finalHtml = applyTemplate(template, frontmatter, htmlContent, canonicalUrl, 'blog', jsonLd);
+
+    const outputPath = path.join(SITE_DIR, 'blog', slug, 'index.html');
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, finalHtml, 'utf8');
+
+    blogPages.push({
+      title: article.title,
+      description,
+      date: dateStr,
+      slug,
+      category: 'Dev.to',
+    });
+
+    builtPages.push({ url: canonicalUrl, lastmod: dateStr, section: 'blog' });
+
+    console.log(`  blog/${slug}/index.html (dev.to)`);
+    count++;
+  }
+
+  return count;
+}
+
+/**
  * Generate a listing page (blog index or docs index)
  * @param {'blog'|'docs'} section
  * @param {Array} pages - front-matter objects with title, description, date, slug, category
@@ -433,6 +520,12 @@ async function build() {
 
   const total = blogCount + docsCount;
   console.log(`\nBuilt ${total} pages (${blogCount} blog, ${docsCount} docs)`);
+
+  // Phase 2a: Fetch Dev.to blog posts
+  console.log('\nFetching Dev.to blog posts...');
+  const devtoPosts = await fetchDevtoBlogPosts(template, blogPages, builtPages);
+  blogCount += devtoPosts;
+  console.log(`  Fetched ${devtoPosts} posts from Dev.to`);
 
   // Phase 2b: Generate listing pages
   console.log('\nGenerating listing pages...');
