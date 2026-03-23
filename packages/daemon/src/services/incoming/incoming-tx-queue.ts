@@ -15,7 +15,7 @@
  */
 
 import type { Database } from 'better-sqlite3';
-import type { IncomingTransaction } from '@waiaas/core';
+import type { IncomingTransaction, ILogger } from '@waiaas/core';
 import { generateId } from '../../infrastructure/database/id.js';
 
 /** Maximum items extracted per flush() call. */
@@ -33,6 +33,11 @@ const INSERT_SQL = `INSERT INTO incoming_transactions (id, wallet_id, chain, net
 
 export class IncomingTxQueue {
   private queue = new Map<string, IncomingTransaction>();
+  private logger?: ILogger;
+
+  constructor(logger?: ILogger) {
+    this.logger = logger;
+  }
 
   /** Current number of queued items. */
   get size(): number {
@@ -55,7 +60,7 @@ export class IncomingTxQueue {
       if (firstKey !== undefined) {
         this.queue.delete(firstKey);
       }
-      console.warn('IncomingTxQueue overflow: dropping oldest entry');
+      this.logger?.warn('IncomingTxQueue overflow: dropping oldest entry');
     }
 
     const key = `${tx.txHash}:${tx.walletId}`;

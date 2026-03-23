@@ -315,6 +315,7 @@ describe('BUG-2: Polling Worker Handlers', () => {
       { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
+    const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const service = new IncomingTxMonitorService({
       sqlite: sqlite as any,
       db: {} as any,
@@ -324,6 +325,7 @@ describe('BUG-2: Polling Worker Handlers', () => {
       notificationService: null,
       subscriberFactory,
       config: makeConfig(),
+      logger: mockLogger,
     });
 
     await service.start();
@@ -334,19 +336,14 @@ describe('BUG-2: Polling Worker Handlers', () => {
     );
     const handler = pollSolanaCall![1].handler as () => Promise<void>;
 
-    // Spy on console.warn to verify error logging
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
     // Should NOT throw -- error is caught and logged
     await expect(handler()).resolves.not.toThrow();
 
-    // Verify warning was logged
-    expect(warnSpy).toHaveBeenCalledWith(
-      'Solana polling worker error:',
-      expect.any(Error),
+    // Verify warning was logged via ILogger
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Solana polling worker error'),
     );
 
-    warnSpy.mockRestore();
     await service.stop();
   });
 });

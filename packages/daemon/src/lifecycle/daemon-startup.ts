@@ -823,6 +823,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
                 ...(alert.toBlock ? { toBlock: alert.toBlock } : {}),
               });
             } : undefined,
+            logger: state.logger,
           });
         };
         state.incomingTxMonitorService = new IncomingTxMonitorCls({
@@ -834,6 +835,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
           notificationService: state.notificationService,
           subscriberFactory,
           config: monitorConfig,
+          logger: state.logger,
         });
         await state.incomingTxMonitorService.start();
         state.logger.debug('Step 4c-9: Incoming TX monitor started');
@@ -1264,12 +1266,18 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         }
       }
       state.logger.debug(`Step 4f-5: PositionTracker has ${state.positionTracker.providerCount} providers`);
-      // Trigger immediate sync for all categories now that providers are registered
+      // Defer initial position sync to avoid competing with IncomingTxMonitor
+      // for RPC calls during startup (#431). 5s delay + 2s inter-category stagger.
       if (state.positionTracker.providerCount > 0) {
-        void state.positionTracker.syncCategory('LENDING');
-        void state.positionTracker.syncCategory('STAKING');
-        void state.positionTracker.syncCategory('YIELD');
-        void state.positionTracker.syncCategory('PERP');
+        const tracker = state.positionTracker;
+        void (async () => {
+          await new Promise((r) => setTimeout(r, 5_000));
+          const categories = ['LENDING', 'STAKING', 'YIELD', 'PERP'] as const;
+          for (const cat of categories) {
+            void tracker.syncCategory(cat);
+            await new Promise((r) => setTimeout(r, 2_000));
+          }
+        })();
       }
     } catch (err) {
       console.warn('Step 4f-5 (fail-soft): PositionTracker provider registration warning:', err);
