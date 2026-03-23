@@ -44,13 +44,13 @@ describe('DcentDebugDumper', () => {
     const dump: DcentDebugDumpFile = JSON.parse(readFileSync(dumper.filePath, 'utf-8'));
     expect(dump.api_base_url).toBe('https://api.example.com');
     expect(dump.calls).toHaveLength(1);
-    expect(dump.calls[0].seq).toBe(1);
-    expect(dump.calls[0].method).toBe('POST');
-    expect(dump.calls[0].url).toBe('api/swap/v3/get_quotes');
-    expect(dump.calls[0].request).toEqual({ fromId: 'ETHEREUM', toId: 'SOLANA', amount: '1000' });
-    expect(dump.calls[0].response).toEqual({ status: 'success', quotes: [] });
-    expect(dump.calls[0].duration_ms).toBe(150);
-    expect(dump.calls[0].timestamp).toBeTruthy();
+    expect(dump.calls[0]!.seq).toBe(1);
+    expect(dump.calls[0]!.method).toBe('POST');
+    expect(dump.calls[0]!.url).toBe('api/swap/v3/get_quotes');
+    expect(dump.calls[0]!.request).toEqual({ fromId: 'ETHEREUM', toId: 'SOLANA', amount: '1000' });
+    expect(dump.calls[0]!.response).toEqual({ status: 'success', quotes: [] });
+    expect(dump.calls[0]!.duration_ms).toBe(150);
+    expect(dump.calls[0]!.timestamp).toBeTruthy();
   });
 
   it('records error calls', () => {
@@ -65,8 +65,8 @@ describe('DcentDebugDumper', () => {
     });
 
     const dump: DcentDebugDumpFile = JSON.parse(readFileSync(dumper.filePath, 'utf-8'));
-    expect(dump.calls[0].error).toBe('API error 500: Internal Server Error');
-    expect(dump.calls[0].response).toBeUndefined();
+    expect(dump.calls[0]!.error).toBe('API error 500: Internal Server Error');
+    expect(dump.calls[0]!.response).toBeUndefined();
   });
 
   it('accumulates multiple calls in session file', () => {
@@ -79,9 +79,9 @@ describe('DcentDebugDumper', () => {
     expect(dumper.callCount).toBe(3);
     const dump: DcentDebugDumpFile = JSON.parse(readFileSync(dumper.filePath, 'utf-8'));
     expect(dump.calls).toHaveLength(3);
-    expect(dump.calls[0].seq).toBe(1);
-    expect(dump.calls[1].seq).toBe(2);
-    expect(dump.calls[2].seq).toBe(3);
+    expect(dump.calls[0]!.seq).toBe(1);
+    expect(dump.calls[1]!.seq).toBe(2);
+    expect(dump.calls[2]!.seq).toBe(3);
   });
 
   it('does not write file when no calls recorded', () => {
