@@ -315,6 +315,8 @@ export class MockDriftSdkWrapper implements IDriftSdkWrapper {
 export class DriftSdkWrapper implements IDriftSdkWrapper {
   readonly rpcUrl: string;
   readonly subAccount: number;
+  private readonly resolveUrl: () => string;
+  private readonly onRpcFailure?: (url: string) => void;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _sdk: { Connection: any; PublicKey: any; Keypair: any; Wallet: any; BN: any; DriftClient: any; PositionDirection: any; OrderType: any; MarketType: any; PRICE_PRECISION: any; BASE_PRECISION: any; QUOTE_PRECISION: any; convertToNumber: any; getMarketOrderParams: any; getLimitOrderParams: any } | null = null;
@@ -323,10 +325,12 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
 
   private readonly logger?: ILogger;
 
-  constructor(rpcUrl: string, subAccount: number, logger?: ILogger) {
-    this.rpcUrl = rpcUrl;
+  constructor(rpcUrl: string | (() => string), subAccount: number, logger?: ILogger, onRpcFailure?: (url: string) => void) {
+    this.resolveUrl = typeof rpcUrl === 'function' ? rpcUrl : () => rpcUrl;
+    this.rpcUrl = typeof rpcUrl === 'string' ? rpcUrl : rpcUrl();
     this.subAccount = subAccount;
     this.logger = logger;
+    this.onRpcFailure = onRpcFailure;
   }
 
   private async loadSdk(): Promise<NonNullable<typeof this._sdk>> {
@@ -368,14 +372,15 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async getClient(): Promise<any> {
     if (this._client) return this._client;
-    this.logger?.debug('DriftSdkWrapper.getClient: initializing', { rpcUrl: this.rpcUrl, subAccount: this.subAccount });
+    this.logger?.debug('DriftSdkWrapper.getClient: initializing', { rpcUrl: this.resolveUrl(), subAccount: this.subAccount });
     const sdk = await this.loadSdk();
 
     const maxRetries = 3;
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
+      const currentUrl = this.resolveUrl();
+      const connection = new sdk.Connection(currentUrl, 'confirmed');
       const client = new sdk.DriftClient({
         connection,
         wallet: new sdk.Wallet(sdk.Keypair.generate()),
@@ -389,8 +394,10 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
         return client;
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
+        // #420: Report failure to RpcPool so next resolve returns a different URL
+        this.onRpcFailure?.(currentUrl);
         this.logger?.warn(`DriftSdkWrapper.getClient: subscribe attempt ${attempt + 1}/${maxRetries} failed`, {
-          error: lastError.message,
+          error: lastError.message, rpcUrl: currentUrl,
         });
         if (attempt < maxRetries - 1) {
           const backoff = Math.min(1000 * Math.pow(2, attempt), 10_000);

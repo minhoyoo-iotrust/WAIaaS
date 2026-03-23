@@ -3,20 +3,31 @@
  *
  * Format: [REQ] GET /health 200 12ms
  *
- * Uses console.log for now; structured logger deferred to later milestone.
+ * Respects daemon log_level via ILogger instance.
  */
 
 import { createMiddleware } from 'hono/factory';
+import type { ILogger } from '@waiaas/core';
 
-export const requestLogger = createMiddleware(async (c, next) => {
-  const start = Date.now();
+export function createRequestLogger(logger?: ILogger) {
+  return createMiddleware(async (c, next) => {
+    const start = Date.now();
 
-  await next();
+    await next();
 
-  const duration = Date.now() - start;
-  const method = c.req.method;
-  const path = c.req.path;
-  const status = c.res.status;
+    const duration = Date.now() - start;
+    const method = c.req.method;
+    const path = c.req.path;
+    const status = c.res.status;
 
-  console.log(`[REQ] ${method} ${path} ${status} ${duration}ms`);
-});
+    const msg = `[REQ] ${method} ${path} ${status} ${duration}ms`;
+    if (logger) {
+      logger.info(msg);
+    } else {
+      console.log(msg);
+    }
+  });
+}
+
+/** Default request logger (backward compat) */
+export const requestLogger = createRequestLogger();

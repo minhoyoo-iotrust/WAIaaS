@@ -9,7 +9,8 @@
  */
 
 import type { Database } from 'better-sqlite3';
-import type { INotificationChannel, ChainType, NetworkType } from '@waiaas/core';
+import type { INotificationChannel, ChainType, NetworkType, LogLevel } from '@waiaas/core';
+import type { ConsoleLogger } from '@waiaas/core';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { AdapterPool } from '../adapter-pool.js';
 import { configKeyToNetwork } from '../adapter-pool.js';
@@ -46,6 +47,8 @@ export interface HotReloadDeps {
   actionProviderRegistryRef?: { current: import('../action/action-provider-registry.js').ActionProviderRegistry | null } | null;
   /** IRpcCaller for Aave V3 on-chain reads via RpcPool */
   rpcCaller?: { call: (params: { to: string; data: string; chainId?: number }) => Promise<string> } | null;
+  /** Daemon logger for log level hot-reload */
+  daemonLogger?: ConsoleLogger | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +101,8 @@ const RPC_POOL_KEYS_PREFIX = 'rpc_pool.';
 // SmartAccountService reads settings on-demand per UserOperation.
 const SMART_ACCOUNT_KEYS_PREFIX = 'smart_account.';
 
+const DAEMON_KEYS = new Set(['daemon.log_level']);
+
 const TELEGRAM_BOT_KEYS = new Set([
   'telegram.bot_token',
   'telegram.locale',
@@ -122,6 +127,7 @@ export class HotReloadOrchestrator {
   async handleChangedKeys(changedKeys: string[]): Promise<void> {
     if (changedKeys.length === 0) return;
 
+    const hasDaemonChanges = changedKeys.some((k) => DAEMON_KEYS.has(k));
     const hasNotificationChanges = changedKeys.some((k) => NOTIFICATION_KEYS.has(k));
     const hasRpcChanges = changedKeys.some((k) => k.startsWith(RPC_KEYS_PREFIX));
     const hasSecurityChanges = changedKeys.some((k) => SECURITY_KEYS.has(k));
@@ -136,6 +142,16 @@ export class HotReloadOrchestrator {
     const hasSmartAccountChanges = changedKeys.some((k) => k.startsWith(SMART_ACCOUNT_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
+
+    // Daemon log level hot-reload (synchronous)
+    if (hasDaemonChanges) {
+      const ss = this.deps.settingsService;
+      const newLevel = (ss.get('daemon.log_level') || 'info') as LogLevel;
+      if (this.deps.daemonLogger) {
+        this.deps.daemonLogger.setLevel(newLevel);
+      }
+      console.info(`Hot-reload: Log level changed to '${newLevel}'`);
+    }
 
     if (hasNotificationChanges) {
       reloads.push(

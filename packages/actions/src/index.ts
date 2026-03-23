@@ -97,6 +97,7 @@ export { DcentSwapActionProvider } from './providers/dcent-swap/index.js';
 export { DCENT_SWAP_DEFAULTS } from './providers/dcent-swap/config.js';
 export type { DcentSwapConfig } from './providers/dcent-swap/config.js';
 export { DcentSwapApiClient } from './providers/dcent-swap/dcent-api-client.js';
+export { DcentDebugDumper } from './providers/dcent-swap/debug-dumper.js';
 export { caip19ToDcentId, dcentIdToCaip19 } from './providers/dcent-swap/currency-mapper.js';
 export type { DcentQuoteResult, GetQuotesParams } from './providers/dcent-swap/dex-swap.js';
 
@@ -165,7 +166,7 @@ interface ProviderRegistry {
 export function registerBuiltInProviders(
   registry: ProviderRegistry,
   settingsReader: SettingsReader,
-  options?: { rpcCaller?: IRpcCaller; logger?: ILogger },
+  options?: { rpcCaller?: IRpcCaller; logger?: ILogger; solanaRpcResolver?: () => string; reportSolanaRpcFailure?: (url: string) => void },
 ): { loaded: string[]; skipped: string[]; hyperliquidMarketData?: HyperliquidMarketData } {
   const loaded: string[] = [];
   const skipped: string[] = [];
@@ -280,13 +281,15 @@ export function registerBuiltInProviders(
       enabledKey: 'actions.kamino_enabled',
       factory: () => {
         const kaminoRpcUrl = settingsReader.get('rpc.solana_mainnet') || '';
+        // #419: Pass URL resolver so each retry attempt can use a different RPC endpoint from pool
+        const resolveRpcUrl = options?.solanaRpcResolver ?? (() => kaminoRpcUrl);
         const config: KaminoConfig = {
           enabled: true,
           market: settingsReader.get('actions.kamino_market') || 'main',
           hfThreshold: Number(settingsReader.get('actions.kamino_hf_threshold')) || 1.2,
           rpcUrl: kaminoRpcUrl,
         };
-        return new KaminoLendingProvider(config, new KaminoSdkWrapper(kaminoRpcUrl, logger));
+        return new KaminoLendingProvider(config, new KaminoSdkWrapper(resolveRpcUrl, logger, options?.reportSolanaRpcFailure));
       },
     },
     {
@@ -309,12 +312,14 @@ export function registerBuiltInProviders(
       enabledKey: 'actions.drift_enabled',
       factory: () => {
         const driftRpcUrl = settingsReader.get('rpc.solana_mainnet') || '';
+        // #419: Pass URL resolver so each retry attempt can use a different RPC endpoint from pool
+        const resolveDriftRpcUrl = options?.solanaRpcResolver ?? (() => driftRpcUrl);
         const config: DriftConfig = {
           enabled: true,
           subAccount: 0,
           rpcUrl: driftRpcUrl,
         };
-        return new DriftPerpProvider(config, new DriftSdkWrapper(driftRpcUrl, config.subAccount, logger));
+        return new DriftPerpProvider(config, new DriftSdkWrapper(resolveDriftRpcUrl, config.subAccount, logger, options?.reportSolanaRpcFailure));
       },
     },
     {
@@ -368,12 +373,15 @@ export function registerBuiltInProviders(
       key: 'dcent_swap',
       enabledKey: 'actions.dcent_swap_enabled',
       factory: () => {
+        // #419: DCent API debug dump — set WAIAAS_DCENT_DEBUG_DUMP to a directory path to enable
+        const debugDumpDir = process.env.WAIAAS_DCENT_DEBUG_DUMP || undefined;
         const dcentConfig: DcentSwapConfig = {
           apiBaseUrl: settingsReader.get('actions.dcent_swap_api_url'),
           requestTimeoutMs: 15_000,
           defaultSlippageBps: Number(settingsReader.get('actions.dcent_swap_default_slippage_bps')),
           maxSlippageBps: Number(settingsReader.get('actions.dcent_swap_max_slippage_bps')),
           currencyCacheTtlMs: Number(settingsReader.get('actions.dcent_swap_currency_cache_ttl_ms')),
+          debugDumpDir,
         };
         return new DcentSwapActionProvider(dcentConfig, logger);
       },

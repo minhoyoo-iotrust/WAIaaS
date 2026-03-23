@@ -23,18 +23,31 @@ const PendleMarketDetailsSchema = z.object({
 // Market (/v1/markets/all) — single market entry
 // ---------------------------------------------------------------------------
 
+/** Strip optional chainId prefix (e.g., "1-0xabc..." → "0xabc..."). */
+const stripChainPrefix = (s: string) => s.replace(/^\d+-/, '');
+
+/** underlyingAsset can be an object { address, symbol } or a prefixed string "chainId-0xaddr". */
+const PendleUnderlyingAssetSchema = z.union([
+  z.object({
+    address: z.string().transform(stripChainPrefix),
+    symbol: z.string(),
+    decimals: z.number().optional(),
+  }).passthrough(),
+  z.string().transform((s) => ({
+    address: stripChainPrefix(s),
+    symbol: '',
+    decimals: undefined as number | undefined,
+  })),
+]);
+
 export const PendleMarketSchema = z.object({
   address: z.string(),
   name: z.string(),
   expiry: z.string().describe('ISO 8601 date string'),
-  pt: z.string().describe('PT token address'),
-  yt: z.string().describe('YT token address'),
-  sy: z.string().describe('SY token address'),
-  underlyingAsset: z.object({
-    address: z.string(),
-    symbol: z.string(),
-    decimals: z.number().optional(),
-  }).passthrough(),
+  pt: z.string().transform(stripChainPrefix).describe('PT token address'),
+  yt: z.string().transform(stripChainPrefix).describe('YT token address'),
+  sy: z.string().transform(stripChainPrefix).describe('SY token address'),
+  underlyingAsset: PendleUnderlyingAssetSchema,
   chainId: z.number(),
   details: PendleMarketDetailsSchema.optional(),
 }).passthrough();
@@ -44,6 +57,7 @@ export type PendleMarket = z.infer<typeof PendleMarketSchema>;
 /** Full response from /v1/markets/all — accepts both array and paginated object. */
 const PendleMarketsArraySchema = z.array(PendleMarketSchema);
 const PendleMarketsPaginatedSchema = z.union([
+  z.object({ markets: z.array(PendleMarketSchema) }).passthrough(),
   z.object({ results: z.array(PendleMarketSchema) }).passthrough(),
   z.object({ data: z.array(PendleMarketSchema) }).passthrough(),
 ]);
@@ -80,6 +94,27 @@ const PendleConvertAltSchema = z.object({
   amountOut: d.outputAmount,
 }));
 
+/** Routes-based response from /v2/sdk/{chainId}/convert (observed 2026-03-23). */
+const PendleConvertRouteSchema = z.object({
+  tx: z.object({
+    to: z.string(),
+    data: z.string(),
+    value: z.union([z.string(), z.number()]).transform(String),
+  }).passthrough(),
+  outputs: z.array(z.object({
+    token: z.string(),
+    amount: z.union([z.string(), z.number()]).transform(String),
+  }).passthrough()).min(1),
+}).passthrough();
+
+const PendleConvertRoutesSchema = z.object({
+  routes: z.array(PendleConvertRouteSchema).min(1),
+}).passthrough().transform((d) => ({
+  ...d,
+  tx: d.routes[0]!.tx,
+  amountOut: d.routes[0]!.outputs[0]!.amount,
+}));
+
 /**
  * Accept ALL observed Pendle API response formats:
  * 1. Direct object: { tx, amountOut }
@@ -88,10 +123,12 @@ const PendleConvertAltSchema = z.object({
  * 4. results wrapper: { results: [{ tx, amountOut }] }
  * 5. result wrapper: { result: { tx, amountOut } }
  * 6. Alt field names: { transaction, outputAmount }
+ * 7. Routes-based: { routes: [{ tx, outputs: [{ token, amount }] }] }
  */
 export const PendleConvertResponseSchema = z.union([
   PendleConvertObjectSchema,
   PendleConvertAltSchema,
+  PendleConvertRoutesSchema,
   z.array(PendleConvertObjectSchema).min(1),
   z.object({ data: PendleConvertObjectSchema }).passthrough(),
   z.object({ data: z.array(PendleConvertObjectSchema).min(1) }).passthrough(),

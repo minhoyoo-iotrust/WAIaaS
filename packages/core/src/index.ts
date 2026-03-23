@@ -444,7 +444,7 @@ export type {
 export { hasNftApprovalQuery } from './interfaces/index.js';
 
 // v32.6 Logger abstraction
-export type { ILogger } from './interfaces/index.js';
+export type { ILogger, LogLevel } from './interfaces/index.js';
 export { ConsoleLogger } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)

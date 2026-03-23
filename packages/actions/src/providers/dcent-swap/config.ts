@@ -16,6 +16,8 @@ export interface DcentSwapConfig {
   maxSlippageBps: number;
   /** Currency cache TTL in milliseconds (DS-05). */
   currencyCacheTtlMs: number;
+  /** Debug dump directory for API request/response logging (#419). Disabled when undefined. */
+  debugDumpDir?: string;
 }
 
 /**

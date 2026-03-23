@@ -19,6 +19,7 @@ import {
   type DcentTxDataResponse,
 } from './schemas.js';
 import { type DcentSwapConfig, DCENT_SWAP_DEFAULTS } from './config.js';
+import { DcentDebugDumper } from './debug-dumper.js';
 
 // ---------------------------------------------------------------------------
 // Request parameter types
@@ -55,11 +56,15 @@ export class DcentSwapApiClient extends ActionApiClient {
   private readonly config: DcentSwapConfig;
   private currencyCache: Map<string, DcentCurrency> | null = null;
   private cacheExpiry = 0;
+  private readonly dumper?: DcentDebugDumper;
 
   constructor(config?: Partial<DcentSwapConfig>, logger?: ILogger) {
     const merged = { ...DCENT_SWAP_DEFAULTS, ...config };
     super(merged.apiBaseUrl, merged.requestTimeoutMs, {}, logger);
     this.config = merged;
+    if (merged.debugDumpDir) {
+      this.dumper = new DcentDebugDumper(merged.debugDumpDir, merged.apiBaseUrl);
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -105,13 +110,17 @@ export class DcentSwapApiClient extends ActionApiClient {
    * Get swap quotes from all available providers.
    */
   async getQuotes(params: GetQuotesParams): Promise<DcentQuotesResponse> {
+    const start = Date.now();
     try {
-      return await this.post(
+      const result = await this.post(
         'api/swap/v3/get_quotes',
         params,
         DcentQuotesResponseSchema,
       );
+      this.dumper?.record({ method: 'POST', url: 'api/swap/v3/get_quotes', request: params, response: result, status: 200, duration_ms: Date.now() - start });
+      return result;
     } catch (err) {
+      this.dumper?.record({ method: 'POST', url: 'api/swap/v3/get_quotes', request: params, error: err instanceof Error ? err.message : String(err), duration_ms: Date.now() - start });
       throw this.mapError(err);
     }
   }
@@ -121,13 +130,17 @@ export class DcentSwapApiClient extends ActionApiClient {
    * Get transaction data for DEX swap execution.
    */
   async getDexSwapTransactionData(params: DexSwapTxParams): Promise<DcentTxDataResponse> {
+    const start = Date.now();
     try {
-      return await this.post(
+      const result = await this.post(
         'api/swap/v3/get_dex_swap_transaction_data',
         params,
         DcentTxDataResponseSchema,
       );
+      this.dumper?.record({ method: 'POST', url: 'api/swap/v3/get_dex_swap_transaction_data', request: params, response: result, status: 200, duration_ms: Date.now() - start });
+      return result;
     } catch (err) {
+      this.dumper?.record({ method: 'POST', url: 'api/swap/v3/get_dex_swap_transaction_data', request: params, error: err instanceof Error ? err.message : String(err), duration_ms: Date.now() - start });
       throw this.mapError(err);
     }
   }
@@ -152,10 +165,18 @@ export class DcentSwapApiClient extends ActionApiClient {
   // -----------------------------------------------------------------------
 
   private async refreshCache(): Promise<DcentCurrency[]> {
-    const currencies: DcentCurrency[] = await this.get(
-      'api/swap/v3/get_supported_currencies',
-      DcentCurrenciesResponseSchema,
-    );
+    const start = Date.now();
+    let currencies: DcentCurrency[];
+    try {
+      currencies = await this.get(
+        'api/swap/v3/get_supported_currencies',
+        DcentCurrenciesResponseSchema,
+      );
+      this.dumper?.record({ method: 'GET', url: 'api/swap/v3/get_supported_currencies', request: null, response: { count: currencies.length }, status: 200, duration_ms: Date.now() - start });
+    } catch (err) {
+      this.dumper?.record({ method: 'GET', url: 'api/swap/v3/get_supported_currencies', request: null, error: err instanceof Error ? err.message : String(err), duration_ms: Date.now() - start });
+      throw err;
+    }
 
     // Build cache map indexed by currencyId
     const cache = new Map<string, DcentCurrency>();

@@ -14,7 +14,7 @@ import { writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, EventBus, RpcPool } from '@waiaas/core';
+import { WAIaaSError, EventBus, RpcPool, ConsoleLogger } from '@waiaas/core';
 import type { IPriceOracle, IForexRateService, ContractNameRegistry } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
@@ -159,6 +159,7 @@ export interface DaemonState {
   polymarketInfra: PolymarketInfraDeps | null;
   contractNameRegistry: ContractNameRegistry | null;
   daemonStartTime: number;
+  logger: ConsoleLogger;
 
   // Methods needed by extracted modules
   acquireDaemonLock(dataDir: string): Promise<void>;
@@ -219,6 +220,7 @@ export class DaemonLifecycle implements DaemonState {
   polymarketInfra: PolymarketInfraDeps | null = null;
   contractNameRegistry: ContractNameRegistry | null = null;
   daemonStartTime: number = Math.floor(Date.now() / 1000);
+  logger: ConsoleLogger = new ConsoleLogger('daemon', 'info');
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {

@@ -271,14 +271,18 @@ export class MockKaminoSdkWrapper implements IKaminoSdkWrapper {
  */
 export class KaminoSdkWrapper implements IKaminoSdkWrapper {
   readonly rpcUrl: string;
+  private readonly resolveUrl: () => string;
+  private readonly onRpcFailure?: (url: string) => void;
   private readonly logger?: ILogger;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _sdk: { Connection: any; PublicKey: any; KaminoMarket: any; KaminoAction: any; VanillaObligation: any } | null = null;
 
-  constructor(rpcUrl: string, logger?: ILogger) {
-    this.rpcUrl = rpcUrl;
+  constructor(rpcUrl: string | (() => string), logger?: ILogger, onRpcFailure?: (url: string) => void) {
+    this.resolveUrl = typeof rpcUrl === 'function' ? rpcUrl : () => rpcUrl;
+    this.rpcUrl = typeof rpcUrl === 'string' ? rpcUrl : rpcUrl();
     this.logger = logger;
+    this.onRpcFailure = onRpcFailure;
   }
 
   private async loadSdk() {
@@ -314,8 +318,9 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const currentUrl = this.resolveUrl();
       try {
-        const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
+        const connection = new sdk.Connection(currentUrl, 'confirmed');
         const marketPubkey = new sdk.PublicKey(marketAddress);
         const market = await sdk.KaminoMarket.load(connection, marketPubkey);
         if (!market) {
@@ -330,8 +335,10 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
         const msg = lastError.message;
         // Only retry on rate limit / network errors, not on market-not-found
         if (msg.includes('market not found')) throw lastError;
+        // #420: Report failure to RpcPool so next resolve returns a different URL
+        this.onRpcFailure?.(currentUrl);
         this.logger?.warn(`KaminoSdkWrapper.loadMarket: attempt ${attempt + 1}/${maxRetries} failed`, {
-          error: msg,
+          error: msg, rpcUrl: currentUrl,
         });
         if (attempt < maxRetries - 1) {
           const backoff = Math.min(1000 * Math.pow(2, attempt), 10_000);

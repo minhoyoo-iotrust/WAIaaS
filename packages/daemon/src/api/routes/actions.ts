@@ -384,10 +384,15 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       // Re-throw WAIaaSError as-is (ACTION_VALIDATION_FAILED, ACTION_RETURN_INVALID, etc.)
       if (err instanceof WAIaaSError) throw err;
       // Wrap unexpected errors as ACTION_RESOLVE_FAILED
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      const isRpcLimit = /429|rate.?limit|too many request|freetier|not allowed|api.?key.*(invalid|required|missing)|method is not available/i.test(errMsg);
       throw new WAIaaSError('ACTION_RESOLVE_FAILED', {
-        message: `Action resolve failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        message: `Action resolve failed: ${errMsg}`,
         details: { actionKey },
         cause: err instanceof Error ? err : undefined,
+        hint: isRpcLimit
+          ? 'This action requires heavy RPC calls that may exceed free-tier limits. Configure a dedicated RPC endpoint via Admin Settings or config.toml [rpc] section.'
+          : undefined,
       });
     }
 
@@ -412,8 +417,8 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       for (const item of contractCalls) {
         // ApiDirectResult bypass
         if (isApiDirectResult(item)) {
-          const direct = item as { externalId: string; status: string };
-          pipelineResults.push({ id: direct.externalId, status: direct.status });
+          const direct = item as { externalId: string; status: string; data?: Record<string, unknown> };
+          pipelineResults.push({ id: direct.externalId, status: direct.status, ...(direct.data ? { data: direct.data } : {}) });
           continue;
         }
 
@@ -473,10 +478,11 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       // If all items handled by external pipeline, return immediately
       if (contractCallsForLegacy.length === 0) {
         const lastResult = pipelineResults[pipelineResults.length - 1]!;
+        const lr = lastResult as Record<string, unknown>;
         if (pipelineResults.length === 1) {
-          return c.json({ id: lastResult.id, status: lastResult.status }, 201);
+          return c.json({ id: lastResult.id, status: lastResult.status, ...(lr.data ? { data: lr.data } : {}) }, 201);
         }
-        return c.json({ id: lastResult.id, status: lastResult.status, pipeline: pipelineResults }, 201);
+        return c.json({ id: lastResult.id, status: lastResult.status, ...(lr.data ? { data: lr.data } : {}), pipeline: pipelineResults }, 201);
       }
 
       // Otherwise, overwrite contractCalls with only the contractCall items for legacy pipeline
@@ -565,6 +571,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         pipelineResults.push({
           id: contractCall.externalId,
           status: contractCall.status,
+          ...(contractCall.data ? { data: contractCall.data } : {}),
         });
         continue;
       }
@@ -802,10 +809,11 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
     // Backward compatible: single-element -> standard { id, status }
     // Multi-element -> { id, status, pipeline: [{id, status}...] }
     const lastResult = pipelineResults[pipelineResults.length - 1]!;
+    const lr = lastResult as Record<string, unknown>;
 
     if (pipelineResults.length === 1) {
       return c.json(
-        { id: lastResult.id, status: lastResult.status },
+        { id: lastResult.id, status: lastResult.status, ...(lr.data ? { data: lr.data } : {}) },
         201,
       );
     }
@@ -814,6 +822,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       {
         id: lastResult.id,
         status: lastResult.status,
+        ...(lr.data ? { data: lr.data } : {}),
         pipeline: pipelineResults,
       },
       201,
