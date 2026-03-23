@@ -674,8 +674,6 @@ describe('dcent-dex-swap', () => {
     it('decodes base58 txdata and returns CONTRACT_CALL with base64 instructionData (#427)', async () => {
       // DCent API returns base58-encoded VersionedTransaction data
       // The code decodes base58 → re-encodes as base64 for SolanaAdapter
-      const testBytes = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
-      // base58 encode the test bytes manually: [1,2,3,4,5,6,7,8] → "4HUtbH"  (approx)
       // Use a known base58 string "3QJmnh" which decodes to some bytes
       const base58Data = '3QJmnh';
 
