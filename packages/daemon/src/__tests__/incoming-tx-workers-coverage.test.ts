@@ -238,11 +238,12 @@ describe('createConfirmationWorkerHandler', () => {
       .mockRejectedValueOnce(new Error('RPC fail'))
       .mockResolvedValueOnce(BigInt(200));
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
     const handler = createConfirmationWorkerHandler({
       sqlite: sqlite as any,
       getBlockNumber,
+      logger: mockLogger,
     });
 
     const selectStmt = sqlite.prepare('SELECT id, tx_hash, chain, network, block_number FROM incoming_transactions WHERE status = \'DETECTED\'');
@@ -255,12 +256,9 @@ describe('createConfirmationWorkerHandler', () => {
 
     // Second row should still be processed
     expect(getBlockNumber).toHaveBeenCalledTimes(2);
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(mockLogger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Confirmation check failed'),
-      expect.any(Error),
     );
-
-    warnSpy.mockRestore();
   });
 });
 
@@ -276,22 +274,21 @@ describe('createRetentionWorkerHandler', () => {
     const deleteStmt = sqlite.prepare('DELETE FROM incoming_transactions WHERE detected_at < ?');
     deleteStmt.run.mockReturnValueOnce({ changes: 5 });
 
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
     const handler = createRetentionWorkerHandler({
       sqlite: sqlite as any,
       getRetentionDays,
+      logger: mockLogger,
     });
 
     await handler();
 
     expect(getRetentionDays).toHaveBeenCalled();
     expect(deleteStmt.run).toHaveBeenCalledWith(expect.any(Number));
-    expect(logSpy).toHaveBeenCalledWith(
+    expect(mockLogger.info).toHaveBeenCalledWith(
       expect.stringContaining('deleted 5'),
     );
-
-    logSpy.mockRestore();
   });
 
   it('does not log when no records deleted', async () => {
@@ -301,18 +298,17 @@ describe('createRetentionWorkerHandler', () => {
     const deleteStmt = sqlite.prepare('DELETE FROM incoming_transactions WHERE detected_at < ?');
     deleteStmt.run.mockReturnValueOnce({ changes: 0 });
 
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
     const handler = createRetentionWorkerHandler({
       sqlite: sqlite as any,
       getRetentionDays,
+      logger: mockLogger,
     });
 
     await handler();
 
-    expect(logSpy).not.toHaveBeenCalled();
-
-    logSpy.mockRestore();
+    expect(mockLogger.info).not.toHaveBeenCalled();
   });
 });
 
@@ -351,20 +347,17 @@ describe('createGapRecoveryHandler', () => {
       ['ethereum:ethereum-mainnet', { subscriber: { pollAll } }],
     ]);
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-    const handler = createGapRecoveryHandler({ subscribers });
+    const handler = createGapRecoveryHandler({ subscribers, logger: mockLogger });
 
     await expect(
       handler('ethereum', 'ethereum-mainnet', ['w1']),
     ).resolves.toBeUndefined();
 
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(mockLogger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Gap recovery failed'),
-      expect.any(Error),
     );
-
-    warnSpy.mockRestore();
   });
 
   it('skips subscriber without pollAll method', async () => {

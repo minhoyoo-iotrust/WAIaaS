@@ -21,8 +21,8 @@
 
 import type { Database } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { EventBus, IChainSubscriber, IncomingTransaction, ChainType, EnvironmentType } from '@waiaas/core';
-import { getNetworksForEnvironment, formatAmount, nativeSymbol } from '@waiaas/core';
+import type { EventBus, IChainSubscriber, IncomingTransaction, ChainType, EnvironmentType, ILogger } from '@waiaas/core';
+import { getNetworksForEnvironment, formatAmount, nativeSymbol, ConsoleLogger } from '@waiaas/core';
 import type { BackgroundWorkers } from '../../lifecycle/workers.js';
 import type { KillSwitchService } from '../kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -66,6 +66,7 @@ export interface IncomingTxMonitorDeps {
   notificationService?: NotificationService | null;
   subscriberFactory: SubscriberFactory;
   config: IncomingTxMonitorConfig;
+  logger?: ILogger;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
@@ -100,6 +101,7 @@ export class IncomingTxMonitorService {
   private readonly killSwitchService: KillSwitchService | null;
   private readonly notificationService: NotificationService | null;
   private readonly subscriberFactory: SubscriberFactory;
+  private readonly logger: ILogger;
 
   private queue: IncomingTxQueue;
   private multiplexer!: SubscriptionMultiplexer;
@@ -115,6 +117,7 @@ export class IncomingTxMonitorService {
     this.notificationService = deps.notificationService ?? null;
     this.subscriberFactory = deps.subscriberFactory;
     this.config = { ...deps.config };
+    this.logger = deps.logger ?? new ConsoleLogger('IncomingTxMonitor');
 
     // Initialize safety rules
     this.safetyRules = [
@@ -124,7 +127,7 @@ export class IncomingTxMonitorService {
     ];
 
     // Create queue
-    this.queue = new IncomingTxQueue();
+    this.queue = new IncomingTxQueue(this.logger);
   }
 
   /**
@@ -156,6 +159,7 @@ export class IncomingTxMonitorService {
         // onGapRecovery is never called during construction (only on reconnect).
         const handler = createGapRecoveryHandler({
           subscribers: this.multiplexer.getSubscriberEntries(),
+          logger: this.logger,
         });
         await handler(chain, network, walletIds);
       },
@@ -173,20 +177,37 @@ export class IncomingTxMonitorService {
       public_key: string;
     }>;
 
-    // Subscribe each wallet on all networks for its chain:environment
-    let subscriptionCount = 0;
+    // Group wallets by chain:network to batch subscriptions and minimize RPC calls (#429).
+    // Each network only needs one getBlockNumber() call regardless of wallet count.
+    const networkGroups = new Map<string, Array<{ id: string; chain: string; public_key: string }>>();
     for (const wallet of wallets) {
       const networks = getNetworksForEnvironment(
         wallet.chain as ChainType,
         wallet.environment as EnvironmentType,
       );
       if (!networks || !Array.isArray(networks)) {
-        console.warn(
+        this.logger.warn(
           `IncomingTxMonitor: unknown chain:environment ${wallet.chain}:${wallet.environment}, skipping wallet ${wallet.id}`,
         );
         continue;
       }
       for (const network of networks) {
+        const key = `${wallet.chain}:${network}`;
+        let group = networkGroups.get(key);
+        if (!group) {
+          group = [];
+          networkGroups.set(key, group);
+        }
+        group.push({ id: wallet.id, chain: wallet.chain, public_key: wallet.public_key });
+      }
+    }
+
+    // Subscribe with inter-network staggering to avoid RPC rate-limit bursts (#429).
+    let subscriptionCount = 0;
+    let networkIndex = 0;
+    for (const [key, group] of networkGroups) {
+      const network = key.split(':').slice(1).join(':');
+      for (const wallet of group) {
         try {
           await this.multiplexer.addWallet(
             wallet.chain,
@@ -196,18 +217,22 @@ export class IncomingTxMonitorService {
           );
           subscriptionCount++;
         } catch (err) {
-          console.warn(
-            `IncomingTxMonitor: failed to subscribe wallet ${wallet.id} on ${network}:`,
-            err,
+          this.logger.warn(
+            `IncomingTxMonitor: failed to subscribe wallet ${wallet.id} on ${network}: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
+      }
+      // Stagger between different networks (200ms) to spread RPC load
+      networkIndex++;
+      if (networkIndex < networkGroups.size) {
+        await new Promise((r) => setTimeout(r, 200));
       }
     }
 
     // Register 6 background workers
     this.registerWorkers();
 
-    console.debug(
+    this.logger.info(
       `IncomingTxMonitorService started: ${wallets.length} wallets, ${subscriptionCount} network subscriptions`,
     );
   }
@@ -231,7 +256,7 @@ export class IncomingTxMonitorService {
     // 3. Clear cooldowns
     this.notifyCooldown.clear();
 
-    console.debug('IncomingTxMonitorService stopped');
+    this.logger.debug('IncomingTxMonitorService stopped');
   }
 
   /**
@@ -273,9 +298,8 @@ export class IncomingTxMonitorService {
             wallet.public_key,
           );
         } catch (err) {
-          console.warn(
-            `syncSubscriptions: failed to add wallet ${wallet.id} on ${network}:`,
-            err,
+          this.logger.warn(
+            `syncSubscriptions: failed to add wallet ${wallet.id} on ${network}: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
       }
@@ -471,6 +495,7 @@ export class IncomingTxMonitorService {
       handler: createRetentionWorkerHandler({
         sqlite: this.sqlite,
         getRetentionDays: () => this.config.retentionDays,
+        logger: this.logger,
       }),
     });
 
@@ -488,6 +513,7 @@ export class IncomingTxMonitorService {
       handler: createConfirmationWorkerHandler({
         sqlite: this.sqlite,
         checkSolanaFinalized,
+        logger: this.logger,
       }),
     });
 
@@ -509,6 +535,7 @@ export class IncomingTxMonitorService {
       handler: createConfirmationWorkerHandler({
         sqlite: this.sqlite,
         getBlockNumber,
+        logger: this.logger,
       }),
     });
 
@@ -521,7 +548,7 @@ export class IncomingTxMonitorService {
           try {
             await subscriber.pollAll?.();
           } catch (err) {
-            console.warn('Solana polling worker error:', err);
+            this.logger.warn(`Solana polling worker error: ${err instanceof Error ? err.message : String(err)}`);
           }
         }
       },
@@ -538,7 +565,7 @@ export class IncomingTxMonitorService {
           try {
             await entry.subscriber.pollAll?.();
           } catch (err) {
-            console.warn('EVM polling worker error:', err);
+            this.logger.warn(`EVM polling worker error: ${err instanceof Error ? err.message : String(err)}`);
           }
           // Stagger between subscribers to avoid RPC rate-limit bursts
           if (i < entries.length - 1) {

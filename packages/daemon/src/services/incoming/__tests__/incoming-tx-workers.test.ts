@@ -194,11 +194,12 @@ describe('incoming-tx-workers', () => {
         return Promise.resolve(true);
       });
 
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
       const handler = createConfirmationWorkerHandler({
         sqlite: mock.db,
         checkSolanaFinalized,
+        logger: mockLogger,
       });
       await handler();
 
@@ -206,9 +207,7 @@ describe('incoming-tx-workers', () => {
       const updates = mock.getUpdateCalls();
       expect(updates).toHaveLength(1);
       expect(updates[0]![1]).toBe('sol-ok');
-      expect(warnSpy).toHaveBeenCalled();
-
-      warnSpy.mockRestore();
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
 
@@ -342,11 +341,12 @@ describe('incoming-tx-workers', () => {
   describe('createRetentionWorkerHandler', () => {
     it('should delete records older than retention_days', async () => {
       const mock = createRetentionMockDb(5);
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
       const handler = createRetentionWorkerHandler({
         sqlite: mock.db,
         getRetentionDays: () => 30,
+        logger: mockLogger,
       });
       await handler();
 
@@ -358,10 +358,9 @@ describe('incoming-tx-workers', () => {
       const expectedCutoff = Math.floor(Date.now() / 1000) - 30 * 86400;
       expect(Math.abs(cutoff - expectedCutoff)).toBeLessThan(2); // within 2 seconds
 
-      expect(logSpy).toHaveBeenCalledWith(
+      expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringContaining('deleted 5'),
       );
-      logSpy.mockRestore();
     });
 
     it('should support hot-reload: changing retention_days adjusts cutoff', async () => {
@@ -530,16 +529,14 @@ describe('incoming-tx-workers', () => {
       const subscribers = new Map([
         ['ethereum:ethereum-mainnet', { subscriber: { pollAll: mockPollAll } }],
       ]);
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-      const handler = createGapRecoveryHandler({ subscribers });
+      const handler = createGapRecoveryHandler({ subscribers, logger: mockLogger });
       await expect(handler('ethereum', 'ethereum-mainnet', ['w1'])).resolves.toBeUndefined();
 
-      expect(warnSpy).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Gap recovery failed'),
-        expect.any(Error),
       );
-      warnSpy.mockRestore();
     });
   });
 

@@ -891,29 +891,31 @@ describe('EvmIncomingSubscriber - per-wallet backoff (#175)', () => {
   });
 
   it('logs message-only (no full stack trace) at WARN_THRESHOLD', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const loggedSubscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      generateId: mockGenerateId,
+      resolveTokenAddresses: () => [TEST_TOKEN_ADDRESS as `0x${string}`],
+      logger: mockLogger,
+    });
 
     mockClient.getBlockNumber.mockResolvedValueOnce(100n);
-    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+    await loggedSubscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
 
     // Fail 3 times (reaching threshold)
     for (let i = 0; i < 3; i++) {
       mockClient.getBlockNumber.mockResolvedValueOnce(105n);
       mockClient.getLogs.mockRejectedValueOnce(new Error('ResourceNotFoundRpcError'));
-      await subscriber.pollAll();
+      await loggedSubscriber.pollAll();
       vi.advanceTimersByTime(301_000);
     }
 
     // warn called once at 3rd failure with message string (not Error object)
-    expect(warnSpy).toHaveBeenCalledOnce();
-    const warnArgs = warnSpy.mock.calls[0]!;
-    // Should be a single string argument (message only, no Error object)
-    expect(warnArgs).toHaveLength(1);
-    expect(typeof warnArgs[0]).toBe('string');
-    expect(warnArgs[0]).toContain('consecutive: 3');
-    expect(warnArgs[0]).toContain('ResourceNotFoundRpcError');
-
-    warnSpy.mockRestore();
+    expect(mockLogger.warn).toHaveBeenCalledOnce();
+    const warnMsg = mockLogger.warn.mock.calls[0]![0] as string;
+    expect(typeof warnMsg).toBe('string');
+    expect(warnMsg).toContain('consecutive: 3');
+    expect(warnMsg).toContain('ResourceNotFoundRpcError');
   });
 
   it('per-wallet backoff does not affect other wallets', async () => {
@@ -975,25 +977,29 @@ describe('EvmIncomingSubscriber - backoff on RPC errors (#169)', () => {
   });
 
   it('escalates backoff exponentially up to 300s cap', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const loggedSubscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      generateId: mockGenerateId,
+      logger: mockLogger,
+    });
     vi.useFakeTimers();
 
     // Fail 10 times
     for (let i = 0; i < 10; i++) {
       mockClient.getBlockNumber.mockRejectedValueOnce(new Error('HTTP 429'));
-      await subscriber.pollAll();
+      await loggedSubscriber.pollAll();
       // Advance past max backoff
       vi.advanceTimersByTime(301_000);
     }
 
     // After 10 failures, warn should have been called (threshold is 3)
-    expect(warnSpy).toHaveBeenCalled();
+    expect(mockLogger.warn).toHaveBeenCalled();
     // The warn message should contain backoff duration capped at 300s
-    const lastWarnCall = warnSpy.mock.calls[warnSpy.mock.calls.length - 1]!;
+    const lastWarnCall = mockLogger.warn.mock.calls[mockLogger.warn.mock.calls.length - 1]!;
     expect(lastWarnCall[0]).toContain('300s');
 
     vi.useRealTimers();
-    warnSpy.mockRestore();
   });
 
   it('suppresses warn for first errors below threshold', async () => {

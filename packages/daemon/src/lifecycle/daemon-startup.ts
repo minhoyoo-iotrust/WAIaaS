@@ -823,6 +823,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
                 ...(alert.toBlock ? { toBlock: alert.toBlock } : {}),
               });
             } : undefined,
+            logger: state.logger,
           });
         };
         state.incomingTxMonitorService = new IncomingTxMonitorCls({
@@ -834,6 +835,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
           notificationService: state.notificationService,
           subscriberFactory,
           config: monitorConfig,
+          logger: state.logger,
         });
         await state.incomingTxMonitorService.start();
         state.logger.debug('Step 4c-9: Incoming TX monitor started');

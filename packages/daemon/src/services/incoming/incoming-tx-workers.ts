@@ -14,6 +14,7 @@
  */
 
 import type { Database } from 'better-sqlite3';
+import type { ILogger } from '@waiaas/core';
 
 // ── EVM Confirmation Thresholds ─────────────────────────────────────
 
@@ -48,6 +49,7 @@ interface ConfirmationWorkerDeps {
   getBlockNumber?: (chain: string, network: string) => Promise<bigint>;
   /** Checks if a Solana transaction has reached finalized commitment. */
   checkSolanaFinalized?: (txHash: string) => Promise<boolean>;
+  logger?: ILogger;
 }
 
 interface RetentionWorkerDeps {
@@ -55,11 +57,13 @@ interface RetentionWorkerDeps {
   sqlite: Database;
   /** Returns current retention period in days (supports hot-reload). */
   getRetentionDays: () => number;
+  logger?: ILogger;
 }
 
 interface GapRecoveryDeps {
   /** Map of connection key ("chain:network") to subscriber with optional pollAll(). */
   subscribers: Map<string, { subscriber: { pollAll?: () => Promise<void> } }>;
+  logger?: ILogger;
 }
 
 // ── Confirmation Worker ─────────────────────────────────────────────
@@ -74,7 +78,7 @@ interface GapRecoveryDeps {
 export function createConfirmationWorkerHandler(
   deps: ConfirmationWorkerDeps,
 ): () => Promise<void> {
-  const { sqlite, getBlockNumber, checkSolanaFinalized } = deps;
+  const { sqlite, getBlockNumber, checkSolanaFinalized, logger } = deps;
 
   return async () => {
     // Query all DETECTED transactions
@@ -133,9 +137,8 @@ export function createConfirmationWorkerHandler(
         }
       } catch (err) {
         // Per-record error isolation: log and continue
-        console.warn(
-          `Confirmation check failed for tx ${row.id}:`,
-          err,
+        logger?.warn(
+          `Confirmation check failed for tx ${row.id}: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }
@@ -154,7 +157,7 @@ export function createConfirmationWorkerHandler(
 export function createRetentionWorkerHandler(
   deps: RetentionWorkerDeps,
 ): () => Promise<void> {
-  const { sqlite, getRetentionDays } = deps;
+  const { sqlite, getRetentionDays, logger } = deps;
 
   return async () => {
     const retentionDays = getRetentionDays();
@@ -164,7 +167,7 @@ export function createRetentionWorkerHandler(
       .run(cutoff);
 
     if (result.changes > 0) {
-      console.log(
+      logger?.info(
         `Retention worker: deleted ${result.changes} incoming_transactions older than ${retentionDays} days`,
       );
     }
@@ -183,7 +186,7 @@ export function createRetentionWorkerHandler(
 export function createGapRecoveryHandler(
   deps: GapRecoveryDeps,
 ): (chain: string, network: string, walletIds: string[]) => Promise<void> {
-  const { subscribers } = deps;
+  const { subscribers, logger } = deps;
 
   return async (
     chain: string,
@@ -200,7 +203,7 @@ export function createGapRecoveryHandler(
     try {
       await entry.subscriber.pollAll?.();
     } catch (err) {
-      console.warn(`Gap recovery failed for ${key}:`, err);
+      logger?.warn(`Gap recovery failed for ${key}: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 }

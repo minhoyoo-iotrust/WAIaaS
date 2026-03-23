@@ -21,7 +21,7 @@ import {
   type PublicClient,
   type Address,
 } from 'viem';
-import type { IChainSubscriber, IncomingTransaction, ChainType } from '@waiaas/core';
+import type { IChainSubscriber, IncomingTransaction, ChainType, ILogger } from '@waiaas/core';
 
 /** ERC-20 Transfer event signature for getLogs filtering. */
 const TRANSFER_EVENT = parseAbiItem(
@@ -83,6 +83,7 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   private generateId: () => string;
   private onRpcAlert?: RpcAlertCallback;
   private resolveTokenAddresses?: () => Address[];
+  private logger?: ILogger;
   private errorCount = 0;
   private backoffUntil = 0;
   /** Track wallets that already emitted RPC_HEALTH_DEGRADED to avoid spam. */
@@ -103,6 +104,7 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
     onRpcAlert?: RpcAlertCallback;
     /** Resolve registered token contract addresses for getLogs address filter (#203). */
     resolveTokenAddresses?: () => Address[];
+    logger?: ILogger;
   }) {
     this.resolveRpcUrl = config.resolveRpcUrl ?? (() => config.rpcUrl!);
     this.reportRpcFailure = config.reportRpcFailure;
@@ -112,6 +114,7 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
     this.generateId = config.generateId ?? (() => crypto.randomUUID());
     this.onRpcAlert = config.onRpcAlert;
     this.resolveTokenAddresses = config.resolveTokenAddresses;
+    this.logger = config.logger;
     // wsUrl accepted for future WSS subscription support (#193).
     // Currently stored but unused -- EVM uses polling-first strategy (D-06).
   }
@@ -285,7 +288,7 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
 
           // Log only after WARN_THRESHOLD, message-only (no full stack trace)
           if (sub.errorCount >= WARN_THRESHOLD) {
-            console.warn(
+            this.logger?.warn(
               `EVM poll failed for wallet ${walletId} (backoff ${backoffMs / 1000}s, consecutive: ${sub.errorCount}): ${errMsg}`,
             );
           }
@@ -311,9 +314,8 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
       );
       this.backoffUntil = Date.now() + backoffMs;
       if (this.errorCount >= WARN_THRESHOLD) {
-        console.warn(
-          `EVM poll RPC error (backoff ${backoffMs / 1000}s, consecutive: ${this.errorCount}):`,
-          err,
+        this.logger?.warn(
+          `EVM poll RPC error (backoff ${backoffMs / 1000}s, consecutive: ${this.errorCount}): ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }

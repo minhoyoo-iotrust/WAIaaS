@@ -318,20 +318,19 @@ describe('IncomingTxQueue', () => {
       expect(queue.size).toBe(10_000);
     });
 
-    it('should log console.warn on overflow', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('should log via logger.warn on overflow', () => {
+      const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const loggedQueue = new IncomingTxQueue(mockLogger);
 
       // Fill to MAX_QUEUE_SIZE
       for (let i = 0; i < 10_000; i++) {
-        queue.push(makeTx());
+        loggedQueue.push(makeTx());
       }
-      expect(warnSpy).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
 
       // Push one more to trigger overflow
-      queue.push(makeTx());
-      expect(warnSpy).toHaveBeenCalledWith('IncomingTxQueue overflow: dropping oldest entry');
-
-      warnSpy.mockRestore();
+      loggedQueue.push(makeTx());
+      expect(mockLogger.warn).toHaveBeenCalledWith('IncomingTxQueue overflow: dropping oldest entry');
     });
 
     it('should drop the oldest entry on overflow (first-inserted is removed)', () => {
