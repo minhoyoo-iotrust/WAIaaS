@@ -16,6 +16,7 @@
 |----|------|--------|------|----------|------|--------|
 | 429 | BUG | MEDIUM | IncomingTxMonitor 구독 시 RPC Rate Limit 에러 | — | FIXED | 2026-03-23 |
 | 430 | ENHANCEMENT | LOW | IncomingTx 서비스에서 console.* 직접 호출 (ILogger 미사용) | — | FIXED | 2026-03-23 |
+| 431 | BUG | MEDIUM | 데몬 시작 시 서비스 간 RPC 경합으로 429 Rate Limit 발생 | — | OPEN | — |
 
 ## Type Legend
 
@@ -27,8 +28,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 430
 - **WONTFIX:** 1
-- **Total:** 431
+- **Total:** 432
 - **Archived:** 428 (001–428)
