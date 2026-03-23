@@ -14,6 +14,8 @@
 
 | ID | 유형 | 심각도 | 제목 | 마일스톤 | 상태 | 수정일 |
 |----|------|--------|------|----------|------|--------|
+| 429 | BUG | MEDIUM | IncomingTxMonitor 구독 시 RPC Rate Limit 에러 | — | OPEN | — |
+| 430 | ENHANCEMENT | LOW | IncomingTx 서비스에서 console.* 직접 호출 (ILogger 미사용) | — | OPEN | — |
 
 ## Type Legend
 
@@ -25,8 +27,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **FIXED:** 428
 - **WONTFIX:** 1
-- **Total:** 428
+- **Total:** 431
 - **Archived:** 428 (001–428)
