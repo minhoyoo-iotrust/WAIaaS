@@ -239,10 +239,11 @@ export class IncomingTxMonitorService {
           );
         }
       }
-      // Stagger between different networks (200ms) to spread RPC load
+      // Stagger between different networks (500ms) to spread RPC load.
+      // Free-tier providers (drpc.org) share rate limits across networks.
       networkIndex++;
       if (networkIndex < networkGroups.size) {
-        await new Promise((r) => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
 
