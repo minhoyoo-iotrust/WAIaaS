@@ -558,4 +558,102 @@ describe('DcentSwapApiClient', () => {
       expect(client.getCurrencyMap().size).toBe(3);
     });
   });
+
+  describe('debugDumpDir', () => {
+    it('creates debug dumper when debugDumpDir is set', async () => {
+      const { mkdtempSync, rmSync, existsSync, readdirSync } = await import('node:fs');
+      const { tmpdir } = await import('node:os');
+      const { join } = await import('node:path');
+      const dir = mkdtempSync(join(tmpdir(), 'dcent-test-'));
+      try {
+        const client = new DcentSwapApiClient({ debugDumpDir: dir });
+        // Client should be usable; dumper records internally
+        await client.init();
+        // Dump directory should exist and contain a session file
+        expect(existsSync(dir)).toBe(true);
+        const files = readdirSync(dir).filter((f: string) => f.endsWith('.json'));
+        expect(files.length).toBeGreaterThanOrEqual(1);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it('records getQuotes call to dump file', async () => {
+      const { mkdtempSync, rmSync, readFileSync } = await import('node:fs');
+      const { tmpdir } = await import('node:os');
+      const { join } = await import('node:path');
+      const dir = mkdtempSync(join(tmpdir(), 'dcent-dump-'));
+      try {
+        const client = new DcentSwapApiClient({ debugDumpDir: dir, apiBaseUrl: BASE_URL });
+        await client.init();
+        await client.getQuotes({ fromId: 'ETHEREUM', toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', amount: '1000000000000000000', fromDecimals: 18, toDecimals: 6 });
+        const dump = JSON.parse(readFileSync(client['dumper']!.filePath, 'utf-8'));
+        expect(dump.calls.length).toBeGreaterThanOrEqual(2); // init + getQuotes
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it('records getDexSwapTransactionData call to dump file', async () => {
+      const { mkdtempSync, rmSync, readFileSync } = await import('node:fs');
+      const { tmpdir } = await import('node:os');
+      const { join } = await import('node:path');
+      const dir = mkdtempSync(join(tmpdir(), 'dcent-dump-'));
+      try {
+        const client = new DcentSwapApiClient({ debugDumpDir: dir, apiBaseUrl: BASE_URL });
+        await client.init();
+        await client.getDexSwapTransactionData({ fromId: 'ETHEREUM', toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', amount: '1000000000000000000', fromDecimals: 18, toDecimals: 6, provider: 'sushi_swap', walletAddress: '0x1234567890123456789012345678901234567890' });
+        const dump = JSON.parse(readFileSync(client['dumper']!.filePath, 'utf-8'));
+        expect(dump.calls.length).toBeGreaterThanOrEqual(2); // init + getTxData
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it('records error to dump file when getQuotes fails', async () => {
+      const { mkdtempSync, rmSync, readFileSync } = await import('node:fs');
+      const { tmpdir } = await import('node:os');
+      const { join } = await import('node:path');
+      const dir = mkdtempSync(join(tmpdir(), 'dcent-dump-'));
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () => HttpResponse.json({ error: 'fail' }, { status: 500 })),
+      );
+      try {
+        const client = new DcentSwapApiClient({ debugDumpDir: dir, apiBaseUrl: BASE_URL });
+        await client.init();
+        await client.getQuotes({ fromId: 'ETHEREUM', toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', amount: '1', fromDecimals: 18, toDecimals: 6 }).catch(() => {});
+        const dump = JSON.parse(readFileSync(client['dumper']!.filePath, 'utf-8'));
+        const errCall = dump.calls.find((c: Record<string, unknown>) => c.error);
+        expect(errCall).toBeDefined();
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it('records error to dump file when getDexSwapTransactionData fails', async () => {
+      const { mkdtempSync, rmSync, readFileSync } = await import('node:fs');
+      const { tmpdir } = await import('node:os');
+      const { join } = await import('node:path');
+      const dir = mkdtempSync(join(tmpdir(), 'dcent-dump-'));
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () => HttpResponse.json({ error: 'fail' }, { status: 500 })),
+      );
+      try {
+        const client = new DcentSwapApiClient({ debugDumpDir: dir, apiBaseUrl: BASE_URL });
+        await client.init();
+        await client.getDexSwapTransactionData({ fromId: 'ETHEREUM', toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', amount: '1', fromDecimals: 18, toDecimals: 6, provider: 'sushi', walletAddress: '0x1234' }).catch(() => {});
+        const dump = JSON.parse(readFileSync(client['dumper']!.filePath, 'utf-8'));
+        const errCall = dump.calls.find((c: Record<string, unknown>) => c.error);
+        expect(errCall).toBeDefined();
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it('works without debugDumpDir (no dumper)', () => {
+      const client = new DcentSwapApiClient();
+      // Should work normally without dump
+      expect(client).toBeDefined();
+    });
+  });
 });

@@ -84,6 +84,19 @@ describe('DcentDebugDumper', () => {
     expect(dump.calls[2]!.seq).toBe(3);
   });
 
+  it('uses "unknown" when npm_package_version is not set', () => {
+    const orig = process.env.npm_package_version;
+    delete process.env.npm_package_version;
+    try {
+      const dumper = new DcentDebugDumper(dumpDir, 'https://api.example.com');
+      dumper.record({ method: 'GET', url: 'test', request: null, status: 200, response: {}, duration_ms: 1 });
+      const dump: DcentDebugDumpFile = JSON.parse(readFileSync(dumper.filePath, 'utf-8'));
+      expect(dump.daemon_version).toBe('unknown');
+    } finally {
+      if (orig !== undefined) process.env.npm_package_version = orig;
+    }
+  });
+
   it('does not write file when no calls recorded', () => {
     const dumper = new DcentDebugDumper(dumpDir, 'https://api.example.com');
     dumper.flush();
