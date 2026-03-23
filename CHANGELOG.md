@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.1...v2.12.0-rc.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* add non-null assertions to dcent-debug-dumper test for strict typecheck ([1ded5c6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1ded5c65a61d094ae007a4d664b959f67cec5954))
+* correct DexSwapTxParams field names in debug dumper tests ([e3b165c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e3b165c5055af84ce8b52badd9560513ca7bca95))
+* resolve issues [#418](https://github.com/minhoyoo-iotrust/WAIaaS/issues/418)-421 ([e314a74](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e314a74e5a1056e3560ba3c368eaa59442742ae7))
+* resolve issues [#418](https://github.com/minhoyoo-iotrust/WAIaaS/issues/418)-421 — daemon log level, DeFi UAT fixes, RPC hint ([2d62a13](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2d62a13c998a2caa913016a082ac0f853c9e22dd))
+
 ## [2.12.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc...v2.12.0-rc.1) (2026-03-19)
 
 
