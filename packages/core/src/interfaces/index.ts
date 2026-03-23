@@ -1,5 +1,5 @@
 // Logger abstraction
-export type { ILogger } from './logger.js';
+export type { ILogger, LogLevel } from './logger.js';
 export { ConsoleLogger } from './logger.js';
 
 // Chain adapter types

@@ -672,6 +672,27 @@ export class SolanaAdapter implements IChainAdapter {
   async buildContractCall(request: ContractCallParams): Promise<UnsignedTransaction> {
     const rpc = this.getRpc();
     try {
+      // Pre-built serialized transaction bypass (#419):
+      // When a provider (e.g., DCent) returns a full serialized Solana transaction
+      // instead of individual instruction data, pass it through directly.
+      if (!request.programId && request.instructionData && (!request.accounts || request.accounts.length === 0)) {
+        const serialized = typeof request.instructionData === 'string'
+          ? new Uint8Array(Buffer.from(request.instructionData, 'base64'))
+          : request.instructionData instanceof Uint8Array
+            ? request.instructionData
+            : new Uint8Array(Buffer.from(request.instructionData as unknown as string, 'base64'));
+        return {
+          chain: 'solana',
+          serialized,
+          estimatedFee: DEFAULT_SOL_TRANSFER_FEE,
+          expiresAt: new Date(Date.now() + 60_000),
+          metadata: {
+            preBuilt: true,
+            provider: 'dcent-swap',
+          },
+        };
+      }
+
       // Validate required Solana contract call fields
       if (!request.programId) {
         throw new ChainError('INVALID_INSTRUCTION', 'solana', {

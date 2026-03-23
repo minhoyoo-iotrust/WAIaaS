@@ -65,6 +65,10 @@
 | 415 | BUG | HIGH | Drift SDK 초기화 시 Solana RPC 429 + 재시도 로직 부재 — subscribe() 3-4회 RPC, RPC Pool 미연동 | — | FIXED | 2026-03-20 |
 | 416 | BUG | MEDIUM | Action Provider 디버그 로그가 log_level 설정 무시하고 항상 출력 — #412 후속, ConsoleLogger 레벨 필터링 없음 | — | FIXED | 2026-03-20 |
 | 417 | MISSING | MEDIUM | DCent Swap Solana 체인 미지원 — EVM 전용 가드로 Solana 스왑 차단, defi-16 시나리오 실행 불가 | — | FIXED | 2026-03-20 |
+| 418 | ENHANCEMENT | MEDIUM | 데몬 기본 로그 레벨이 debug로 동작 — console.debug() 직접 호출이 ConsoleLogger 레벨 필터링 우회 | — | FIXED | 2026-03-23 |
+| 419 | BUG | HIGH | DeFi UAT 6시나리오 반복 검증 및 수정 루프 — 3/6 PASS(defi-09/14 코드수정, defi-08/10 RPC환경, defi-15/16 DCent API 제한) | — | FIXED | 2026-03-23 |
+| 420 | BUG | HIGH | Kamino/Drift SDK wrapper RPC Pool reportFailure 연동 — 로테이션 코드 수정 완료, public RPC 3개 전부 제한(429/403/freetier), 유료 RPC 필요 | — | FIXED | 2026-03-23 |
+| 421 | ENHANCEMENT | MEDIUM | RPC rate limit/access 에러 시 유료 RPC 설정 안내 hint 누락 — ACTION_RESOLVE_FAILED 응답에 설정 방법 안내 필요 | — | FIXED | 2026-03-23 |
 
 ## Type Legend
 
@@ -77,7 +81,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 417
+- **FIXED:** 421
 - **WONTFIX:** 1
-- **Total:** 417
+- **Total:** 421
 - **Archived:** 366 (001–366)

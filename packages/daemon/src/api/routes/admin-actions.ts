@@ -186,10 +186,15 @@ export function adminActionRoutes(deps: AdminActionRouteDeps): OpenAPIHono {
       );
     } catch (err) {
       if (err instanceof WAIaaSError) throw err;
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      const isRpcLimit = /429|rate.?limit|too many request|freetier|not allowed|api.?key.*(invalid|required|missing)|method is not available/i.test(errMsg);
       throw new WAIaaSError('ACTION_RESOLVE_FAILED', {
-        message: `Action resolve failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        message: `Action resolve failed: ${errMsg}`,
         details: { actionKey },
         cause: err instanceof Error ? err : undefined,
+        hint: isRpcLimit
+          ? 'This action requires heavy RPC calls that may exceed free-tier limits. Configure a dedicated RPC endpoint via Admin Settings or config.toml [rpc] section.'
+          : undefined,
       });
     }
 

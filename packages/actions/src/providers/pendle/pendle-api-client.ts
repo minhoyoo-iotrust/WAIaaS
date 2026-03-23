@@ -35,12 +35,14 @@ export class PendleApiClient extends ActionApiClient {
    * GET /v1/markets/all?chainId={chainId}
    */
   async getMarkets(): Promise<PendleMarket[]> {
-    const raw = await this.get('v1/markets/all', PendleMarketsResponseSchema, {
+    const raw: unknown = await this.get('v1/markets/all', PendleMarketsResponseSchema, {
       chainId: String(this.chainId),
     });
-    if (Array.isArray(raw)) return raw;
-    if ('results' in raw) return raw.results as PendleMarket[];
-    return (raw as { data: PendleMarket[] }).data;
+    if (Array.isArray(raw)) return raw as PendleMarket[];
+    const obj = raw as Record<string, unknown>;
+    if ('markets' in obj) return obj.markets as PendleMarket[];
+    if ('results' in obj) return obj.results as PendleMarket[];
+    return (obj as { data: PendleMarket[] }).data;
   }
 
   /**
@@ -79,6 +81,7 @@ export class PendleApiClient extends ActionApiClient {
       if ('data' in obj) return this.normalizeConvertResponse(obj.data);
       if ('results' in obj && Array.isArray(obj.results)) return obj.results[0]!;
       if ('result' in obj && typeof obj.result === 'object') return this.normalizeConvertResponse(obj.result);
+      // Routes-based format is already transformed by Zod schema to have tx + amountOut
       if ('tx' in obj) return obj as unknown as PendleConvertResponse;
     }
     return data as PendleConvertResponse;

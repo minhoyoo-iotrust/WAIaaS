@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { getDcentQuotes, executeDexSwap } from '../providers/dcent-swap/dex-swap.js';
+import { getDcentQuotes, executeDexSwap, tryGetDcentQuotes } from '../providers/dcent-swap/dex-swap.js';
 import { DcentSwapApiClient } from '../providers/dcent-swap/dcent-api-client.js';
 import { DCENT_SWAP_DEFAULTS, type DcentSwapConfig } from '../providers/dcent-swap/config.js';
 import { ChainError } from '@waiaas/core';
@@ -701,6 +701,115 @@ describe('dcent-dex-swap', () => {
       expect(result[0]!.type).toBe('CONTRACT_CALL');
       expect(result[0]!.instructionData).toBe('AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbase64==');
       expect(result[0]!.to).toBe('JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4');
+    });
+  });
+
+  describe('tryGetDcentQuotes', () => {
+    it('returns result on success', async () => {
+      server.use(
+        http.get(`${BASE_URL}/api/swap/v3/get_supported_currencies`, () => HttpResponse.json(CURRENCIES_RESPONSE)),
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () => HttpResponse.json(makeQuotesResponse())),
+      );
+      const client = createClient();
+      const res = await tryGetDcentQuotes(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+      });
+      expect('result' in res).toBe(true);
+    });
+
+    it('returns noRoute when no provider available', async () => {
+      server.use(
+        http.get(`${BASE_URL}/api/swap/v3/get_supported_currencies`, () => HttpResponse.json(CURRENCIES_RESPONSE)),
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () =>
+          HttpResponse.json({ status: 'fail_no_available_provider', fromId: 'ETHEREUM', toId: 'UNKNOWN', providers: { bestOrder: [], common: [] } }),
+        ),
+      );
+      const client = createClient();
+      const res = await tryGetDcentQuotes(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+      });
+      expect('noRoute' in res).toBe(true);
+    });
+
+    it('rethrows non-route errors', async () => {
+      server.use(
+        http.get(`${BASE_URL}/api/swap/v3/get_supported_currencies`, () => HttpResponse.json(CURRENCIES_RESPONSE)),
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () =>
+          HttpResponse.json({ error: 'Internal Server Error' }, { status: 500 }),
+        ),
+      );
+      const client = createClient();
+      await expect(tryGetDcentQuotes(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+      })).rejects.toThrow();
+    });
+  });
+
+  describe('executeDexSwap edge cases', () => {
+    it('throws when specified providerId not found among DEX providers', async () => {
+      server.use(
+        http.get(`${BASE_URL}/api/swap/v3/get_supported_currencies`, () => HttpResponse.json(CURRENCIES_RESPONSE)),
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () =>
+          HttpResponse.json(makeQuotesResponse()),
+        ),
+      );
+      const client = createClient();
+      await expect(executeDexSwap(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+        walletAddress: '0x1234567890123456789012345678901234567890',
+        providerId: 'nonexistent_provider',
+      }, DEFAULT_CONFIG)).rejects.toThrow('not available or not a DEX provider');
+    });
+
+    it('throws when expectedAmount is 0', async () => {
+      server.use(
+        http.get(`${BASE_URL}/api/swap/v3/get_supported_currencies`, () => HttpResponse.json(CURRENCIES_RESPONSE)),
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () =>
+          HttpResponse.json({
+            status: 'success',
+            fromId: 'ETHEREUM',
+            toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+            providers: {
+              bestOrder: ['sushi_swap'],
+              common: [{
+                id: 'sushi_swap',
+                status: 'success',
+                providerId: 'sushi_swap',
+                providerType: 'swap',
+                name: 'Sushi',
+                fromAmount: '1000000000000000000',
+                expectedAmount: '0',
+                spenderContractAddress: '0xAC4c6e212A361c968F1725b4d055b47E63F80b75',
+              }],
+            },
+          }),
+        ),
+      );
+      const client = createClient();
+      await expect(executeDexSwap(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+        walletAddress: '0x1234567890123456789012345678901234567890',
+      }, DEFAULT_CONFIG)).rejects.toThrow('Amount too small');
     });
   });
 });

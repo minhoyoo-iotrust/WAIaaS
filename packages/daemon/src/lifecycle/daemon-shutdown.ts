@@ -18,7 +18,8 @@ export async function shutdownDaemon(state: DaemonState, signal: string): Promis
   if (state._isShuttingDown) return;
   state._isShuttingDown = true;
 
-  console.log(`Shutdown initiated by ${signal}`);
+  const log = state.logger;
+  log.info(`Shutdown initiated by ${signal}`);
 
   // Start force-exit timer (configurable, default 30s)
   const timeout = state._config?.daemon.shutdown_timeout ?? 30;
@@ -34,7 +35,7 @@ export async function shutdownDaemon(state: DaemonState, signal: string): Promis
     // Steps 2-4: HTTP server close
     if (state.httpServer) {
       state.httpServer.close();
-      console.log('Steps 2-4: HTTP server closed');
+      log.debug('Steps 2-4: HTTP server closed');
     }
 
     // Steps 5-6: In-flight signing + pending queue persistence -- not yet implemented
@@ -43,7 +44,7 @@ export async function shutdownDaemon(state: DaemonState, signal: string): Promis
     if (state.adapterPool) {
       try {
         await state.adapterPool.disconnectAll();
-        console.log('Adapter pool disconnected');
+        log.debug('Adapter pool disconnected');
       } catch (err) {
         console.warn('Adapter pool disconnect warning:', err);
       }
@@ -121,14 +122,14 @@ export async function shutdownDaemon(state: DaemonState, signal: string): Promis
     // Step 7: Stop background workers
     if (state.workers) {
       await state.workers.stopAll();
-      console.log('Step 7: Workers stopped');
+      log.debug('Step 7: Workers stopped');
     }
 
     // Step 8: WAL checkpoint(TRUNCATE)
     if (state.sqlite) {
       try {
         state.sqlite.pragma('wal_checkpoint(TRUNCATE)');
-        console.log('Step 8: WAL checkpoint complete');
+        log.debug('Step 8: WAL checkpoint complete');
       } catch (err) {
         console.warn('Step 8: WAL checkpoint warning:', err);
       }
@@ -137,7 +138,7 @@ export async function shutdownDaemon(state: DaemonState, signal: string): Promis
     // Step 9: Keystore lock (sodium_memzero all guarded buffers)
     if (state.keyStore) {
       state.keyStore.lockAll();
-      console.log('Step 9: Keystore locked');
+      log.debug('Step 9: Keystore locked');
     }
 
     // Clear master password and hash from memory
@@ -153,7 +154,7 @@ export async function shutdownDaemon(state: DaemonState, signal: string): Promis
     if (state.sqlite) {
       try {
         state.sqlite.close();
-        console.log('Step 10: Database closed');
+        log.debug('Step 10: Database closed');
       } catch (err) {
         console.warn('Step 10: DB close warning:', err);
       }
@@ -186,7 +187,7 @@ export async function shutdownDaemon(state: DaemonState, signal: string): Promis
       state.forceTimer = null;
     }
 
-    console.log('Shutdown complete');
+    log.info('Shutdown complete');
     process.exit(0);
   } catch (err) {
     console.error('Shutdown error:', err);

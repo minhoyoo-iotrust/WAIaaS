@@ -10,7 +10,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
-import { WAIaaSError, BUILT_IN_RPC_DEFAULTS, RpcPool, safeJsonParse } from '@waiaas/core';
+import { WAIaaSError, BUILT_IN_RPC_DEFAULTS, RpcPool, safeJsonParse, ConsoleLogger } from '@waiaas/core';
+import type { LogLevel } from '@waiaas/core';
 import { z } from 'zod';
 import { KillSwitchService } from '../services/kill-switch-service.js';
 import { AutoStopService } from '../services/autostop-service.js';
@@ -64,7 +65,10 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       // Acquire daemon lock (flock-like via proper-lockfile)
       await state.acquireDaemonLock(dataDir);
 
-      console.debug('Step 1: Config loaded, daemon lock acquired');
+      // Initialize daemon logger with config log_level (default: 'info')
+      const configLogLevel = (state._config!.daemon.log_level ?? 'info') as LogLevel;
+      state.logger = new ConsoleLogger('daemon', configLogLevel);
+      state.logger.debug('Step 1: Config loaded, daemon lock acquired');
     })(),
     5_000,
     'STEP1_CONFIG_LOCK',
@@ -96,7 +100,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         });
       }
       if (compatibility.action === 'migrate') {
-        console.debug('Step 2: Schema migration needed, applying...');
+        state.logger.debug('Step 2: Schema migration needed, applying...');
       }
 
       // Create all tables + run migrations (idempotent)
@@ -112,10 +116,10 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       });
       const importResult = state._settingsService.importFromConfig();
       if (importResult.imported > 0) {
-        console.debug(`Step 2: Settings imported from config.toml (${importResult.imported} keys)`);
+        state.logger.debug(`Step 2: Settings imported from config.toml (${importResult.imported} keys)`);
       }
 
-      console.debug('Step 2: Database initialized');
+      state.logger.debug('Step 2: Database initialized');
     })(),
     30_000,
     'STEP2_DATABASE',
@@ -139,7 +143,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
           console.error('Invalid master password.');
           process.exit(1);
         }
-        console.debug('Step 2b: Master password verified (DB hash)');
+        state.logger.debug('Step 2b: Master password verified (DB hash)');
       } else {
         // Path B: No DB hash -> check for existing keystore files
         const keystoreDir = join(dataDir, 'keystore');
@@ -185,9 +189,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
             console.error('Invalid master password. Cannot decrypt existing wallets.');
             process.exit(1);
           }
-          console.debug('Step 2b: Master password verified (keystore migration)');
+          state.logger.debug('Step 2b: Master password verified (keystore migration)');
         } else {
-          console.debug('Step 2b: First install, no password validation needed');
+          state.logger.debug('Step 2b: First install, no password validation needed');
         }
 
         // Store hash in DB for future startups
@@ -230,9 +234,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       // v1.1: just verify keystore infrastructure is accessible
       // Full key decryption happens when agents are accessed
       if (masterPassword) {
-        console.debug('Step 3: Keystore infrastructure verified (master password provided)');
+        state.logger.debug('Step 3: Keystore infrastructure verified (master password provided)');
       } else {
-        console.debug('Step 3: Keystore infrastructure verified (no master password)');
+        state.logger.debug('Step 3: Keystore infrastructure verified (no master password)');
       }
     })(),
     30_000,
@@ -286,7 +290,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
 
         // 4. Create AdapterPool with RpcPool
         state.adapterPool = new AdapterPool(state.rpcPool);
-        console.debug(`Step 4: AdapterPool created with RpcPool (${state.rpcPool.getNetworks().length} networks seeded)`);
+        state.logger.debug(`Step 4: AdapterPool created with RpcPool (${state.rpcPool.getNetworks().length} networks seeded)`);
       })(),
       10_000,
       'STEP4_ADAPTER',
@@ -311,7 +315,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       },
       onApproved: (txId) => state.handleApprovalApproved(txId),
     });
-    console.debug('Step 4b: Workflow instances created (DelayQueue + ApprovalWorkflow)');
+    state.logger.debug('Step 4b: Workflow instances created (DelayQueue + ApprovalWorkflow)');
   }
 
   // ------------------------------------------------------------------
@@ -328,7 +332,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
     });
     // Create mutable ref for live password/hash updates (password change API)
     state.passwordRef = { password: masterPassword, hash: state.masterPasswordHash };
-    console.debug('Step 4c: JWT secret manager initialized, master password hashed');
+    state.logger.debug('Step 4c: JWT secret manager initialized, master password hashed');
   }
 
   // ------------------------------------------------------------------
@@ -341,7 +345,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       eventBus: state.eventBus,
     });
     state.killSwitchService.ensureInitialized();
-    console.debug('Step 4c-2: KillSwitchService initialized');
+    state.logger.debug('Step 4c-2: KillSwitchService initialized');
   }
 
   // ------------------------------------------------------------------
@@ -423,7 +427,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
     }
 
     const channelNames = state.notificationService.getChannelNames();
-    console.debug(
+    state.logger.debug(
       `Step 4d: NotificationService initialized (${channelNames.length} channels: ${channelNames.join(', ') || 'none'})`,
     );
   } catch (err) {
@@ -466,9 +470,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
 
       if (autoStopConfig.enabled) {
         state.autoStopService.start();
-        console.debug('Step 4c-3: AutoStop engine started');
+        state.logger.debug('Step 4c-3: AutoStop engine started');
       } else {
-        console.debug('Step 4c-3: AutoStop engine disabled');
+        state.logger.debug('Step 4c-3: AutoStop engine disabled');
       }
     }
   } catch (err) {
@@ -497,7 +501,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         version: daemonVersion,
         dataDir,
       });
-      console.debug('Step 4c-3b: AdminStatsService created');
+      state.logger.debug('Step 4c-3b: AdminStatsService created');
     }
   } catch (err) {
     console.warn('Step 4c-3b (fail-soft): AdminStatsService init warning:', err);
@@ -531,9 +535,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
 
       if (monitorConfig.enabled) {
         state.balanceMonitorService.start();
-        console.debug('Step 4c-4: Balance monitor started');
+        state.logger.debug('Step 4c-4: Balance monitor started');
       } else {
-        console.debug('Step 4c-4: Balance monitor disabled');
+        state.logger.debug('Step 4c-4: Balance monitor disabled');
       }
     }
   } catch (err) {
@@ -570,9 +574,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       });
       state.telegramBotService.start();
       state.telegramBotRef.current = state.telegramBotService;
-      console.debug('Step 4c-5: Telegram Bot started');
+      state.logger.debug('Step 4c-5: Telegram Bot started');
     } else {
-      console.debug('Step 4c-5: Telegram Bot disabled');
+      state.logger.debug('Step 4c-5: Telegram Bot disabled');
     }
   } catch (err) {
     console.warn('Step 4c-5 (fail-soft): Telegram Bot init warning:', err);
@@ -593,9 +597,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       });
       await state.wcSessionService.initialize();
       state.wcServiceRef.current = state.wcSessionService;
-      console.debug('Step 4c-6: WalletConnect service initialized');
+      state.logger.debug('Step 4c-6: WalletConnect service initialized');
     } else {
-      console.debug('Step 4c-6: WalletConnect disabled (no project_id)');
+      state.logger.debug('Step 4c-6: WalletConnect disabled (no project_id)');
     }
   } catch (err) {
     console.warn('Step 4c-6 (fail-soft): WalletConnect init warning:', err);
@@ -616,7 +620,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         notificationService: state.notificationService ?? undefined,
         eventBus: state.eventBus,
       });
-      console.debug('Step 4c-7: WcSigningBridge initialized');
+      state.logger.debug('Step 4c-7: WcSigningBridge initialized');
     }
   } catch (err) {
     console.warn('Step 4c-7 (fail-soft): WcSigningBridge init warning:', err);
@@ -684,7 +688,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       // Inject signResponseHandler into TelegramBotService for /sign_response command (GAP-2: CHAN-04)
       if (state.telegramBotService) {
         state.telegramBotService.setSignResponseHandler(signResponseHandler);
-        console.debug('Step 4c-8: signResponseHandler injected into TelegramBotService');
+        state.logger.debug('Step 4c-8: signResponseHandler injected into TelegramBotService');
       }
 
       // Wallet Notification Side Channel (v2.7)
@@ -693,11 +697,11 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         settingsService: state._settingsService!,
       });
       state.notificationService?.setWalletNotificationChannel(walletNotifChannel);
-      console.debug('Step 4c-8: WalletNotificationChannel injected into NotificationService');
+      state.logger.debug('Step 4c-8: WalletNotificationChannel injected into NotificationService');
 
-      console.debug('Step 4c-8: Signing SDK initialized (ApprovalChannelRouter + channels)');
+      state.logger.debug('Step 4c-8: Signing SDK initialized (ApprovalChannelRouter + channels)');
     } else {
-      console.debug('Step 4c-8: Signing SDK disabled');
+      state.logger.debug('Step 4c-8: Signing SDK disabled');
     }
   } catch (err) {
     console.warn('Step 4c-8 (fail-soft): Signing SDK init warning:', err);
@@ -814,9 +818,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
           config: monitorConfig,
         });
         await state.incomingTxMonitorService.start();
-        console.debug('Step 4c-9: Incoming TX monitor started');
+        state.logger.debug('Step 4c-9: Incoming TX monitor started');
       } else {
-        console.debug('Step 4c-9: Incoming TX monitor disabled');
+        state.logger.debug('Step 4c-9: Incoming TX monitor disabled');
       }
     }
   } catch (err) {
@@ -855,7 +859,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
           void state.executeFromStage4(txId, walletId);
         },
       });
-      console.debug('Step 4c-10: AsyncPollingService initialized (with callbacks)');
+      state.logger.debug('Step 4c-10: AsyncPollingService initialized (with callbacks)');
     }
   } catch (err) {
     console.warn('Step 4c-10 (fail-soft): AsyncPollingService init warning:', err);
@@ -876,9 +880,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
           rpcPool: state.rpcPool ?? undefined,
         });
         state.positionTracker.start();
-        console.debug('Step 4c-10.5: Position tracker started');
+        state.logger.debug('Step 4c-10.5: Position tracker started');
       } else {
-        console.debug('Step 4c-10.5: Position tracker disabled');
+        state.logger.debug('Step 4c-10.5: Position tracker disabled');
       }
     }
   } catch (err) {
@@ -934,7 +938,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
     }
 
     state.defiMonitorService.start();
-    console.debug('Step 4c-11: DeFi monitor service started with', state.defiMonitorService.monitorCount, 'monitors');
+    state.logger.debug(`Step 4c-11: DeFi monitor service started with ${state.defiMonitorService.monitorCount} monitors`);
   } catch (err) {
     console.warn('Step 4c-11 (fail-soft): DeFi monitor service init warning:', err);
     state.defiMonitorService = null;
@@ -965,7 +969,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       crossValidationThreshold,
     });
 
-    console.debug(
+    state.logger.debug(
       `Step 4e: PriceOracle initialized (Pyth primary${coingeckoOracle ? ' + CoinGecko fallback' : ''})`,
     );
   } catch (err) {
@@ -989,7 +993,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
     const forexProvider = new CoinGeckoForexProvider(coingeckoApiKey);
     state.forexRateService = new ForexRateService({ forexProvider, cache: forexCache });
 
-    console.debug('Step 4e-2: ForexRateService initialized (30min cache)');
+    state.logger.debug('Step 4e-2: ForexRateService initialized (30min cache)');
   } catch (err) {
     console.warn('Step 4e-2 (fail-soft): ForexRateService init warning:', err);
     state.forexRateService = null;
@@ -1042,12 +1046,15 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
 
     // Register built-in action providers from @waiaas/actions (reads from SettingsService)
     const { registerBuiltInProviders } = await import('@waiaas/actions');
-    const { ConsoleLogger } = await import('@waiaas/core');
     const actionDebugEnv = process.env.WAIAAS_ACTION_DEBUG === 'true';
-    const configLogLevel = state._settingsService!.get('daemon.log_level') as 'debug' | 'info' | 'warn' | 'error' | undefined;
-    const actionLogLevel = actionDebugEnv ? 'debug' as const : (configLogLevel ?? 'info');
+    const actionLogLevel = actionDebugEnv ? 'debug' as const : state.logger.level;
     const actionLogger = new ConsoleLogger('actions', actionLogLevel);
-    const builtIn = registerBuiltInProviders(state.actionProviderRegistry, state._settingsService!, { rpcCaller, logger: actionLogger });
+    // #419/#420: Pass RPC URL resolver + failure reporter so Kamino/Drift use pool rotation on 429
+    const rpcPool = state.rpcPool;
+    const sSvc = state._settingsService!;
+    const solanaRpcResolver = () => resolveRpcUrlFromPool(rpcPool, sSvc.get.bind(sSvc), 'solana', 'solana-mainnet');
+    const reportSolanaRpcFailure = (url: string) => rpcPool?.reportFailure('solana-mainnet', url);
+    const builtIn = registerBuiltInProviders(state.actionProviderRegistry, sSvc, { rpcCaller, logger: actionLogger, solanaRpcResolver, reportSolanaRpcFailure });
     // Capture HyperliquidMarketData for HTTP routes (Phase 349)
     if (builtIn.hyperliquidMarketData) {
       state.hyperliquidMarketData = builtIn.hyperliquidMarketData;
@@ -1121,7 +1128,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         state.actionProviderRegistry.register(pmInfra.orderProvider);
         state.actionProviderRegistry.register(pmInfra.ctfProvider);
         state.polymarketInfra = pmInfra as unknown as typeof state.polymarketInfra;
-        console.debug('Step 4f-pm: Polymarket providers registered (order + ctf)');
+        state.logger.debug('Step 4f-pm: Polymarket providers registered (order + ctf)');
       } catch (err) {
         console.warn('Step 4f-pm (fail-soft): Polymarket registration failed:', err);
       }
@@ -1131,11 +1138,11 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
     const actionsDir = join(dataDir, 'actions');
     if (existsSync(actionsDir)) {
       const result = await state.actionProviderRegistry.loadPlugins(actionsDir);
-      console.debug(
+      state.logger.debug(
         `Step 4f: ActionProviderRegistry initialized (${builtIn.loaded.length} built-in, ${result.loaded.length} plugins loaded, ${result.failed.length} failed)`,
       );
     } else {
-      console.debug(`Step 4f: ActionProviderRegistry initialized (${builtIn.loaded.length} built-in, no plugins directory)`);
+      state.logger.debug(`Step 4f: ActionProviderRegistry initialized (${builtIn.loaded.length} built-in, no plugins directory)`);
     }
   } catch (err) {
     console.warn('Step 4f (fail-soft): ActionProviderRegistry init warning:', err);
@@ -1157,7 +1164,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       };
       state._asyncPollingService.registerTracker(new BridgeStatusTracker(lifiConfig));
       state._asyncPollingService.registerTracker(new BridgeMonitoringTracker(lifiConfig));
-      console.debug('Step 4f-2: Bridge status trackers registered (bridge + bridge-monitoring)');
+      state.logger.debug('Step 4f-2: Bridge status trackers registered (bridge + bridge-monitoring)');
     } catch (err) {
       console.warn('Step 4f-2 (fail-soft): Bridge tracker registration failed:', err);
     }
@@ -1180,7 +1187,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       };
       state._asyncPollingService.registerTracker(new AcrossBridgeStatusTracker(acrossConfig));
       state._asyncPollingService.registerTracker(new AcrossBridgeMonitoringTracker(acrossConfig));
-      console.debug('Step 4f-2a: Across bridge status trackers registered (across-bridge + across-bridge-monitoring)');
+      state.logger.debug('Step 4f-2a: Across bridge status trackers registered (across-bridge + across-bridge-monitoring)');
     } catch (err) {
       console.warn('Step 4f-2a (fail-soft): Across bridge tracker registration failed:', err);
     }
@@ -1194,12 +1201,12 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       if (state._settingsService?.get('actions.lido_staking_enabled') === 'true') {
         const { LidoWithdrawalTracker } = await import('@waiaas/actions');
         state._asyncPollingService.registerTracker(new LidoWithdrawalTracker());
-        console.debug('Step 4f-3: Lido withdrawal tracker registered');
+        state.logger.debug('Step 4f-3: Lido withdrawal tracker registered');
       }
       if (state._settingsService?.get('actions.jito_staking_enabled') === 'true') {
         const { JitoEpochTracker } = await import('@waiaas/actions');
         state._asyncPollingService.registerTracker(new JitoEpochTracker());
-        console.debug('Step 4f-3: Jito epoch tracker registered');
+        state.logger.debug('Step 4f-3: Jito epoch tracker registered');
       }
     } catch (err) {
       console.warn('Step 4f-3 (fail-soft): Staking tracker registration failed:', err);
@@ -1215,9 +1222,9 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       if (gasConditionEnabled) {
         const { GasConditionTracker } = await import('../pipeline/gas-condition-tracker.js');
         state._asyncPollingService.registerTracker(new GasConditionTracker());
-        console.debug('Step 4f-4: GasConditionTracker registered');
+        state.logger.debug('Step 4f-4: GasConditionTracker registered');
       } else {
-        console.debug('Step 4f-4: GasConditionTracker disabled');
+        state.logger.debug('Step 4f-4: GasConditionTracker disabled');
       }
     } catch (err) {
       console.warn('Step 4f-4 (fail-soft): GasConditionTracker registration failed:', err);
@@ -1235,10 +1242,10 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         const provider = state.actionProviderRegistry.getProvider(meta.name);
         if (provider && 'getPositions' in provider && 'getSupportedCategories' in provider && 'getProviderName' in provider) {
           state.positionTracker.registerProvider(provider as unknown as IPositionProvider);
-          console.debug(`Step 4f-5: Registered ${meta.name} with PositionTracker`);
+          state.logger.debug(`Step 4f-5: Registered ${meta.name} with PositionTracker`);
         }
       }
-      console.debug(`Step 4f-5: PositionTracker has ${state.positionTracker.providerCount} providers`);
+      state.logger.debug(`Step 4f-5: PositionTracker has ${state.positionTracker.providerCount} providers`);
       // Trigger immediate sync for all categories now that providers are registered
       if (state.positionTracker.providerCount > 0) {
         void state.positionTracker.syncCategory('LENDING');
@@ -1260,7 +1267,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
     if (state.notificationService) {
       state._versionCheckService.setNotificationService(state.notificationService);
     }
-    console.debug('Step 4g: VersionCheckService created');
+    state.logger.debug('Step 4g: VersionCheckService created');
   }
 
   // ------------------------------------------------------------------
@@ -1273,7 +1280,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
       const backupDir = state._config!.backup?.dir ?? 'backups';
       const backupsDir = isAbsolute(backupDir) ? backupDir : join(dataDir, backupDir);
       state._encryptedBackupService = new EncryptedBackupService(dataDir, backupsDir, state.sqlite);
-      console.debug('Step 4h: EncryptedBackupService created');
+      state.logger.debug('Step 4h: EncryptedBackupService created');
     }
   } catch (err) {
     console.warn('Step 4h (fail-soft): EncryptedBackupService init warning:', err);
@@ -1286,7 +1293,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
     if (state.sqlite && state.eventBus) {
       const { WebhookService } = await import('../services/webhook-service.js');
       state.webhookService = new WebhookService(state.sqlite, state.eventBus, () => state.masterPassword);
-      console.debug('Step 4i: WebhookService created');
+      state.logger.debug('Step 4i: WebhookService created');
     }
   } catch (err) {
     console.warn('Step 4i (fail-soft): WebhookService init warning:', err);
@@ -1316,6 +1323,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         incomingTxMonitorService: state.incomingTxMonitorService,
         actionProviderRegistryRef: { current: state.actionProviderRegistry },
         rpcCaller: state.rpcCaller ?? undefined,
+        daemonLogger: state.logger,
       });
 
       // [Phase 320] Create ReputationCacheService for REPUTATION_THRESHOLD policy evaluation
@@ -1418,7 +1426,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         server.once('error', onError);
       });
 
-      console.debug(
+      state.logger.debug(
         `Step 5: HTTP server listening on ${hostname}:${port}`,
       );
     })(),
@@ -1637,7 +1645,7 @@ async function startWorkers(state: DaemonState, dataDir: string): Promise<void> 
             'DELETE FROM wallet_credentials WHERE expires_at IS NOT NULL AND expires_at < ?',
           ).run(now);
           if (result.changes > 0) {
-            console.log(`[credential-cleanup] Deleted ${result.changes} expired credential(s)`);
+            state.logger.info(`[credential-cleanup] Deleted ${result.changes} expired credential(s)`);
           }
         }
       },
@@ -1663,9 +1671,9 @@ async function startWorkers(state: DaemonState, dataDir: string): Promise<void> 
         runImmediately: true,
         handler: async () => { await state._versionCheckService!.check(); },
       });
-      console.debug('Step 6: Version check worker registered');
+      state.logger.debug('Step 6: Version check worker registered');
     } else {
-      console.debug('Step 6: Version check disabled');
+      state.logger.debug('Step 6: Version check disabled');
     }
 
     // Register backup worker (auto-backup scheduler)
@@ -1681,19 +1689,19 @@ async function startWorkers(state: DaemonState, dataDir: string): Promise<void> 
           if (state._isShuttingDown) return;
           try {
             const info = await backupService.createBackup(masterPwd);
-            console.log(`Auto-backup created: ${info.filename} (${info.size} bytes)`);
+            state.logger.info(`Auto-backup created: ${info.filename} (${info.size} bytes)`);
             const pruned = backupService.pruneBackups(retentionCount);
             if (pruned > 0) {
-              console.log(`Auto-backup: pruned ${pruned} old backup(s), keeping ${retentionCount}`);
+              state.logger.info(`Auto-backup: pruned ${pruned} old backup(s), keeping ${retentionCount}`);
             }
           } catch (err) {
             console.error('Auto-backup failed:', err);
           }
         },
       });
-      console.debug(`Step 6: Backup worker registered (interval=${state._config!.backup.interval}s, retention=${retentionCount})`);
+      state.logger.debug(`Step 6: Backup worker registered (interval=${state._config!.backup.interval}s, retention=${retentionCount})`);
     } else {
-      console.debug('Step 6: Backup worker disabled (interval=0 or no backup service)');
+      state.logger.debug('Step 6: Backup worker disabled (interval=0 or no backup service)');
     }
 
     state.workers.startAll();
@@ -1702,8 +1710,8 @@ async function startWorkers(state: DaemonState, dataDir: string): Promise<void> 
     state.pidPath = join(dataDir, state._config!.daemon.pid_file);
     writeFileSync(state.pidPath, String(process.pid), 'utf-8');
 
-    console.debug(`Step 6: Workers started, PID file written`);
-    console.log(
+    state.logger.debug(`Step 6: Workers started, PID file written`);
+    state.logger.info(
       `WAIaaS daemon ready on http://${state._config!.daemon.hostname}:${state._config!.daemon.port} (PID: ${process.pid})\n` +
       `  Admin UI: http://${state._config!.daemon.hostname}:${state._config!.daemon.port}/admin`,
     );
