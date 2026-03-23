@@ -92,6 +92,23 @@ function formatIncomingAmount(
   }
 }
 
+/**
+ * Extract a concise one-line error message.
+ * viem errors contain multi-line `.message` with URL/body/version details;
+ * prefer `.shortMessage` + `.details` for brevity.
+ */
+function conciseError(err: unknown): string {
+  if (err instanceof Error) {
+    const e = err as Error & { shortMessage?: string; details?: string };
+    if (e.shortMessage) {
+      return e.details ? `${e.shortMessage} (${e.details})` : e.shortMessage;
+    }
+    // Fallback: take first line only
+    return e.message.split('\n')[0] ?? e.message;
+  }
+  return String(err);
+}
+
 // ── IncomingTxMonitorService ────────────────────────────────────
 
 export class IncomingTxMonitorService {
@@ -218,7 +235,7 @@ export class IncomingTxMonitorService {
           subscriptionCount++;
         } catch (err) {
           this.logger.warn(
-            `IncomingTxMonitor: failed to subscribe wallet ${wallet.id} on ${network}: ${err instanceof Error ? err.message : String(err)}`,
+            `IncomingTxMonitor: failed to subscribe wallet ${wallet.id} on ${network}: ${conciseError(err)}`,
           );
         }
       }
@@ -299,7 +316,7 @@ export class IncomingTxMonitorService {
           );
         } catch (err) {
           this.logger.warn(
-            `syncSubscriptions: failed to add wallet ${wallet.id} on ${network}: ${err instanceof Error ? err.message : String(err)}`,
+            `syncSubscriptions: failed to add wallet ${wallet.id} on ${network}: ${conciseError(err)}`,
           );
         }
       }
@@ -548,7 +565,7 @@ export class IncomingTxMonitorService {
           try {
             await subscriber.pollAll?.();
           } catch (err) {
-            this.logger.warn(`Solana polling worker error: ${err instanceof Error ? err.message : String(err)}`);
+            this.logger.warn(`Solana polling worker error: ${conciseError(err)}`);
           }
         }
       },
@@ -565,7 +582,7 @@ export class IncomingTxMonitorService {
           try {
             await entry.subscriber.pollAll?.();
           } catch (err) {
-            this.logger.warn(`EVM polling worker error: ${err instanceof Error ? err.message : String(err)}`);
+            this.logger.warn(`EVM polling worker error: ${conciseError(err)}`);
           }
           // Stagger between subscribers to avoid RPC rate-limit bursts
           if (i < entries.length - 1) {
