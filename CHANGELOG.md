@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.12.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.4...v2.12.0-rc.5) (2026-03-23)
+
+
+### Bug Fixes
+
+* add subscription staggering and ILogger injection for IncomingTxMonitor ([#429](https://github.com/minhoyoo-iotrust/WAIaaS/issues/429), [#430](https://github.com/minhoyoo-iotrust/WAIaaS/issues/430)) ([f129a3c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f129a3c76a149f07f9dea58f699f76ec6989dcd5))
+* concise error messages for viem errors + register issue [#431](https://github.com/minhoyoo-iotrust/WAIaaS/issues/431) ([b9cd4cc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b9cd4ccd08b14be58adb2ec375de0a862263e30c))
+* defer PositionTracker sync and increase stagger delay ([#431](https://github.com/minhoyoo-iotrust/WAIaaS/issues/431)) ([ca8613d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ca8613d6935661873ae8ffe6f9bcba8a55b780b6))
+* extract concise one-line error messages from viem errors ([#429](https://github.com/minhoyoo-iotrust/WAIaaS/issues/429)) ([1aed766](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1aed7662ddeab8b466b14f0648f1985f5ac28097))
+* IncomingTxMonitor startup stability and auto-merge CI ([596805b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/596805bbfcf3c0b81f9a4232c7c8ba52b2d96955))
+
 ## [2.12.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.3...v2.12.0-rc.4) (2026-03-23)
 
 
