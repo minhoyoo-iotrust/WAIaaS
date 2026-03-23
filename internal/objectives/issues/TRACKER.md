@@ -75,7 +75,7 @@
 | 425 | BUG | HIGH | Drift SDK getDepositIx 호환성 에러 — 현재 @drift-labs/sdk 버전에서 메서드 제거/변경, defi-10 UAT 실패 | — | FIXED | 2026-03-23 |
 | 426 | BUG | HIGH | DCent 크로스체인 스왑 toWalletAddress에 출발 체인 주소 사용 — 입력 스키마 미지원 + 하드코딩, defi-15 fail_internal_error 원인 | — | FIXED | 2026-03-23 |
 | 427 | BUG | CRITICAL | DCent Solana 스왑 3중 오류 — base58/base64 인코딩 불일치 + blockhash 미갱신 + CONTRACT_CALL 파이프라인 부적합 | — | FIXED | 2026-03-23 |
-| 428 | BUG | HIGH | DeFi UAT defi-08/09/10 반복 검증 및 수정 — Kamino stale slot + Pendle market 만료 + Drift subscribe 실패, #424 반영 데몬 재시작 필요 | — | OPEN | 2026-03-23 |
+| 428 | BUG | HIGH | DeFi UAT defi-08/09/10 반복 검증 및 수정 — Kamino stale slot + Pendle market 만료 + Drift subscribe 실패, #424 반영 데몬 재시작 필요 | — | FIXED | 2026-03-23 |
 
 ## Type Legend
 
@@ -87,8 +87,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 427
+- **OPEN:** 0
+- **FIXED:** 428
 - **WONTFIX:** 1
 - **Total:** 428
 - **Archived:** 366 (001–366)
