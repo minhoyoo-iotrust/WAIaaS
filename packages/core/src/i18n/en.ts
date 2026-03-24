@@ -233,7 +233,7 @@ export const messages: Messages = {
   // Notification templates (30 event types)
   notifications: {
     TX_REQUESTED: { title: 'Transaction Requested', body: '{walletName} requested {type}: {amount} to {to} {display_amount}' },
-    TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
+    TX_QUEUED: { title: 'Transaction Queued', body: 'Send: {amount} {amountUsd}\nTo: {to}\nDelay: {delaySeconds}s before auto-execution' },
     TX_SUBMITTED: { title: 'Transaction Submitted', body: 'Transaction {txId} submitted to blockchain. To: {to} {display_amount}' },
     TX_CONFIRMED: { title: 'Transaction Confirmed', body: 'Transaction {txId} confirmed. Amount: {amount}, To: {to} {display_amount}' },
     TX_FAILED: { title: 'Transaction Failed', body: 'Transaction {txId} failed: {error} {display_amount}' },

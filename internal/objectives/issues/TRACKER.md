@@ -30,6 +30,10 @@
 | 442 | BUG | LOW | 서명 요청 유효기간이 approval timeout을 초과할 수 있음 (clamp 미적용) | — | FIXED | 2026-03-24 |
 | 443 | BUG | MEDIUM | APPROVAL 생성 시 정책별 approval_timeout이 전달되지 않음 | — | FIXED | 2026-03-24 |
 | 444 | BUG | LOW | ApprovalWorkflow의 configTimeout이 hot-reload 되지 않음 | — | FIXED | 2026-03-24 |
+| 445 | ENHANCEMENT | MEDIUM | 서명 요청 대상 지갑 앱을 명시적으로 선택할 수 없음 (wallet_type 그룹별 서명용 앱 선택) | m33-04 | PLANNED | 2026-03-24 |
+| 446 | BUG | MEDIUM | DELAY 티어 TX_QUEUED 알림에 Cancel 인라인 키보드가 포함되지 않음 | — | FIXED | 2026-03-24 |
+| 447 | BUG | LOW | DELAY Cancel 키보드 버튼 레이블이 locale 미반영 + 불필요한 TX ID 포함 | — | FIXED | 2026-03-24 |
+| 448 | ENHANCEMENT | MEDIUM | DELAY TX_QUEUED 알림에 트랜잭션 상세 정보 부족 (금액, USD, 수신 주소, 딜레이 시간) | — | FIXED | 2026-03-24 |
 
 ## Type Legend
 
@@ -42,7 +46,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 444
+- **PLANNED:** 1
+- **FIXED:** 447
 - **WONTFIX:** 1
-- **Total:** 445
+- **Total:** 449
 - **Archived:** 428 (001–428)

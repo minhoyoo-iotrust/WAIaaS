@@ -32,11 +32,13 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
     ctx.delayQueue.queueDelay(ctx.txId, delaySeconds);
 
     // Fire-and-forget: notify TX_QUEUED with cancel keyboard data
+    // reply_markup is built by NotificationService using locale-aware buildCancelKeyboard (#447)
     void ctx.notificationService?.notify('TX_QUEUED', ctx.walletId, {
       txId: ctx.txId,
       amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
       to: getRequestTo(ctx.request),
       delaySeconds: String(delaySeconds),
+      ...(ctx.amountUsd !== undefined ? { amountUsd: `(~$${ctx.amountUsd.toFixed(2)})` } : {}),
     }, { txId: ctx.txId });
 
     // Halt pipeline -- transaction will be picked up by processExpired worker

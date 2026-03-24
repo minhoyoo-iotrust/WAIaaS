@@ -57,7 +57,7 @@ export function getNotificationMessage(
   }
 
   // Remove un-substituted optional placeholders (fallback safety net)
-  for (const placeholder of ['{display_amount}', '{type}', '{amount}', '{to}']) {
+  for (const placeholder of ['{display_amount}', '{type}', '{amount}', '{to}', '{amountUsd}', '{delaySeconds}', '{txId}']) {
     title = title.replaceAll(placeholder, '');
     body = body.replaceAll(placeholder, '');
   }
