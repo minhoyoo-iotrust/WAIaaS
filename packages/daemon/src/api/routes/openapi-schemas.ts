@@ -1374,6 +1374,7 @@ export const ConnectInfoResponseSchema = z.object({
     chain: z.string(),
     environment: z.string(),
     address: z.string(),
+    ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']).openapi({ description: 'Owner registration state' }),
     availableNetworks: z.array(z.string()),
     erc8004: z.object({
       agentId: z.string(),

@@ -281,7 +281,10 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
       }
       return c.json({ success: true }, 200);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
+      let msg = err instanceof Error ? err.message : 'Unknown error';
+      if (err instanceof Error && err.cause instanceof Error) {
+        msg = `${msg}: ${err.cause.message}`;
+      }
       return c.json({ success: false, error: msg }, 200);
     }
   });

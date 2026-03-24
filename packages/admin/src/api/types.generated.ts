@@ -9066,6 +9066,11 @@ export type components = {
                 chain: string;
                 environment: string;
                 address: string;
+                /**
+                 * @description Owner registration state
+                 * @enum {string}
+                 */
+                ownerState: "NONE" | "GRACE" | "LOCKED";
                 availableNetworks: string[];
                 erc8004?: {
                     agentId: string;

@@ -110,9 +110,15 @@ export class SubscriptionMultiplexer {
       this.deps.onTransaction,
     );
 
-    // Connect the subscriber
-    await subscriber.connect();
-    entry.state = 'WS_ACTIVE';
+    // Connect the subscriber -- errors are caught to clean up the entry
+    try {
+      await subscriber.connect();
+      entry.state = 'WS_ACTIVE';
+    } catch (err) {
+      // Clean up broken entry to prevent cascading failure for subsequent wallets
+      this.connections.delete(key);
+      throw err;
+    }
 
     // Start reconnectLoop in fire-and-forget mode
     // The loop monitors the connection and handles reconnection on disconnect

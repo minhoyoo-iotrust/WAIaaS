@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** MEDIUM
-- **상태:** OPEN
+- **상태:** FIXED
 - **등록일:** 2026-03-24
 
 ## 현상
@@ -42,6 +42,14 @@ Node.js의 undici(내장 fetch)는 네트워크 에러 시 `TypeError: fetch fai
 
 ## 테스트 항목
 
+### 단위 테스트 (wallet-apps route)
+
+1. **err.cause 전파:** fetch가 `TypeError('fetch failed', { cause: new Error('connect ECONNREFUSED ...') })`를 던질 때 응답 `error` 필드에 `"fetch failed: connect ECONNREFUSED ..."` 형태로 포함되는지 확인
+2. **err.cause 없는 경우:** 일반 Error (cause 없음) 시 기존대로 `err.message`만 반환되는지 확인
+3. **err.cause가 Error가 아닌 경우:** `err.cause`가 문자열 등 비-Error 타입일 때 `err.message`만 반환되는지 확인
+4. **정상 응답 회귀:** Push Relay 정상 연결 시 기존 동작(success: true)에 영향 없는지 확인
+
+### 수동 확인
+
 - Push Relay가 꺼진 상태에서 테스트 알림 전송 시 `fetch failed: connect ECONNREFUSED ...` 형태의 상세 에러 메시지가 Admin UI에 표시되는지 확인
 - 잘못된 호스트명으로 테스트 시 `fetch failed: getaddrinfo ENOTFOUND ...` 형태로 표시되는지 확인
-- 정상 Push Relay 연결 시 기존 동작(성공 또는 HTTP 상태 에러)에 영향 없는지 확인

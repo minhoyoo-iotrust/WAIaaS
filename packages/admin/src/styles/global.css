@@ -518,26 +518,26 @@ table .table-loading {
 }
 
 .toast-success {
-  background: var(--color-success-bg);
-  color: var(--color-success);
+  background: rgba(0, 255, 65, 0.95);
+  color: #0c0c0c;
   border: 1px solid var(--color-success);
 }
 
 .toast-error {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
+  background: rgba(255, 68, 68, 0.95);
+  color: #fff;
   border: 1px solid var(--color-danger);
 }
 
 .toast-info {
-  background: var(--color-info-bg);
-  color: var(--color-info);
+  background: rgba(0, 212, 255, 0.95);
+  color: #0c0c0c;
   border: 1px solid var(--color-info);
 }
 
 .toast-warning {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
+  background: rgba(255, 149, 0, 0.95);
+  color: #0c0c0c;
   border: 1px solid var(--color-warning);
 }
 

@@ -219,31 +219,20 @@ export class IncomingTxMonitorService {
       }
     }
 
-    // Subscribe with inter-network staggering to avoid RPC rate-limit bursts (#429).
+    // Subscribe asynchronously (fire-and-forget) to avoid blocking daemon startup (#437).
+    // Failed connections are recovered by reconnectLoop's exponential backoff.
     let subscriptionCount = 0;
-    let networkIndex = 0;
     for (const [key, group] of networkGroups) {
       const network = key.split(':').slice(1).join(':');
       for (const wallet of group) {
-        try {
-          await this.multiplexer.addWallet(
-            wallet.chain,
-            network,
-            wallet.id,
-            wallet.public_key,
-          );
-          subscriptionCount++;
-        } catch (err) {
-          this.logger.warn(
-            `IncomingTxMonitor: failed to subscribe wallet ${wallet.id} on ${network}: ${conciseError(err)}`,
-          );
-        }
-      }
-      // Stagger between different networks (500ms) to spread RPC load.
-      // Free-tier providers (drpc.org) share rate limits across networks.
-      networkIndex++;
-      if (networkIndex < networkGroups.size) {
-        await new Promise((r) => setTimeout(r, 500));
+        subscriptionCount++;
+        void this.multiplexer
+          .addWallet(wallet.chain, network, wallet.id, wallet.public_key)
+          .catch((err) => {
+            this.logger.warn(
+              `IncomingTxMonitor: failed to subscribe wallet ${wallet.id} on ${network}: ${conciseError(err)}`,
+            );
+          });
       }
     }
 
