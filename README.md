@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-22_LTS-green.svg)](https://nodejs.org/)
 [![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/minhoyoo-iotrust/8eaa6e6fa868042de1a47f1b600df0f6/raw/waiaas-test-badge.json)](#)
+[![MCP Server](https://glama.ai/mcp/servers/minhoyoo-iotrust/WAIaaS/badges/score.svg)](https://glama.ai/mcp/servers/minhoyoo-iotrust/WAIaaS)
 
 A self-hosted wallet daemon that lets AI agents perform on-chain transactions securely -- while the owner keeps full control of funds.
 

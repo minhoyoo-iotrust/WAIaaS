@@ -2,22 +2,24 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.minhoyoo-iotrust/waiaas",
   "title": "WAIaaS - Wallet-as-a-Service for AI Agents",
-  "description": "Self-hosted wallet MCP server for AI agents. Provides 24 tools for multi-chain crypto operations: transfers, token management, DeFi (swap, lend, stake, bridge), smart contract calls, transaction signing, and x402 micro-payments. Supports Solana and EVM chains with session-based auth and spending policies.",
-  "version": "2.9.0",
+  "description": "Self-hosted wallet for AI agents. 60 tools: transfers, DeFi, NFTs, x402. EVM + Solana.",
+  "version": "2.11.0",
   "websiteUrl": "https://github.com/minhoyoo-iotrust/WAIaaS",
   "repository": {
     "url": "https://github.com/minhoyoo-iotrust/WAIaaS",
-    "source": "github"
+    "source": "github",
+    "id": "1149407153"
   },
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@waiaas/mcp",
-      "version": "2.9.0",
+      "version": "2.11.0",
       "transport": {
         "type": "stdio"
       },
+      "runtimeHint": "npx",
       "environmentVariables": [
         {
           "name": "WAIAAS_BASE_URL",
