@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.12.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.7...v2.12.0-rc.8) (2026-03-24)
+
+
+### Features
+
+* **daemon,admin:** add test sign request for wallet apps ([#450](https://github.com/minhoyoo-iotrust/WAIaaS/issues/450)) ([d46e79e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d46e79e856e5e3db5bc7cbb3e4ace71e7f187020))
+
+
+### Bug Fixes
+
+* **daemon,admin,push-relay:** resolve issues 451-452 — sign request push body and toast args ([e24940c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e24940c1b23720ce3899c3322ccb7a07513b8043))
+* **daemon,admin:** resolve issues 437-442 ([81e7405](https://github.com/minhoyoo-iotrust/WAIaaS/commit/81e7405a4da1685476675ba9cec1d1c5332ec7ff))
+* **daemon:** resolve issue 449 — use subscription_token for Push Relay routing ([42ebfb8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/42ebfb84174c79c832a00079eb95f7771216ec80))
+* **daemon:** resolve issues 443-444 — approval timeout policy passthrough and hot-reload ([441a431](https://github.com/minhoyoo-iotrust/WAIaaS/commit/441a431615660fd8112e0972353e021bd816464d))
+* **daemon:** resolve issues 446-448 — DELAY cancel keyboard and TX_QUEUED notification enrichment ([c1e97ba](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c1e97ba3a0c00c403ee613b04e5fd3e024d73281))
+* resolve open issues 437-452 ([c6cb6d7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c6cb6d7b45ee64dd9ed18917d246423c9cb824bb))
+* **site:** bypass Dev.to CDN cache with API key authentication ([9fc4bab](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9fc4babdb2ed94433e288e1eab7c8e2507afee69))
+
 ## [2.12.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.6...v2.12.0-rc.7) (2026-03-24)
 
 
