@@ -31,8 +31,13 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
   const app = new Hono();
   const { registry, provider, apiKey } = opts;
 
-  // POST /v1/sign-response -- store response in DB
+  // POST /v1/sign-response -- store response in DB (requires API key)
   app.post('/v1/sign-response', async (c) => {
+    const reqKey = c.req.header('X-API-Key');
+    if (!reqKey || reqKey !== apiKey) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     const body: unknown = await c.req.json();
     const parsed = SignResponseStoreSchema.safeParse(body);
     if (!parsed.success) {
@@ -88,14 +93,8 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
     return c.body(null, 204);
   });
 
-  // POST /v1/push -- direct push notification (requires API key)
+  // POST /v1/push -- direct push notification (no API key — subscriptionToken is the credential)
   app.post('/v1/push', async (c) => {
-    // Check API key
-    const reqKey = c.req.header('X-API-Key');
-    if (!reqKey || reqKey !== apiKey) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
     const body: unknown = await c.req.json();
     const parsed = PushRequestSchema.safeParse(body);
     if (!parsed.success) {

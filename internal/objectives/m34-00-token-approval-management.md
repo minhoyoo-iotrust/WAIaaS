@@ -1,7 +1,7 @@
-# 마일스톤 m33-00: ERC-20 Token Approval 관리 (Allowance 조회 + Revoke)
+# 마일스톤 m34-00: ERC-20 Token Approval 관리 (Allowance 조회 + Revoke)
 
 - **Status:** PLANNED
-- **Milestone:** v33.0
+- **Milestone:** v34.0
 
 ## 목표
 

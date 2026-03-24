@@ -1,4 +1,4 @@
-# 마일스톤 m34-00: Desktop App 아키텍처 재설계
+# 마일스톤 m33-00: Desktop App 아키텍처 재설계
 
 - **Status:** PLANNED
 - **Milestone:** TBD

@@ -40,6 +40,13 @@ export default function HumanWalletAppsPage() {
   const subTokenEditing = useSignal<Record<string, string>>({});
   const subTokenSaving = useSignal<string | null>(null);
 
+  // Push Relay URL editing state: maps app.id -> url value
+  const pushRelayEditing = useSignal<Record<string, string>>({});
+  const pushRelaySaving = useSignal<string | null>(null);
+
+  // Inline test notification error: maps app.id -> error message
+  const testNotifError = useSignal<Record<string, string>>({});
+
   // Toggle saving state
   const toggleSaving = useSignal<string | null>(null);
 
@@ -113,6 +120,10 @@ export default function HumanWalletAppsPage() {
 
   const handleTestNotification = async (app: WalletAppApi) => {
     testNotifSending.value = app.id;
+    // Clear previous error
+    const nextErr = { ...testNotifError.value };
+    delete nextErr[app.id];
+    testNotifError.value = nextErr;
     try {
       const { data: result } = await api.POST('/v1/admin/wallet-apps/{id}/test-notification', {
         params: { path: { id: app.id } },
@@ -120,10 +131,11 @@ export default function HumanWalletAppsPage() {
       if (result!.success) {
         showToast('Test notification sent successfully', 'success');
       } else {
-        showToast(result!.error || 'Test notification failed', 'error');
+        const errorMsg = result!.error || 'Test notification failed';
+        testNotifError.value = { ...testNotifError.value, [app.id]: errorMsg };
       }
     } catch {
-      showToast('Failed to send test notification', 'error');
+      testNotifError.value = { ...testNotifError.value, [app.id]: 'Failed to send test notification' };
     } finally {
       testNotifSending.value = null;
     }
@@ -181,6 +193,25 @@ export default function HumanWalletAppsPage() {
       showToast('Failed to update subscription token', 'error');
     } finally {
       subTokenSaving.value = null;
+    }
+  };
+
+  const handleSetPushRelayUrl = async (app: WalletAppApi, url: string) => {
+    pushRelaySaving.value = app.id;
+    try {
+      await api.PUT('/v1/admin/wallet-apps/{id}', {
+        params: { path: { id: app.id } },
+        body: { push_relay_url: url || '' },
+      });
+      const next = { ...pushRelayEditing.value };
+      delete next[app.id];
+      pushRelayEditing.value = next;
+      await fetchApps();
+      showToast(url ? 'Push Relay URL set' : 'Push Relay URL cleared', 'success');
+    } catch {
+      showToast('Failed to update Push Relay URL', 'error');
+    } finally {
+      pushRelaySaving.value = null;
     }
   };
 
@@ -325,17 +356,28 @@ export default function HumanWalletAppsPage() {
                     </label>
 
                     {/* Test notification button */}
-                    {app.alerts_enabled && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleTestNotification(app)}
-                        disabled={testNotifSending.value === app.id}
-                      >
-                        {testNotifSending.value === app.id ? 'Sending...' : 'Test'}
-                      </Button>
-                    )}
+                    {app.alerts_enabled && (() => {
+                      const canTest = !!(app.subscription_token && app.push_relay_url);
+                      return (
+                        <span title={canTest ? undefined : 'Set subscription token and Push Relay URL first'}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleTestNotification(app)}
+                            disabled={!canTest || testNotifSending.value === app.id}
+                          >
+                            {testNotifSending.value === app.id ? 'Sending...' : 'Test'}
+                          </Button>
+                        </span>
+                      );
+                    })()}
                   </div>
+                  {/* Inline test error */}
+                  {testNotifError.value[app.id] && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #e74c3c)' }}>
+                      {testNotifError.value[app.id]}
+                    </div>
+                  )}
 
                   {/* Used by */}
                   <div style={{ marginTop: '0.75rem' }}>
@@ -423,10 +465,76 @@ export default function HumanWalletAppsPage() {
                   {/* Push Relay URL */}
                   <div style={{ marginTop: '0.75rem' }}>
                     <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Push Relay URL: </span>
-                    {app.push_relay_url ? (
-                      <code style={{ fontSize: '0.85rem' }}>{app.push_relay_url}</code>
+                    {pushRelayEditing.value[app.id] !== undefined ? (
+                      <span style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          value={pushRelayEditing.value[app.id]}
+                          onInput={(e) => {
+                            pushRelayEditing.value = {
+                              ...pushRelayEditing.value,
+                              [app.id]: (e.target as HTMLInputElement).value,
+                            };
+                          }}
+                          placeholder="https://push-relay.example.com"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', width: '260px' }}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleSetPushRelayUrl(app, pushRelayEditing.value[app.id]!)}
+                          disabled={pushRelaySaving.value === app.id}
+                        >
+                          {pushRelaySaving.value === app.id ? 'Saving...' : 'Save'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            const next = { ...pushRelayEditing.value };
+                            delete next[app.id];
+                            pushRelayEditing.value = next;
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </span>
+                    ) : app.push_relay_url ? (
+                      <span style={{ fontSize: '0.85rem' }}>
+                        <code>{app.push_relay_url}</code>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            pushRelayEditing.value = { ...pushRelayEditing.value, [app.id]: app.push_relay_url || '' };
+                          }}
+                          style={{ marginLeft: '0.5rem' }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleSetPushRelayUrl(app, '')}
+                          disabled={pushRelaySaving.value === app.id}
+                          style={{ marginLeft: '0.25rem' }}
+                        >
+                          Clear
+                        </Button>
+                      </span>
                     ) : (
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Not configured</span>
+                      <span style={{ fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Not configured</span>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            pushRelayEditing.value = { ...pushRelayEditing.value, [app.id]: '' };
+                          }}
+                          style={{ marginLeft: '0.5rem' }}
+                        >
+                          Set
+                        </Button>
+                      </span>
                     )}
                   </div>
                 </div>
@@ -461,23 +569,31 @@ export default function HumanWalletAppsPage() {
             placeholder="My Custom Wallet"
             description="Human-readable name shown in the UI"
           />
-          <FormField
-            label="Wallet Type (optional)"
-            name="register-app-wallet-type"
-            type="text"
-            value={registerWalletType.value}
-            onChange={(v) => {
-              registerWalletType.value = String(v);
-              // Auto-fill Push Relay URL for known presets
-              const PRESET_PUSH_RELAY_URLS: Record<string, string> = {
-                dcent: 'https://waiaas-push.dcentwallet.com',
-              };
-              const preset = PRESET_PUSH_RELAY_URLS[String(v)];
-              registerPushRelayUrl.value = preset ?? '';
-            }}
-            placeholder="dcent, ledger, or custom"
-            description="Group multiple devices under the same wallet type. Defaults to app name."
-          />
+          <div class="form-field">
+            <label for="field-register-app-wallet-type">Wallet Type (optional)</label>
+            <input
+              id="field-register-app-wallet-type"
+              type="text"
+              name="register-app-wallet-type"
+              list="wallet-type-presets"
+              value={registerWalletType.value}
+              onInput={(e) => {
+                const v = (e.target as HTMLInputElement).value;
+                registerWalletType.value = v;
+                // Auto-fill Push Relay URL for known presets
+                const PRESET_PUSH_RELAY_URLS: Record<string, string> = {
+                  dcent: 'https://waiaas-push.dcentwallet.com',
+                };
+                const preset = PRESET_PUSH_RELAY_URLS[v];
+                registerPushRelayUrl.value = preset ?? '';
+              }}
+              placeholder="Select preset or enter custom"
+            />
+            <datalist id="wallet-type-presets">
+              <option value="dcent">D'CENT Wallet</option>
+            </datalist>
+            <span class="form-description">Group multiple devices under the same wallet type. Defaults to app name.</span>
+          </div>
           <FormField
             label="Push Relay URL (optional)"
             name="register-app-push-relay-url"

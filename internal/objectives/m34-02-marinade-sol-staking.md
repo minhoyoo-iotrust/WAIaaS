@@ -1,4 +1,4 @@
-# 마일스톤 m33-02: SOL Staking 확장 (Marinade)
+# 마일스톤 m34-02: SOL Staking 확장 (Marinade)
 
 - **Status:** PLANNED
 - **Milestone:** TBD

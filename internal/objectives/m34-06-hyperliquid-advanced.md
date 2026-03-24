@@ -1,7 +1,7 @@
-# 마일스톤 m33-06: Hyperliquid 고급 기능
+# 마일스톤 m34-06: Hyperliquid 고급 기능
 
 - **Status:** PLANNED
-- **Milestone:** v33.6
+- **Milestone:** v34.6
 
 ## 목표
 

@@ -61,7 +61,6 @@ function createMockSettingsService(overrides: Record<string, string> = {}) {
     'signing_sdk.preferred_wallet': 'dcent',
     'signing_sdk.request_expiry_min': '30',
     'signing_sdk.preferred_channel': 'push_relay',
-    'signing_sdk.push_relay_api_key': 'test-api-key',
     'telegram.bot_token': '',
   };
   const store = { ...defaults, ...overrides };

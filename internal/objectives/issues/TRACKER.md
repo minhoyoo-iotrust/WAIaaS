@@ -17,6 +17,11 @@
 | 429 | BUG | MEDIUM | IncomingTxMonitor 구독 시 RPC Rate Limit 에러 | — | FIXED | 2026-03-23 |
 | 430 | ENHANCEMENT | LOW | IncomingTx 서비스에서 console.* 직접 호출 (ILogger 미사용) | — | FIXED | 2026-03-23 |
 | 431 | BUG | MEDIUM | 데몬 시작 시 서비스 간 RPC 경합으로 429 Rate Limit 발생 | — | FIXED | 2026-03-23 |
+| 432 | MISSING | LOW | Admin UI: 등록된 지갑 앱의 Push Relay URL 수정 불가 | — | FIXED | 2026-03-24 |
+| 433 | ENHANCEMENT | LOW | Admin UI: Wallet App 등록 시 wallet_type combobox 변경 | — | FIXED | 2026-03-24 |
+| 434 | ENHANCEMENT | LOW | Admin UI: 테스트 알림 실패 시 에러 메시지가 눈에 띄지 않음 | — | FIXED | 2026-03-24 |
+| 435 | ENHANCEMENT | LOW | Admin UI: Subscription Token 미설정 시 Test 버튼 사전 안내 부재 | — | FIXED | 2026-03-24 |
+| 436 | ENHANCEMENT | MEDIUM | Push Relay API Key 인증 정책 재설계 | — | FIXED | 2026-03-24 |
 
 ## Type Legend
 
@@ -29,7 +34,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 431
+- **FIXED:** 436
 - **WONTFIX:** 1
-- **Total:** 432
+- **Total:** 437
 - **Archived:** 428 (001–428)

@@ -86,7 +86,7 @@ const mockApps = {
       alerts_enabled: true,
       sign_topic: 'waiaas-sign-dcent',
       notify_topic: 'waiaas-notify-dcent',
-      subscription_token: null,
+      subscription_token: 'tok12345678',
       push_relay_url: 'https://waiaas-push.dcentwallet.com',
       used_by: [{ id: 'w1', label: 'wallet-1' }],
       created_at: 1700000000,
@@ -378,7 +378,7 @@ describe('HumanWalletAppsPage', () => {
     );
   });
 
-  it('T-HWUI-16: Test failure shows error toast', async () => {
+  it('T-HWUI-16: Test failure shows inline error', async () => {
     mockApiCalls();
     mockApiPost.mockResolvedValue({ data: { success: false, error: 'Signing SDK is disabled' } });
 
@@ -390,11 +390,131 @@ describe('HumanWalletAppsPage', () => {
     fireEvent.click(screen.getByText('Test'));
 
     await waitFor(() => {
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-        'Signing SDK is disabled',
-        'error',
+      expect(screen.getByText('Signing SDK is disabled')).toBeTruthy();
+    });
+  });
+
+  it('T-HWUI-17: Test button disabled when subscription token missing', async () => {
+    const appsNoToken = {
+      apps: [{
+        id: 'app-1', name: 'dcent', display_name: "D'CENT Wallet", wallet_type: 'dcent',
+        signing_enabled: true, alerts_enabled: true, sign_topic: null, notify_topic: null,
+        subscription_token: null, push_relay_url: 'https://waiaas-push.dcentwallet.com',
+        used_by: [], created_at: 1700000000, updated_at: 1700000000,
+      }],
+    };
+    mockApiGet.mockImplementation(async (path: string) => {
+      if (path === '/v1/admin/wallet-apps') return { data: appsNoToken };
+      if (path === '/v1/admin/settings') return { data: mockSettings };
+      return { data: {} };
+    });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    const testBtn = screen.getByText('Test').closest('button') as HTMLButtonElement;
+    expect(testBtn.disabled).toBe(true);
+  });
+
+  it('T-HWUI-18: Test button disabled when push relay URL missing', async () => {
+    const appsNoUrl = {
+      apps: [{
+        id: 'app-1', name: 'dcent', display_name: "D'CENT Wallet", wallet_type: 'dcent',
+        signing_enabled: true, alerts_enabled: true, sign_topic: null, notify_topic: null,
+        subscription_token: 'tok123', push_relay_url: null,
+        used_by: [], created_at: 1700000000, updated_at: 1700000000,
+      }],
+    };
+    mockApiGet.mockImplementation(async (path: string) => {
+      if (path === '/v1/admin/wallet-apps') return { data: appsNoUrl };
+      if (path === '/v1/admin/settings') return { data: mockSettings };
+      return { data: {} };
+    });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    const testBtn = screen.getByText('Test').closest('button') as HTMLButtonElement;
+    expect(testBtn.disabled).toBe(true);
+  });
+
+  it('T-HWUI-19: Push Relay URL Edit/Clear buttons shown for configured URL', async () => {
+    mockApiCalls();
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // app-1 has push_relay_url configured — should show Edit and Clear buttons
+    expect(screen.getByText('Edit')).toBeTruthy();
+    // Multiple Clear buttons (subscription token + push relay URL) — verify at least 2 exist
+    expect(screen.getAllByText('Clear').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('T-HWUI-20: Push Relay URL Set button shown for unconfigured URL', async () => {
+    mockApiCalls();
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // app-2 has no push_relay_url — should show "Not configured" + Set
+    expect(screen.getByText('Not configured')).toBeTruthy();
+  });
+
+  it('T-HWUI-21: Push Relay URL Edit opens inline form and Save calls PUT', async () => {
+    mockApiCalls();
+    mockApiPut.mockResolvedValue({ data: {} });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Edit'));
+    await waitFor(() => {
+      expect(document.querySelector('input[placeholder="https://push-relay.example.com"]')).toBeTruthy();
+    });
+
+    const urlInput = document.querySelector('input[placeholder="https://push-relay.example.com"]') as HTMLInputElement;
+    fireEvent.input(urlInput, { target: { value: 'https://new-relay.example.com' } });
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/v1/admin/wallet-apps/{id}',
+        expect.objectContaining({
+          params: { path: { id: 'app-1' } },
+          body: { push_relay_url: 'https://new-relay.example.com' },
+        }),
       );
     });
+  });
+
+  it('T-HWUI-22: Register dialog wallet_type has datalist with dcent preset', async () => {
+    mockApiCalls();
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('+ Register App'));
+    await waitFor(() => {
+      expect(screen.getByText('Register Wallet App')).toBeTruthy();
+    });
+
+    const walletTypeInput = document.querySelector('input[name="register-app-wallet-type"]') as HTMLInputElement;
+    expect(walletTypeInput).toBeTruthy();
+    expect(walletTypeInput.getAttribute('list')).toBe('wallet-type-presets');
+
+    const datalist = document.getElementById('wallet-type-presets');
+    expect(datalist).toBeTruthy();
+    expect(datalist!.querySelector('option[value="dcent"]')).toBeTruthy();
   });
 });
 

@@ -265,12 +265,10 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
       };
 
       const pushRelayUrl = app.pushRelayUrl.replace(/\/$/, '');
-      const apiKey = deps.settingsService?.get('signing_sdk.push_relay_api_key') || '';
       const res = await fetch(`${pushRelayUrl}/v1/push`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(apiKey ? { 'X-Api-Key': apiKey } : {}),
         },
         body: JSON.stringify({
           subscriptionToken: app.subscriptionToken,

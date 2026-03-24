@@ -96,12 +96,13 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
         id: 'app-1', name: 'dcent', display_name: "D'CENT Wallet", wallet_type: 'dcent',
         signing_enabled: true, alerts_enabled: true, sign_topic: 'waiaas-sign-dcent',
         notify_topic: 'waiaas-notify-dcent', subscription_token: 'tok12345678',
+        push_relay_url: 'https://waiaas-push.dcentwallet.com',
         used_by: [{ id: 'w1', label: 'wallet-1' }], created_at: 1700000000, updated_at: 1700000000,
       },
       {
         id: 'app-2', name: 'custom', display_name: 'Custom Wallet', wallet_type: '',
         signing_enabled: false, alerts_enabled: false, sign_topic: null,
-        notify_topic: null, subscription_token: null,
+        notify_topic: null, subscription_token: null, push_relay_url: null,
         used_by: [], created_at: 1700000100, updated_at: 1700000100,
       },
     ],
@@ -224,10 +225,10 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
     });
 
     // app-2 has no token, should show "Not set" with "Set" button
-    // Find the Set button near "Not set" text (not the "Set" from sub token saving)
+    // Find all Set buttons — subscription token Set buttons appear before push relay URL Set buttons
     const setButtons = screen.getAllByText('Set');
-    // Click the last "Set" (for app-2's subscription token)
-    fireEvent.click(setButtons[setButtons.length - 1]!);
+    // First "Set" is app-2's subscription token (app-1 has token already)
+    fireEvent.click(setButtons[0]!);
 
     // Should enter edit mode with input
     await waitFor(() => {
@@ -237,9 +238,9 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
     const tokenInput = document.querySelector('input[placeholder="e.g., a1b2c3d4"]') as HTMLInputElement;
     fireEvent.input(tokenInput, { target: { value: 'newtoken123' } });
 
-    // Click the Set button in edit mode
+    // Click the Set button in edit mode (first one is the subscription token edit Set)
     const editSetBtns = screen.getAllByText('Set');
-    fireEvent.click(editSetBtns[editSetBtns.length - 1]!);
+    fireEvent.click(editSetBtns[0]!);
 
     await waitFor(() => {
       expect(mockApiPut).toHaveBeenCalledWith(
@@ -284,7 +285,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
     });
   });
 
-  it('handleTestNotification error shows toast', async () => {
+  it('handleTestNotification error shows inline error', async () => {
     mockApiCalls();
     mockApiPost.mockRejectedValueOnce(new Error('Network'));
 
@@ -296,7 +297,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
     fireEvent.click(screen.getByText('Test'));
 
     await waitFor(() => {
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('Failed to send test notification', 'error');
+      expect(screen.getByText('Failed to send test notification')).toBeTruthy();
     });
   });
 });

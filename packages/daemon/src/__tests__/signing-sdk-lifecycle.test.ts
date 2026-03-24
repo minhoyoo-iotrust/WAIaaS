@@ -49,7 +49,6 @@ function createMockSettings(overrides: Record<string, string> = {}): SettingsSer
     'signing_sdk.preferred_wallet': 'dcent',
     'signing_sdk.request_expiry_min': '30',
     'signing_sdk.preferred_channel': 'push_relay',
-    'signing_sdk.push_relay_api_key': 'test-key',
     'signing_sdk.wallets': '[]',
     'notifications.telegram_chat_id': '12345',
     'telegram.bot_token': 'bot123:token',
