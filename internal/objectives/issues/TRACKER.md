@@ -35,6 +35,7 @@
 | 447 | BUG | LOW | DELAY Cancel 키보드 버튼 레이블이 locale 미반영 + 불필요한 TX ID 포함 | — | FIXED | 2026-03-24 |
 | 448 | ENHANCEMENT | MEDIUM | DELAY TX_QUEUED 알림에 트랜잭션 상세 정보 부족 (금액, USD, 수신 주소, 딜레이 시간) | — | FIXED | 2026-03-24 |
 | 449 | BUG | HIGH | Push Relay subscriptionToken 불일치로 푸시가 디바이스에 도달하지 않음 | — | FIXED | 2026-03-24 |
+| 450 | ENHANCEMENT | MEDIUM | Admin UI: 지갑 앱 테스트 서명 요청 기능 (서명 응답 검증) | — | FIXED | 2026-03-24 |
 
 ## Type Legend
 
@@ -48,7 +49,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 1
-- **FIXED:** 448
+- **FIXED:** 449
 - **WONTFIX:** 1
-- **Total:** 450
+- **Total:** 451
 - **Archived:** 428 (001–428)

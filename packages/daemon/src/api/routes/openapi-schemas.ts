@@ -420,6 +420,23 @@ export const WalletAppTestNotificationResponseSchema = z
   })
   .openapi('WalletAppTestNotificationResponse');
 
+export const WalletAppTestSignRequestResponseSchema = z
+  .object({
+    success: z.boolean().openapi({ description: 'Whether the test sign request completed' }),
+    error: z.string().optional().openapi({ description: 'Error message if request failed' }),
+    timeout: z.boolean().optional().openapi({ description: 'True if no response within 30 seconds' }),
+    result: z
+      .object({
+        action: z.enum(['approve', 'reject']).openapi({ description: 'User action' }),
+        signature: z.string().optional().openapi({ description: 'SIWE signature (approve only)' }),
+        signerAddress: z.string().openapi({ description: 'Address that signed' }),
+        signedAt: z.string().openapi({ description: 'ISO 8601 timestamp' }),
+      })
+      .optional()
+      .openapi({ description: 'Sign response result' }),
+  })
+  .openapi('WalletAppTestSignRequestResponse');
+
 // ---------------------------------------------------------------------------
 // Error Code -> OpenAPI Response Mapping
 // ---------------------------------------------------------------------------

@@ -28,6 +28,11 @@ export default function HumanWalletAppsPage() {
   // Test notification state
   const testNotifSending = useSignal<string | null>(null);
 
+  // Test sign request state
+  const testSignSending = useSignal<string | null>(null);
+  const testSignError = useSignal<Record<string, string>>({});
+  const testSignResult = useSignal<Record<string, { action: string; signature?: string; signerAddress: string; signedAt: string } | null>>({});
+
   // Register modal
   const registerModal = useSignal(false);
   const registerName = useSignal('');
@@ -138,6 +143,34 @@ export default function HumanWalletAppsPage() {
       testNotifError.value = { ...testNotifError.value, [app.id]: 'Failed to send test notification' };
     } finally {
       testNotifSending.value = null;
+    }
+  };
+
+  const handleTestSignRequest = async (app: WalletAppApi) => {
+    testSignSending.value = app.id;
+    // Clear previous state
+    const nextErr = { ...testSignError.value };
+    delete nextErr[app.id];
+    testSignError.value = nextErr;
+    const nextRes = { ...testSignResult.value };
+    delete nextRes[app.id];
+    testSignResult.value = nextRes;
+    try {
+      const { data: result } = await api.POST('/v1/admin/wallet-apps/{id}/test-sign-request', {
+        params: { path: { id: app.id } },
+      });
+      if (result!.timeout) {
+        testSignError.value = { ...testSignError.value, [app.id]: 'No response within 30 seconds. Check device connection.' };
+      } else if (result!.success && result!.result) {
+        testSignResult.value = { ...testSignResult.value, [app.id]: result!.result };
+        showToast(`Sign request ${result!.result.action === 'approve' ? 'approved' : 'rejected'}`, result!.result.action === 'approve' ? 'success' : 'warning');
+      } else {
+        testSignError.value = { ...testSignError.value, [app.id]: result!.error || 'Test sign request failed' };
+      }
+    } catch {
+      testSignError.value = { ...testSignError.value, [app.id]: 'Failed to send test sign request' };
+    } finally {
+      testSignSending.value = null;
     }
   };
 
@@ -366,16 +399,67 @@ export default function HumanWalletAppsPage() {
                             onClick={() => handleTestNotification(app)}
                             disabled={!canTest || testNotifSending.value === app.id}
                           >
-                            {testNotifSending.value === app.id ? 'Sending...' : 'Test'}
+                            {testNotifSending.value === app.id ? 'Sending...' : 'Test Notify'}
+                          </Button>
+                        </span>
+                      );
+                    })()}
+
+                    {/* Test sign request button */}
+                    {app.signing_enabled && (() => {
+                      const canTest = !!(app.subscription_token && app.push_relay_url);
+                      return (
+                        <span title={canTest ? undefined : 'Set subscription token and Push Relay URL first'}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleTestSignRequest(app)}
+                            disabled={!canTest || testSignSending.value === app.id}
+                          >
+                            {testSignSending.value === app.id ? 'Waiting...' : 'Test Sign'}
                           </Button>
                         </span>
                       );
                     })()}
                   </div>
-                  {/* Inline test error */}
+                  {/* Inline test errors */}
                   {testNotifError.value[app.id] && (
                     <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #e74c3c)' }}>
                       {testNotifError.value[app.id]}
+                    </div>
+                  )}
+                  {testSignError.value[app.id] && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #e74c3c)' }}>
+                      {testSignError.value[app.id]}
+                    </div>
+                  )}
+                  {/* Sign request waiting indicator */}
+                  {testSignSending.value === app.id && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      Waiting for response from wallet app... Check your device.
+                    </div>
+                  )}
+                  {/* Sign request result */}
+                  {testSignResult.value[app.id] && (
+                    <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem' }}>
+                      <div><strong>Action:</strong> <Badge variant={testSignResult.value[app.id]!.action === 'approve' ? 'success' : 'warning'}>{testSignResult.value[app.id]!.action}</Badge></div>
+                      <div style={{ marginTop: '0.25rem' }}><strong>Signer:</strong> <code>{testSignResult.value[app.id]!.signerAddress.slice(0, 6)}...{testSignResult.value[app.id]!.signerAddress.slice(-4)}</code></div>
+                      {testSignResult.value[app.id]!.signature && (
+                        <div style={{ marginTop: '0.25rem' }}>
+                          <strong>Signature:</strong>{' '}
+                          <code
+                            style={{ cursor: 'pointer', wordBreak: 'break-all' }}
+                            title="Click to copy"
+                            onClick={() => {
+                              navigator.clipboard.writeText(testSignResult.value[app.id]!.signature!);
+                              showToast('Signature copied', 'success');
+                            }}
+                          >
+                            {testSignResult.value[app.id]!.signature!.slice(0, 20)}...
+                          </code>
+                        </div>
+                      )}
+                      <div style={{ marginTop: '0.25rem' }}><strong>Signed at:</strong> {testSignResult.value[app.id]!.signedAt}</div>
                     </div>
                   )}
 

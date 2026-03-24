@@ -6101,6 +6101,53 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/wallet-apps/{id}/test-sign-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a test sign request to a wallet app and wait for response */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Test sign request result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WalletAppTestSignRequestResponse"];
+                    };
+                };
+                /** @description WALLET_APP_NOT_FOUND: Wallet app not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/audit-logs": {
         parameters: {
             query?: never;
@@ -8971,6 +9018,28 @@ export type components = {
             success: boolean;
             /** @description Error message if notification failed */
             error?: string;
+        };
+        WalletAppTestSignRequestResponse: {
+            /** @description Whether the test sign request completed */
+            success: boolean;
+            /** @description Error message if request failed */
+            error?: string;
+            /** @description True if no response within 30 seconds */
+            timeout?: boolean;
+            /** @description Sign response result */
+            result?: {
+                /**
+                 * @description User action
+                 * @enum {string}
+                 */
+                action: "approve" | "reject";
+                /** @description SIWE signature (approve only) */
+                signature?: string;
+                /** @description Address that signed */
+                signerAddress: string;
+                /** @description ISO 8601 timestamp */
+                signedAt: string;
+            };
         };
         TokenRegistryItem: {
             address: string;
