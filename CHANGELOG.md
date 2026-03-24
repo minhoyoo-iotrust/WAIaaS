@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.6...v2.12.0-rc.7) (2026-03-24)
+
+
+### Bug Fixes
+
+* **admin,push-relay:** resolve issues 432-436 ([1ba3cb8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1ba3cb8fb36f3f1582f70aba0ad05e67255000d7))
+* **admin,push-relay:** resolve issues 432-436 ([0280d2e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0280d2e409c616f042eeb3d30e07b2ed16439a07))
+* **daemon:** promote startup step logs from debug to info level ([75d5ec8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/75d5ec8a4f8299b1974643583f39d7d60cb5db09))
+* **site:** add state=all to Dev.to API query to include all published posts ([88930f0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/88930f0fdd196d00f43508e401a9220fb4676e06))
+
 ## [2.12.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.5...v2.12.0-rc.6) (2026-03-24)
 
 
