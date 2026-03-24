@@ -112,7 +112,7 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
     // Build push payload
     const pushPayload = {
       title: (payload.title as string) || category,
-      body: (payload.body as string) || '',
+      body: (payload.body as string) || (category === 'sign_request' ? 'Transaction approval required' : 'WAIaaS notification'),
       data: Object.fromEntries(
         Object.entries(payload).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)]),
       ),

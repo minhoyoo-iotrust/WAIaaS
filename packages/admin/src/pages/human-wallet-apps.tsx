@@ -64,7 +64,7 @@ export default function HumanWalletAppsPage() {
       const { data } = await api.GET('/v1/admin/wallet-apps');
       apps.value = data!.apps;
     } catch {
-      showToast('Failed to load wallet apps', 'error');
+      showToast('error', 'Failed to load wallet apps');
     }
   };
 
@@ -99,9 +99,9 @@ export default function HumanWalletAppsPage() {
         body: { settings: [{ key: 'signing_sdk.notifications_enabled', value: String(newValue) }] },
       });
       notificationsEnabled.value = newValue;
-      showToast(`Wallet app notifications ${newValue ? 'enabled' : 'disabled'}`, 'success');
+      showToast('success', `Wallet app notifications ${newValue ? 'enabled' : 'disabled'}`);
     } catch {
-      showToast('Failed to update notification setting', 'error');
+      showToast('error', 'Failed to update notification setting');
     } finally {
       notifToggleSaving.value = false;
     }
@@ -115,9 +115,9 @@ export default function HumanWalletAppsPage() {
         body: { [field]: !app[field] },
       });
       await fetchApps();
-      showToast(`${field === 'signing_enabled' ? 'Signing' : 'Alerts'} ${app[field] ? 'disabled' : 'enabled'} for ${app.display_name}`, 'success');
+      showToast('success', `${field === 'signing_enabled' ? 'Signing' : 'Alerts'} ${app[field] ? 'disabled' : 'enabled'} for ${app.display_name}`);
     } catch {
-      showToast('Failed to update toggle', 'error');
+      showToast('error', 'Failed to update toggle');
     } finally {
       toggleSaving.value = null;
     }
@@ -134,7 +134,7 @@ export default function HumanWalletAppsPage() {
         params: { path: { id: app.id } },
       });
       if (result!.success) {
-        showToast('Test notification sent successfully', 'success');
+        showToast('success', 'Test notification sent successfully');
       } else {
         const errorMsg = result!.error || 'Test notification failed';
         testNotifError.value = { ...testNotifError.value, [app.id]: errorMsg };
@@ -163,7 +163,7 @@ export default function HumanWalletAppsPage() {
         testSignError.value = { ...testSignError.value, [app.id]: 'No response within 30 seconds. Check device connection.' };
       } else if (result!.success && result!.result) {
         testSignResult.value = { ...testSignResult.value, [app.id]: result!.result };
-        showToast(`Sign request ${result!.result.action === 'approve' ? 'approved' : 'rejected'}`, result!.result.action === 'approve' ? 'success' : 'warning');
+        showToast(result!.result.action === 'approve' ? 'success' : 'warning', `Sign request ${result!.result.action === 'approve' ? 'approved' : 'rejected'}`);
       } else {
         testSignError.value = { ...testSignError.value, [app.id]: result!.error || 'Test sign request failed' };
       }
@@ -176,7 +176,7 @@ export default function HumanWalletAppsPage() {
 
   const handleRegister = async () => {
     if (!registerName.value.trim() || !registerDisplayName.value.trim()) {
-      showToast('Name and display name are required', 'error');
+      showToast('error', 'Name and display name are required');
       return;
     }
     registerSaving.value = true;
@@ -198,12 +198,12 @@ export default function HumanWalletAppsPage() {
       registerWalletType.value = '';
       registerPushRelayUrl.value = '';
       await fetchApps();
-      showToast('Wallet app registered', 'success');
+      showToast('success', 'Wallet app registered');
     } catch (err) {
       if (err instanceof ApiError && err.code === 'WALLET_APP_DUPLICATE') {
-        showToast('App already registered', 'error');
+        showToast('error', 'App already registered');
       } else {
-        showToast('Failed to register app', 'error');
+        showToast('error', 'Failed to register app');
       }
     } finally {
       registerSaving.value = false;
@@ -221,9 +221,9 @@ export default function HumanWalletAppsPage() {
       delete next[app.id];
       subTokenEditing.value = next;
       await fetchApps();
-      showToast(token ? 'Subscription token set' : 'Subscription token cleared', 'success');
+      showToast('success', token ? 'Subscription token set' : 'Subscription token cleared');
     } catch {
-      showToast('Failed to update subscription token', 'error');
+      showToast('error', 'Failed to update subscription token');
     } finally {
       subTokenSaving.value = null;
     }
@@ -240,9 +240,9 @@ export default function HumanWalletAppsPage() {
       delete next[app.id];
       pushRelayEditing.value = next;
       await fetchApps();
-      showToast(url ? 'Push Relay URL set' : 'Push Relay URL cleared', 'success');
+      showToast('success', url ? 'Push Relay URL set' : 'Push Relay URL cleared');
     } catch {
-      showToast('Failed to update Push Relay URL', 'error');
+      showToast('error', 'Failed to update Push Relay URL');
     } finally {
       pushRelaySaving.value = null;
     }
@@ -257,9 +257,9 @@ export default function HumanWalletAppsPage() {
         params: { path: { id: app.id } },
       });
       await fetchApps();
-      showToast(`${app.display_name} removed`, 'success');
+      showToast('success', `${app.display_name} removed`);
     } catch {
-      showToast('Failed to remove app', 'error');
+      showToast('error', 'Failed to remove app');
     }
   };
 
@@ -452,7 +452,7 @@ export default function HumanWalletAppsPage() {
                             title="Click to copy"
                             onClick={() => {
                               navigator.clipboard.writeText(testSignResult.value[app.id]!.signature!);
-                              showToast('Signature copied', 'success');
+                              showToast('success', 'Signature copied');
                             }}
                           >
                             {testSignResult.value[app.id]!.signature!.slice(0, 20)}...

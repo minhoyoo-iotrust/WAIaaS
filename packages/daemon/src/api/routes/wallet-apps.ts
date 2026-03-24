@@ -376,7 +376,11 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         body: JSON.stringify({
           subscriptionToken: app.subscriptionToken,
           category: 'sign_request',
-          payload: { request: encoded },
+          payload: {
+            title: 'WAIaaS Test Sign Request',
+            body: `Test sign request for ${app.displayName}`,
+            request: encoded,
+          },
         }),
       });
       if (!pushRes.ok) {
