@@ -34,6 +34,7 @@
 | 446 | BUG | MEDIUM | DELAY 티어 TX_QUEUED 알림에 Cancel 인라인 키보드가 포함되지 않음 | — | FIXED | 2026-03-24 |
 | 447 | BUG | LOW | DELAY Cancel 키보드 버튼 레이블이 locale 미반영 + 불필요한 TX ID 포함 | — | FIXED | 2026-03-24 |
 | 448 | ENHANCEMENT | MEDIUM | DELAY TX_QUEUED 알림에 트랜잭션 상세 정보 부족 (금액, USD, 수신 주소, 딜레이 시간) | — | FIXED | 2026-03-24 |
+| 449 | BUG | HIGH | Push Relay subscriptionToken 불일치로 푸시가 디바이스에 도달하지 않음 | — | FIXED | 2026-03-24 |
 
 ## Type Legend
 
@@ -47,7 +48,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 1
-- **FIXED:** 447
+- **FIXED:** 448
 - **WONTFIX:** 1
-- **Total:** 449
+- **Total:** 450
 - **Archived:** 428 (001–428)

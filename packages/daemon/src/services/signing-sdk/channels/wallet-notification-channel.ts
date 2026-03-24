@@ -89,7 +89,7 @@ export class WalletNotificationChannel {
         apps
           .filter((app) => app.pushRelayUrl) // Skip apps without push_relay_url
           .map((app) =>
-            this.publishNotification(app.pushRelayUrl!, app.name, {
+            this.publishNotification(app.pushRelayUrl!, app.subscriptionToken || app.name, {
               version: '1',
               eventType,
               walletId,
@@ -112,11 +112,11 @@ export class WalletNotificationChannel {
    * Query wallet_apps table for apps with alerts_enabled=1.
    * Returns app names and push_relay_url for Push Relay routing.
    */
-  private resolveAlertApps(): Array<{ name: string; walletType: string; pushRelayUrl: string | null }> {
+  private resolveAlertApps(): Array<{ name: string; walletType: string; pushRelayUrl: string | null; subscriptionToken: string | null }> {
     const rows = this.sqlite.prepare(
-      'SELECT name, wallet_type, push_relay_url FROM wallet_apps WHERE alerts_enabled = 1',
-    ).all() as Array<{ name: string; wallet_type: string; push_relay_url: string | null }>;
-    return rows.map((r) => ({ name: r.name, walletType: r.wallet_type || r.name, pushRelayUrl: r.push_relay_url }));
+      'SELECT name, wallet_type, push_relay_url, subscription_token FROM wallet_apps WHERE alerts_enabled = 1',
+    ).all() as Array<{ name: string; wallet_type: string; push_relay_url: string | null; subscription_token: string | null }>;
+    return rows.map((r) => ({ name: r.name, walletType: r.wallet_type || r.name, pushRelayUrl: r.push_relay_url, subscriptionToken: r.subscription_token }));
   }
 
   private async publishNotification(

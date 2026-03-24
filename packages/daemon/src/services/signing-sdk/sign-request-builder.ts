@@ -213,8 +213,16 @@ export class SignRequestBuilder {
     // 10. Build universal link URL
     const universalLinkUrl = this.walletLinkRegistry.buildSignUrl(walletName, request);
 
-    // 11. Request topic identifier (wallet name, no longer an ntfy topic)
-    const requestTopic = walletName;
+    // 11. Request topic: use subscription_token from wallet_apps if available (#449)
+    let requestTopic = walletName;
+    if (this.sqlite) {
+      const appRow = this.sqlite.prepare(
+        'SELECT subscription_token FROM wallet_apps WHERE name = ? AND subscription_token IS NOT NULL',
+      ).get(walletName) as { subscription_token: string } | undefined;
+      if (appRow?.subscription_token) {
+        requestTopic = appRow.subscription_token;
+      }
+    }
 
     return {
       request,
