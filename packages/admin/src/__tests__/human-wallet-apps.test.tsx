@@ -442,6 +442,88 @@ describe('HumanWalletAppsPage', () => {
     expect(testBtn.disabled).toBe(true);
   });
 
+  it('T-HWUI-23: Test Sign button visible when signing_enabled is true', async () => {
+    mockApiCalls();
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+    // app-1 has signing_enabled=true, so Test Sign should be visible
+    const testSignButtons = screen.getAllByText('Test Sign');
+    expect(testSignButtons.length).toBe(1);
+  });
+
+  it('T-HWUI-24: Test Sign button calls POST test-sign-request', async () => {
+    mockApiCalls();
+    mockApiPost.mockResolvedValue({
+      data: {
+        success: true,
+        result: { action: 'approve', signature: '0xabc123', signerAddress: '0x1234567890abcdef', signedAt: '2026-03-24T12:00:00Z' },
+      },
+    });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Test Sign'));
+
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/v1/admin/wallet-apps/{id}/test-sign-request',
+        expect.objectContaining({ params: { path: { id: 'app-1' } } }),
+      );
+    });
+
+    expect(vi.mocked(showToast)).toHaveBeenCalledWith(
+      'success',
+      'Sign request approved',
+    );
+  });
+
+  it('T-HWUI-25: Test Sign timeout shows error message', async () => {
+    mockApiCalls();
+    mockApiPost.mockResolvedValue({
+      data: { success: false, timeout: true, error: 'No response within 30 seconds' },
+    });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Test Sign'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/No response within 30 seconds/)).toBeTruthy();
+    });
+  });
+
+  it('T-HWUI-26: Test Sign reject shows warning toast', async () => {
+    mockApiCalls();
+    mockApiPost.mockResolvedValue({
+      data: {
+        success: true,
+        result: { action: 'reject', signerAddress: '0xabcdef1234567890', signedAt: '2026-03-24T12:00:00Z' },
+      },
+    });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Test Sign'));
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith(
+        'warning',
+        'Sign request rejected',
+      );
+    });
+  });
+
   it('T-HWUI-19: Push Relay URL Edit/Clear buttons shown for configured URL', async () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
