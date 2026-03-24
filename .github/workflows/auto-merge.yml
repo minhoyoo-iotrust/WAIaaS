@@ -2,7 +2,7 @@ name: Auto Merge
 
 on:
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: write
@@ -13,7 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Enable auto-merge
-        run: gh pr merge "$PR_URL" --auto --merge
+        run: |
+          # Use RELEASE_PAT for release-please PRs so the merge commit
+          # triggers downstream workflows (release-please needs push events).
+          # GITHUB_TOKEN-authored events do not trigger other workflows.
+          if [[ "$HEAD_REF" == release-please--* ]]; then
+            GH_TOKEN="${RELEASE_PAT}" gh pr merge "$PR_URL" --auto --merge
+          else
+            gh pr merge "$PR_URL" --auto --merge
+          fi
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           GH_TOKEN: ${{ github.token }}
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
