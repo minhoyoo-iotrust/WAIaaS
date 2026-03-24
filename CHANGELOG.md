@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.5...v2.12.0-rc.6) (2026-03-24)
+
+
+### Bug Fixes
+
+* **ci:** use RELEASE_PAT for release-please auto-merge and add synchronize trigger ([0a7706f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0a7706f5864bbbfdde153fbefeeca9ccdf5cb139))
+
 ## [2.12.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.4...v2.12.0-rc.5) (2026-03-23)
 
 
