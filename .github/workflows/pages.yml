@@ -39,6 +39,8 @@ jobs:
 
       - name: Build site
         run: node site/build.mjs
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
