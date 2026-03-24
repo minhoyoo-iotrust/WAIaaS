@@ -17,6 +17,8 @@ export interface PolicyEvaluation {
   approvalReason?: 'per_tx' | 'cumulative_daily' | 'cumulative_monthly';
   /** Cumulative spending warning: ratio (0-1) of limit used, if >= 0.8. */
   cumulativeWarning?: { type: 'daily' | 'monthly'; ratio: number; spent: number; limit: number };
+  /** Policy-specific approval timeout in seconds (from SPENDING_LIMIT rules.approval_timeout). */
+  approvalTimeoutSeconds?: number;
 }
 
 /**

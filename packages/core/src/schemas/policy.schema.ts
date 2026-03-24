@@ -112,6 +112,8 @@ const SpendingLimitRulesBaseSchema = z.object({
   monthly_limit_usd: z.number().positive().optional(),
   /** 토큰별 한도 (Phase 235): CAIP-19/native 키 → human-readable 한도 */
   token_limits: z.record(z.string(), TokenLimitSchema).optional(),
+  /** APPROVAL 티어 만료 시간 (초, optional — 미설정 시 전역 config 사용) */
+  approval_timeout: z.number().int().positive().optional(),
 });
 
 export const SpendingLimitRulesSchema = SpendingLimitRulesBaseSchema.superRefine((data, ctx) => {

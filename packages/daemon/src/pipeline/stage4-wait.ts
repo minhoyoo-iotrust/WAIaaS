@@ -51,11 +51,11 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
       // Fallback: if no ApprovalWorkflow, treat as INSTANT (backward compat)
       return;
     }
-    // Pass EIP-712 metadata to requestApproval if present (Phase 321)
-    ctx.approvalWorkflow.requestApproval(ctx.txId, ctx.eip712Metadata ? {
-      approvalType: ctx.eip712Metadata.approvalType,
-      typedDataJson: ctx.eip712Metadata.typedDataJson,
-    } : undefined);
+    // Pass EIP-712 metadata + policy-specific timeout to requestApproval (#443, Phase 321)
+    ctx.approvalWorkflow.requestApproval(ctx.txId, {
+      ...(ctx.policyApprovalTimeout !== undefined ? { policyTimeoutSeconds: ctx.policyApprovalTimeout } : {}),
+      ...(ctx.eip712Metadata ? { approvalType: ctx.eip712Metadata.approvalType, typedDataJson: ctx.eip712Metadata.typedDataJson } : {}),
+    });
 
     // Route approval to the correct signing channel
     if (ctx.approvalChannelRouter) {

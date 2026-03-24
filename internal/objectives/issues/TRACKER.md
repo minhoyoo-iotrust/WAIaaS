@@ -28,6 +28,8 @@
 | 440 | MISSING | MEDIUM | connect-info에 ownerState 필드 누락 — 세션 토큰으로 오너 상태 조회 불가 | — | FIXED | 2026-03-24 |
 | 441 | BUG | LOW | UAT 오너 승인 시나리오(advanced-05)가 실제 구현과 불일치 (PENDING_APPROVAL → QUEUED) | — | FIXED | 2026-03-24 |
 | 442 | BUG | LOW | 서명 요청 유효기간이 approval timeout을 초과할 수 있음 (clamp 미적용) | — | FIXED | 2026-03-24 |
+| 443 | BUG | MEDIUM | APPROVAL 생성 시 정책별 approval_timeout이 전달되지 않음 | — | FIXED | 2026-03-24 |
+| 444 | BUG | LOW | ApprovalWorkflow의 configTimeout이 hot-reload 되지 않음 | — | FIXED | 2026-03-24 |
 
 ## Type Legend
 
@@ -40,7 +42,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 442
+- **FIXED:** 444
 - **WONTFIX:** 1
-- **Total:** 443
+- **Total:** 445
 - **Archived:** 428 (001–428)
