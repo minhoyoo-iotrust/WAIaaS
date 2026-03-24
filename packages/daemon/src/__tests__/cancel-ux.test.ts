@@ -197,8 +197,7 @@ describe('buildCancelKeyboard', () => {
 
     expect(keyboard.inline_keyboard).toHaveLength(1);
     expect(keyboard.inline_keyboard[0]).toHaveLength(1);
-    expect(keyboard.inline_keyboard[0]![0]!.text).toContain('Cancel');
-    expect(keyboard.inline_keyboard[0]![0]!.text).toContain('TX-001-l');
+    expect(keyboard.inline_keyboard[0]![0]!.text).toBe('Cancel');
     expect(keyboard.inline_keyboard[0]![0]!.callback_data).toBe('cancel:TX-001-long-uuid');
   });
 

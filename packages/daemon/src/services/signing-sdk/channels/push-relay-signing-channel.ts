@@ -111,6 +111,8 @@ export class PushRelaySigningChannel {
               subscriptionToken: requestTopic,
               category: 'sign_request',
               payload: {
+                title: 'WAIaaS Sign Request',
+                body: request.displayMessage,
                 request: encoded,
                 universalLinkUrl,
               },

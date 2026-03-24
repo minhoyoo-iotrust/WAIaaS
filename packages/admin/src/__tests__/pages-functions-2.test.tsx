@@ -162,7 +162,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
           body: expect.objectContaining({ name: 'new-app', display_name: 'New App' }),
         }),
       );
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('Wallet app registered', 'success');
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Wallet app registered');
     });
   });
 
@@ -210,7 +210,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
           body: { subscription_token: '' },
         }),
       );
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('Subscription token cleared', 'success');
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Subscription token cleared');
     });
   });
 
@@ -281,7 +281,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
     fireEvent.change(notifToggle);
 
     await waitFor(() => {
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('Failed to update notification setting', 'error');
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Failed to update notification setting');
     });
   });
 
@@ -294,7 +294,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Test'));
+    fireEvent.click(screen.getByText('Test Notify'));
 
     await waitFor(() => {
       expect(screen.getByText('Failed to send test notification')).toBeTruthy();

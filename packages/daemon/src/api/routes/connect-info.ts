@@ -32,6 +32,7 @@ import {
   openApiValidationHook,
 } from './openapi-schemas.js';
 import { buildProviderStatus } from './wallets.js';
+import { resolveOwnerState } from '../../workflow/owner-state.js';
 import { getFactorySupportedNetworks } from '../../infrastructure/smart-account/smart-account-service.js';
 
 // ---------------------------------------------------------------------------
@@ -262,6 +263,8 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         factoryAddress: wallets.factoryAddress,
         aaProvider: wallets.aaProvider,
         aaPaymasterUrl: wallets.aaPaymasterUrl,
+        ownerAddress: wallets.ownerAddress,
+        ownerVerified: wallets.ownerVerified,
       })
       .from(sessionWallets)
       .innerJoin(wallets, eq(sessionWallets.walletId, wallets.id))
@@ -537,6 +540,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
           environment: w.environment!,
           address: w.publicKey,
           accountType: (w.accountType as string) ?? 'eoa',
+          ownerState: resolveOwnerState({ ownerAddress: w.ownerAddress, ownerVerified: w.ownerVerified }),
           availableNetworks: networks.map((n) => n),
           ...(identitiesMap[w.id] ? { erc8004: identitiesMap[w.id] } : {}),
           provider: buildProviderStatus({ aaProvider: w.aaProvider, aaPaymasterUrl: w.aaPaymasterUrl }),

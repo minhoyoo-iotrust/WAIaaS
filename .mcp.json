@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "waiaas": {
+      "command": "npx",
+      "args": ["-y", "@waiaas/mcp"],
+      "env": {
+        "WAIAAS_BASE_URL": "${WAIAAS_BASE_URL}",
+        "WAIAAS_SESSION_TOKEN": "${WAIAAS_SESSION_TOKEN}"
+      }
+    }
+  }
+}

@@ -10,7 +10,8 @@
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, SignResponseSchema } from '@waiaas/core';
+import { generateId } from '../../infrastructure/database/id.js';
 import type { WalletAppService, WalletApp, WalletAppWithUsedBy } from '../../services/signing-sdk/wallet-app-service.js';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import {
@@ -19,6 +20,7 @@ import {
   WalletAppUpdateRequestSchema,
   WalletAppResponseSchema,
   WalletAppTestNotificationResponseSchema,
+  WalletAppTestSignRequestResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -135,6 +137,23 @@ const testNotificationRoute = createRoute({
     200: {
       description: 'Test notification result',
       content: { 'application/json': { schema: WalletAppTestNotificationResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_APP_NOT_FOUND']),
+  },
+});
+
+const testSignRequestRoute = createRoute({
+  method: 'post',
+  path: '/admin/wallet-apps/{id}/test-sign-request',
+  tags: ['Admin'],
+  summary: 'Send a test sign request to a wallet app and wait for response',
+  request: {
+    params: z.object({ id: z.string() }),
+  },
+  responses: {
+    200: {
+      description: 'Test sign request result',
+      content: { 'application/json': { schema: WalletAppTestSignRequestResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_APP_NOT_FOUND']),
   },
@@ -281,7 +300,128 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
       }
       return c.json({ success: true }, 200);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
+      let msg = err instanceof Error ? err.message : 'Unknown error';
+      if (err instanceof Error && err.cause instanceof Error) {
+        msg = `${msg}: ${err.cause.message}`;
+      }
+      return c.json({ success: false, error: msg }, 200);
+    }
+  });
+
+  // POST /admin/wallet-apps/:id/test-sign-request
+  router.openapi(testSignRequestRoute, async (c) => {
+    const { id } = c.req.valid('param');
+
+    const app = deps.walletAppService.getById(id);
+    if (!app) {
+      throw new WAIaaSError('WALLET_APP_NOT_FOUND', { message: `Wallet app ${id} not found` });
+    }
+
+    // Gate 1: Signing SDK enabled
+    if (deps.settingsService) {
+      const sdkEnabled = deps.settingsService.get('signing_sdk.enabled');
+      if (sdkEnabled !== 'true') {
+        return c.json({ success: false, error: 'Signing SDK is disabled' }, 200);
+      }
+    }
+
+    // Gate 2: Signing enabled on app
+    if (!app.signingEnabled) {
+      return c.json({ success: false, error: 'Signing is disabled for this app' }, 200);
+    }
+
+    // Gate 3: Device registered
+    if (!app.subscriptionToken) {
+      return c.json({ success: false, error: 'No device registered for this wallet app' }, 200);
+    }
+
+    // Gate 4: Push Relay URL
+    if (!app.pushRelayUrl) {
+      return c.json({ success: false, error: 'No Push Relay URL configured for this app' }, 200);
+    }
+
+    try {
+      const requestId = generateId();
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 30_000); // 30s timeout
+
+      // Build a minimal test SignRequest
+      const testRequest = {
+        version: '1' as const,
+        requestId,
+        walletName: app.name,
+        chain: 'evm' as const,
+        chainId: 'eip155:1',
+        signerAddress: '0x0000000000000000000000000000000000000000',
+        message: `WAIaaS Test Sign Request for ${app.displayName}\nThis is a connectivity test. Approve or reject to verify the signing flow.`,
+        displayMessage: `Test sign request for ${app.displayName}`,
+        metadata: {
+          txId: `test-${requestId.slice(0, 8)}`,
+          type: 'SIGN',
+          from: '0x0000000000000000000000000000000000000000',
+          to: '0x0000000000000000000000000000000000000000',
+          policyTier: 'APPROVAL' as const,
+        },
+        responseChannel: { type: 'push_relay' as const },
+        expiresAt: expiresAt.toISOString(),
+      };
+
+      const encoded = Buffer.from(JSON.stringify(testRequest), 'utf-8').toString('base64url');
+      const pushRelayUrl = app.pushRelayUrl.replace(/\/$/, '');
+
+      // Send sign request to Push Relay
+      const pushRes = await fetch(`${pushRelayUrl}/v1/push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionToken: app.subscriptionToken,
+          category: 'sign_request',
+          payload: {
+            title: 'WAIaaS Test Sign Request',
+            body: `Test sign request for ${app.displayName}`,
+            request: encoded,
+          },
+        }),
+      });
+      if (!pushRes.ok) {
+        return c.json({ success: false, error: `Push Relay returned ${pushRes.status}` }, 200);
+      }
+
+      // Long-poll for response (30s timeout)
+      const pollRes = await fetch(`${pushRelayUrl}/v1/sign-response/${requestId}?timeout=30`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(35_000), // 35s to allow 30s server-side + network
+      });
+
+      if (pollRes.status === 204) {
+        return c.json({ success: false, timeout: true, error: 'No response within 30 seconds' }, 200);
+      }
+
+      if (pollRes.status === 200) {
+        const body = (await pollRes.json()) as { response: string };
+        const json = Buffer.from(body.response, 'base64url').toString('utf-8');
+        const parsed: unknown = JSON.parse(json);
+        const signResponse = SignResponseSchema.parse(parsed);
+        return c.json({
+          success: true,
+          result: {
+            action: signResponse.action,
+            signature: signResponse.signature,
+            signerAddress: signResponse.signerAddress,
+            signedAt: signResponse.signedAt,
+          },
+        }, 200);
+      }
+
+      return c.json({ success: false, error: `Unexpected response status ${pollRes.status}` }, 200);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'TimeoutError') {
+        return c.json({ success: false, timeout: true, error: 'No response within 30 seconds' }, 200);
+      }
+      let msg = err instanceof Error ? err.message : 'Unknown error';
+      if (err instanceof Error && err.cause instanceof Error) {
+        msg = `${msg}: ${err.cause.message}`;
+      }
       return c.json({ success: false, error: msg }, 200);
     }
   });

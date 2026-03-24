@@ -250,6 +250,10 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
   if (evaluation.delaySeconds !== undefined) {
     ctx.delaySeconds = evaluation.delaySeconds;
   }
+  // #443: pass policy-specific approval timeout to stage4
+  if (evaluation.approvalTimeoutSeconds !== undefined) {
+    ctx.policyApprovalTimeout = evaluation.approvalTimeoutSeconds;
+  }
 
   // [Phase 139] Cache amountUsd on context for Stage 5/6 display_amount
   const stageAmountUsd = priceResult?.type === 'success' ? priceResult.usdAmount : undefined;

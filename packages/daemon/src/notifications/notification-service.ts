@@ -8,13 +8,14 @@
 
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { NotificationEventType, SupportedLocale } from '@waiaas/core';
-import { EVENT_CATEGORY_MAP, getExplorerTxUrl, safeJsonParse } from '@waiaas/core';
+import { EVENT_CATEGORY_MAP, getExplorerTxUrl, getMessages, safeJsonParse } from '@waiaas/core';
 import { z } from 'zod';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
 import { getNotificationMessage } from './templates/message-templates.js';
 import * as schema from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
+import { buildCancelKeyboard } from '../infrastructure/telegram/index.js';
 import type { WalletNotificationChannel } from '../services/signing-sdk/channels/wallet-notification-channel.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 
@@ -161,6 +162,9 @@ export class NotificationService {
       ? getExplorerTxUrl(effectiveNetwork, txHash) ?? undefined
       : undefined;
 
+    // Enrich details with locale-aware inline keyboard for actionable events (#446, #447)
+    const enrichedDetails = this.enrichKeyboard(eventType, details);
+
     const payload: NotificationPayload = {
       eventType,
       walletId,
@@ -170,7 +174,7 @@ export class NotificationService {
       title,
       body,
       message: `${title}\n${body}`,
-      details,
+      details: enrichedDetails,
       explorerUrl,
       timestamp: Math.floor(Date.now() / 1000),
     };
@@ -246,6 +250,25 @@ export class NotificationService {
    * Falls back to legacy notifications.notify_categories if notify_events is empty/unset.
    * Empty array = allow all. Returns true if the event should be suppressed.
    */
+  /**
+   * Enrich details with locale-aware inline keyboard for actionable events.
+   * TX_QUEUED → Cancel keyboard (#446, #447)
+   */
+  private enrichKeyboard(
+    eventType: NotificationEventType,
+    details?: Record<string, unknown>,
+  ): Record<string, unknown> | undefined {
+    if (!details) return details;
+    const txId = details.txId as string | undefined;
+    if (!txId) return details;
+
+    if (eventType === 'TX_QUEUED') {
+      const msgs = getMessages(this.config.locale);
+      return { ...details, reply_markup: buildCancelKeyboard(txId, msgs.telegram) };
+    }
+    return details;
+  }
+
   private isEventFiltered(eventType: NotificationEventType): boolean {
     if (!this.settingsService) return false;
     try {

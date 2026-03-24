@@ -116,10 +116,27 @@ export class SignRequestBuilder {
     // 6. Build display message (concise human-readable version)
     const displayMessage = this.buildDisplayMessage(params);
 
-    // 7. Calculate expiresAt from settings
+    // 7. Calculate expiresAt from settings, clamped to approval remaining time (#442)
     const expiryMinStr = this.settings.get('signing_sdk.request_expiry_min');
     const expiryMin = parseInt(expiryMinStr, 10) || 30;
-    const expiresAt = new Date(now.getTime() + expiryMin * 60 * 1000);
+    let effectiveExpiryMs = expiryMin * 60 * 1000;
+
+    if (this.sqlite) {
+      const approvalRow = this.sqlite.prepare(
+        'SELECT expires_at FROM pending_approvals WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL',
+      ).get(params.txId) as { expires_at: number } | undefined;
+      if (approvalRow) {
+        const approvalRemainingMs = approvalRow.expires_at * 1000 - now.getTime();
+        if (approvalRemainingMs > 0) {
+          effectiveExpiryMs = Math.min(effectiveExpiryMs, approvalRemainingMs);
+        } else {
+          // Approval already expired — use minimal expiry
+          effectiveExpiryMs = 1000;
+        }
+      }
+    }
+
+    const expiresAt = new Date(now.getTime() + effectiveExpiryMs);
 
     // 8. Determine response channel
     const preferredChannel = this.settings.get('signing_sdk.preferred_channel');
@@ -196,8 +213,16 @@ export class SignRequestBuilder {
     // 10. Build universal link URL
     const universalLinkUrl = this.walletLinkRegistry.buildSignUrl(walletName, request);
 
-    // 11. Request topic identifier (wallet name, no longer an ntfy topic)
-    const requestTopic = walletName;
+    // 11. Request topic: use subscription_token from wallet_apps if available (#449)
+    let requestTopic = walletName;
+    if (this.sqlite) {
+      const appRow = this.sqlite.prepare(
+        'SELECT subscription_token FROM wallet_apps WHERE name = ? AND subscription_token IS NOT NULL',
+      ).get(walletName) as { subscription_token: string } | undefined;
+      if (appRow?.subscription_token) {
+        requestTopic = appRow.subscription_token;
+      }
+    }
 
     return {
       request,

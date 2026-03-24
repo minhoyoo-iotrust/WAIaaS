@@ -81,13 +81,18 @@ interface PendingApprovalRow {
 
 export class ApprovalWorkflow {
   private readonly sqlite: SQLiteDatabase;
-  private readonly configTimeout: number;
+  private readonly config: { policy_defaults_approval_timeout: number };
   private readonly onApproved?: (txId: string) => void;
 
   constructor(deps: ApprovalWorkflowDeps) {
     this.sqlite = deps.sqlite;
-    this.configTimeout = deps.config.policy_defaults_approval_timeout;
+    this.config = deps.config; // #444: store reference for hot-reload support
     this.onApproved = deps.onApproved;
+  }
+
+  /** Resolve configTimeout from live config reference (hot-reload safe). */
+  private get configTimeout(): number {
+    return this.config.policy_defaults_approval_timeout;
   }
 
   // -------------------------------------------------------------------------

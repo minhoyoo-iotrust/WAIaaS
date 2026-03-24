@@ -32,11 +32,13 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
     ctx.delayQueue.queueDelay(ctx.txId, delaySeconds);
 
     // Fire-and-forget: notify TX_QUEUED with cancel keyboard data
+    // reply_markup is built by NotificationService using locale-aware buildCancelKeyboard (#447)
     void ctx.notificationService?.notify('TX_QUEUED', ctx.walletId, {
       txId: ctx.txId,
       amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
       to: getRequestTo(ctx.request),
       delaySeconds: String(delaySeconds),
+      ...(ctx.amountUsd !== undefined ? { amountUsd: `(~$${ctx.amountUsd.toFixed(2)})` } : {}),
     }, { txId: ctx.txId });
 
     // Halt pipeline -- transaction will be picked up by processExpired worker
@@ -51,11 +53,11 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
       // Fallback: if no ApprovalWorkflow, treat as INSTANT (backward compat)
       return;
     }
-    // Pass EIP-712 metadata to requestApproval if present (Phase 321)
-    ctx.approvalWorkflow.requestApproval(ctx.txId, ctx.eip712Metadata ? {
-      approvalType: ctx.eip712Metadata.approvalType,
-      typedDataJson: ctx.eip712Metadata.typedDataJson,
-    } : undefined);
+    // Pass EIP-712 metadata + policy-specific timeout to requestApproval (#443, Phase 321)
+    ctx.approvalWorkflow.requestApproval(ctx.txId, {
+      ...(ctx.policyApprovalTimeout !== undefined ? { policyTimeoutSeconds: ctx.policyApprovalTimeout } : {}),
+      ...(ctx.eip712Metadata ? { approvalType: ctx.eip712Metadata.approvalType, typedDataJson: ctx.eip712Metadata.typedDataJson } : {}),
+    });
 
     // Route approval to the correct signing channel
     if (ctx.approvalChannelRouter) {

@@ -87,6 +87,7 @@ export function evaluateSpendingLimit(
     tier: finalTier,
     ...(delaySeconds !== undefined ? { delaySeconds } : {}),
     ...(finalTier === 'APPROVAL' ? { approvalReason: 'per_tx' as const } : {}),
+    ...(finalTier === 'APPROVAL' && rules.approval_timeout !== undefined ? { approvalTimeoutSeconds: rules.approval_timeout } : {}),
   };
 }
 

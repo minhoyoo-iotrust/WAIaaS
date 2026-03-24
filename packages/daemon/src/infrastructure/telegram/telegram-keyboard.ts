@@ -74,7 +74,7 @@ export function buildCancelKeyboard(
     inline_keyboard: [
       [
         {
-          text: `${msgs.keyboard_cancel} ${txId.slice(0, 8)}`,
+          text: msgs.keyboard_cancel,
           callback_data: `cancel:${txId}`,
         },
       ],

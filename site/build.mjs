@@ -240,7 +240,9 @@ async function fetchDevtoBlogPosts(template, blogPages, builtPages) {
   const DEVTO_USERNAME = 'walletguy';
   let articles;
   try {
-    const res = await fetch(`https://dev.to/api/articles?username=${DEVTO_USERNAME}&per_page=100&state=all`);
+    const headers = {};
+    if (process.env.DEVTO_API_KEY) headers['api-key'] = process.env.DEVTO_API_KEY;
+    const res = await fetch(`https://dev.to/api/articles?username=${DEVTO_USERNAME}&per_page=100&state=all`, { headers });
     if (!res.ok) {
       console.warn(`  Dev.to API error: ${res.status}`);
       return 0;

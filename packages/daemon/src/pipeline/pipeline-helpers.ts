@@ -128,6 +128,8 @@ export interface PipelineContext {
   resolvedRpcUrl?: string;
   // v31.4: ApiDirectResult from action provider resolve() (HDESIGN-01)
   actionResult?: import('@waiaas/core').ApiDirectResult;
+  // #443: policy-specific approval timeout (from SPENDING_LIMIT rules.approval_timeout)
+  policyApprovalTimeout?: number;
   // v32.0: contract name registry for notification enrichment
   contractNameRegistry?: ContractNameRegistry;
 }

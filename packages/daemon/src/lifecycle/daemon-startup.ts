@@ -325,12 +325,24 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
   // ------------------------------------------------------------------
   if (state._db && state.sqlite && state._config) {
     state.delayQueue = new DelayQueue({ db: state._db, sqlite: state.sqlite });
+    // #444: pass config as live-reading object so hot-reload changes propagate
+    const initialTimeout = state._config.security.policy_defaults_approval_timeout;
+    const approvalConfig = {
+      get policy_defaults_approval_timeout() {
+        try {
+          const val = state._settingsService?.get('security.policy_defaults_approval_timeout');
+          if (val) {
+            const parsed = parseInt(val, 10);
+            if (!isNaN(parsed) && parsed > 0) return parsed;
+          }
+        } catch { /* settings not available yet */ }
+        return initialTimeout;
+      },
+    };
     state.approvalWorkflow = new ApprovalWorkflow({
       db: state._db,
       sqlite: state.sqlite,
-      config: {
-        policy_defaults_approval_timeout: state._config.security.policy_defaults_approval_timeout,
-      },
+      config: approvalConfig,
       onApproved: (txId) => state.handleApprovalApproved(txId),
     });
     state.logger.info('Step 4b: Workflow instances created (DelayQueue + ApprovalWorkflow)');
