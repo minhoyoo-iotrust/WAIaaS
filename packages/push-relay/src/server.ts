@@ -34,7 +34,7 @@ export function createServer(opts: ServerOpts): Hono {
   // Health check is public
   const deviceRoutes = createDeviceRoutes({ registry, provider, version });
 
-  // Sign response routes (POST /v1/sign-response is public, POST /v1/push requires API key)
+  // Sign response routes (POST /v1/sign-response requires API key, POST /v1/push is credential-based)
   const signResponseRoutes = createSignResponseRoutes({ registry, provider, apiKey });
 
   // Apply API key auth to device registration/deletion endpoints only

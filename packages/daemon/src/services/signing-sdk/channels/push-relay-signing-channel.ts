@@ -61,7 +61,6 @@ export interface SendRequestResult {
 export class PushRelaySigningChannel {
   private readonly signRequestBuilder: SignRequestBuilder;
   private readonly signResponseHandler: SignResponseHandler;
-  private readonly settings: SettingsService;
 
   /** Active long-polling subscriptions: requestId -> AbortController */
   private readonly activeSubscriptions = new Map<string, AbortController>();
@@ -69,7 +68,6 @@ export class PushRelaySigningChannel {
   constructor(opts: PushRelaySigningChannelOpts) {
     this.signRequestBuilder = opts.signRequestBuilder;
     this.signResponseHandler = opts.signResponseHandler;
-    this.settings = opts.settingsService;
   }
 
   // -------------------------------------------------------------------------
@@ -99,7 +97,6 @@ export class PushRelaySigningChannel {
     // 4. POST to Push Relay /v1/push (non-throwing per ERR-01)
     if (pushRelayUrl) {
       try {
-        const apiKey = this.settings.get('signing_sdk.push_relay_api_key');
         const encoded = Buffer.from(JSON.stringify(request), 'utf-8').toString('base64url');
 
         const controller = new AbortController();
@@ -109,7 +106,6 @@ export class PushRelaySigningChannel {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-Api-Key': apiKey,
             },
             body: JSON.stringify({
               subscriptionToken: requestTopic,

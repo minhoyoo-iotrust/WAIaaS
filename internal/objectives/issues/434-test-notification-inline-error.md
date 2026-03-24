@@ -2,7 +2,7 @@
 
 - **유형:** ENHANCEMENT
 - **심각도:** LOW
-- **상태:** OPEN
+- **상태:** FIXED
 - **등록일:** 2026-03-24
 - **파일:** `packages/admin/src/pages/human-wallet-apps.tsx`
 

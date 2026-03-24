@@ -100,7 +100,7 @@ function createMockSignResponseHandler() {
 function createMockSettingsService(overrides: Record<string, string> = {}) {
   const defaults: Record<string, string> = {
     'signing_sdk.enabled': 'true',
-    'signing_sdk.push_relay_api_key': 'test-api-key',
+    // push_relay_api_key no longer needed for POST /v1/push
     'signing_sdk.request_expiry_min': '30',
   };
   const store = { ...defaults, ...overrides };
@@ -168,7 +168,7 @@ describe('PushRelaySigningChannel', () => {
     const [postUrl, postOpts] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(postUrl).toBe(`${pushRelayUrl}/v1/push`);
     expect(postOpts.method).toBe('POST');
-    expect((postOpts.headers as Record<string, string>)['X-Api-Key']).toBe('test-api-key');
+    expect((postOpts.headers as Record<string, string>)['X-Api-Key']).toBeUndefined();
     expect((postOpts.headers as Record<string, string>)['Content-Type']).toBe('application/json');
 
     const postBody = JSON.parse(postOpts.body as string);

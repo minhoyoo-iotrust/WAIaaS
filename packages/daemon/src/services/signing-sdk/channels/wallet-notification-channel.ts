@@ -84,15 +84,12 @@ export class WalletNotificationChannel {
       const apps = this.resolveAlertApps();
       if (apps.length === 0) return; // NOTI-03: skip when no alert-enabled apps
 
-      // Get API key for Push Relay
-      const apiKey = this.settings.get('signing_sdk.push_relay_api_key');
-
       // Send to all alert-enabled apps with push_relay_url in parallel
       await Promise.allSettled(
         apps
           .filter((app) => app.pushRelayUrl) // Skip apps without push_relay_url
           .map((app) =>
-            this.publishNotification(app.pushRelayUrl!, apiKey, app.name, {
+            this.publishNotification(app.pushRelayUrl!, app.name, {
               version: '1',
               eventType,
               walletId,
@@ -124,7 +121,6 @@ export class WalletNotificationChannel {
 
   private async publishNotification(
     pushRelayUrl: string,
-    apiKey: string,
     subscriptionToken: string,
     message: NotificationMessage,
   ): Promise<void> {
@@ -135,7 +131,6 @@ export class WalletNotificationChannel {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Api-Key': apiKey,
         },
         body: JSON.stringify({
           subscriptionToken,

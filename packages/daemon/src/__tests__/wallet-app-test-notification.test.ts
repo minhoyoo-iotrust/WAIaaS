@@ -42,7 +42,7 @@ function mockSettingsService(values: Record<string, string> = {}): SettingsServi
       if (key in values) return values[key];
       if (key === 'signing_sdk.enabled') return 'true';
       if (key === 'signing_sdk.notifications_enabled') return 'true';
-      if (key === 'signing_sdk.push_relay_api_key') return 'test-api-key';
+      // push_relay_api_key no longer needed for POST /v1/push
       return '';
     }),
     set: vi.fn(),
@@ -172,7 +172,6 @@ describe('POST /admin/wallet-apps/:id/test-notification', () => {
         method: 'POST',
         headers: expect.objectContaining({
           'Content-Type': 'application/json',
-          'X-Api-Key': 'test-api-key',
         }),
       }),
     );

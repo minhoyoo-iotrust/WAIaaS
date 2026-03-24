@@ -2,7 +2,7 @@
 
 - **유형:** ENHANCEMENT
 - **심각도:** MEDIUM
-- **상태:** OPEN
+- **상태:** FIXED
 - **등록일:** 2026-03-24
 - **파일:** `packages/push-relay/src/relay/sign-response-routes.ts`, `packages/push-relay/src/config.ts`, `packages/push-relay/src/server.ts`
 

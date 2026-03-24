@@ -35,7 +35,7 @@ function createMockSettings(overrides: Record<string, string> = {}) {
   const map = new Map<string, string>([
     ['signing_sdk.enabled', 'true'],
     ['signing_sdk.notifications_enabled', 'true'],
-    ['signing_sdk.push_relay_api_key', 'test-api-key'],
+    // push_relay_api_key no longer needed for POST /v1/push
     ['notifications.notify_categories', '[]'],
   ]);
   for (const [k, v] of Object.entries(overrides)) {
@@ -112,7 +112,7 @@ describe('WalletNotificationChannel', () => {
       expect(url).toBe('https://relay.example.com/v1/push');
       expect(opts.method).toBe('POST');
       expect(opts.headers['Content-Type']).toBe('application/json');
-      expect(opts.headers['X-Api-Key']).toBe('test-api-key');
+      expect(opts.headers['X-Api-Key']).toBeUndefined();
 
       const body = JSON.parse(opts.body);
       expect(body.subscriptionToken).toBe('dcent');

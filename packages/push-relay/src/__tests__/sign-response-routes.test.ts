@@ -48,7 +48,7 @@ describe('POST /v1/sign-response', () => {
   it('stores a valid approve response in DB', async () => {
     const res = await app.request('/v1/sign-response', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify(validBody),
     });
 
@@ -69,7 +69,7 @@ describe('POST /v1/sign-response', () => {
   it('stores a reject response without signature', async () => {
     const res = await app.request('/v1/sign-response', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({
         requestId: '550e8400-e29b-41d4-a716-446655440000',
         action: 'reject',
@@ -84,10 +84,20 @@ describe('POST /v1/sign-response', () => {
     expect(parsed.signature).toBeUndefined();
   });
 
-  it('does not require API key (public endpoint)', async () => {
+  it('requires API key', async () => {
     const res = await app.request('/v1/sign-response', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validBody),
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('accepts valid API key', async () => {
+    const res = await app.request('/v1/sign-response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify(validBody),
     });
 
@@ -97,7 +107,7 @@ describe('POST /v1/sign-response', () => {
   it('returns 400 for missing requestId', async () => {
     const res = await app.request('/v1/sign-response', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ action: 'approve', signerAddress: 'x' }),
     });
 
@@ -107,7 +117,7 @@ describe('POST /v1/sign-response', () => {
   it('returns 400 for invalid action', async () => {
     const res = await app.request('/v1/sign-response', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ ...validBody, action: 'invalid' }),
     });
 
@@ -117,7 +127,7 @@ describe('POST /v1/sign-response', () => {
   it('returns 400 for non-UUID requestId', async () => {
     const res = await app.request('/v1/sign-response', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ ...validBody, requestId: 'not-a-uuid' }),
     });
 
@@ -175,14 +185,14 @@ describe('GET /v1/sign-response/:requestId (polling)', () => {
 });
 
 describe('POST /v1/push', () => {
-  it('sends push to registered device', async () => {
+  it('sends push to registered device (no API key needed)', async () => {
     registry.register('dcent', 'push-token-123', 'ios');
     const device = registry.getByPushToken('push-token-123')!;
     const subToken = device.subscriptionToken!;
 
     const res = await app.request('/v1/push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subscriptionToken: subToken,
         category: 'sign_request',
@@ -200,7 +210,7 @@ describe('POST /v1/push', () => {
   it('returns 404 for unknown subscription token', async () => {
     const res = await app.request('/v1/push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subscriptionToken: 'nonexistent',
         category: 'notification',
@@ -214,7 +224,7 @@ describe('POST /v1/push', () => {
   it('returns 400 for missing fields', async () => {
     const res = await app.request('/v1/push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscriptionToken: 'abc' }),
     });
 
@@ -235,7 +245,7 @@ describe('POST /v1/push', () => {
 
     const res = await app.request('/v1/push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subscriptionToken: subToken,
         category: 'sign_request',
@@ -255,7 +265,7 @@ describe('POST /v1/push', () => {
 
     const res = await app.request('/v1/push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subscriptionToken: subToken,
         category: 'notification',
@@ -269,17 +279,18 @@ describe('POST /v1/push', () => {
     expect(sendCall[1].priority).toBe('normal');
   });
 
-  it('returns 401 without API key', async () => {
+  it('does not require API key (credential is subscriptionToken)', async () => {
+    // Should get 404 (token not found), not 401 (unauthorized)
     const res = await app.request('/v1/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        subscriptionToken: 'abc',
+        subscriptionToken: 'nonexistent-token',
         category: 'notification',
         payload: { title: 'Test' },
       }),
     });
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(404);
   });
 });
