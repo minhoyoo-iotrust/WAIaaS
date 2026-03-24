@@ -350,7 +350,7 @@ describe('HumanWalletAppsPage', () => {
     await waitFor(() => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
-    const testButtons = screen.getAllByText('Test');
+    const testButtons = screen.getAllByText('Test Notify');
     expect(testButtons.length).toBe(1);
   });
 
@@ -363,7 +363,7 @@ describe('HumanWalletAppsPage', () => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Test'));
+    fireEvent.click(screen.getByText('Test Notify'));
 
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith(
@@ -373,8 +373,8 @@ describe('HumanWalletAppsPage', () => {
     });
 
     expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-      'Test notification sent successfully',
       'success',
+      'Test notification sent successfully',
     );
   });
 
@@ -387,7 +387,7 @@ describe('HumanWalletAppsPage', () => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('Test'));
+    fireEvent.click(screen.getByText('Test Notify'));
 
     await waitFor(() => {
       expect(screen.getByText('Signing SDK is disabled')).toBeTruthy();
@@ -414,7 +414,7 @@ describe('HumanWalletAppsPage', () => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
 
-    const testBtn = screen.getByText('Test').closest('button') as HTMLButtonElement;
+    const testBtn = screen.getByText('Test Notify').closest('button') as HTMLButtonElement;
     expect(testBtn.disabled).toBe(true);
   });
 
@@ -438,7 +438,7 @@ describe('HumanWalletAppsPage', () => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
 
-    const testBtn = screen.getByText('Test').closest('button') as HTMLButtonElement;
+    const testBtn = screen.getByText('Test Notify').closest('button') as HTMLButtonElement;
     expect(testBtn.disabled).toBe(true);
   });
 
