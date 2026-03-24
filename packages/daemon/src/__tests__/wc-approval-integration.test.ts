@@ -178,7 +178,7 @@ describe('stage4Wait WC integration', () => {
     }
 
     // requestApproval should still be called
-    expect(mockApproval.requestApproval).toHaveBeenCalledWith('test-tx-001', undefined);
+    expect(mockApproval.requestApproval).toHaveBeenCalledWith('test-tx-001', {});
   });
 
   it('should not call requestSignature for INSTANT tier', async () => {
@@ -359,7 +359,7 @@ describe('Telegram fallback integration (Phase 149)', () => {
     await new Promise(r => setTimeout(r, 50));
 
     // requestApproval still called
-    expect(mockApproval.requestApproval).toHaveBeenCalledWith('test-tx-001', undefined);
+    expect(mockApproval.requestApproval).toHaveBeenCalledWith('test-tx-001', {});
     // No eventBus events (bridge was undefined)
     expect(mockEventBus.emit).not.toHaveBeenCalled();
   });
