@@ -22,6 +22,9 @@
 | 434 | ENHANCEMENT | LOW | Admin UI: 테스트 알림 실패 시 에러 메시지가 눈에 띄지 않음 | — | FIXED | 2026-03-24 |
 | 435 | ENHANCEMENT | LOW | Admin UI: Subscription Token 미설정 시 Test 버튼 사전 안내 부재 | — | FIXED | 2026-03-24 |
 | 436 | ENHANCEMENT | MEDIUM | Push Relay API Key 인증 정책 재설계 | — | FIXED | 2026-03-24 |
+| 437 | BUG | MEDIUM | IncomingTxMonitor 시작 시 RPC Rate Limit 재발 (optimism-mainnet) | — | OPEN | 2026-03-24 |
+| 438 | BUG | MEDIUM | 테스트 알림 "fetch failed" 에러에 실제 원인(err.cause)이 표시되지 않음 | — | OPEN | 2026-03-24 |
+| 439 | BUG | LOW | Admin UI: 토스트 메시지 배경이 투명하여 뒤 요소가 비침 | — | OPEN | 2026-03-24 |
 
 ## Type Legend
 
@@ -33,8 +36,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 3
 - **FIXED:** 436
 - **WONTFIX:** 1
-- **Total:** 437
+- **Total:** 440
 - **Archived:** 428 (001–428)
