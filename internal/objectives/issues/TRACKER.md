@@ -40,6 +40,7 @@
 | 452 | BUG | LOW | Human Wallet Apps 페이지에서 showToast 인자 순서가 반대 (18곳) | — | FIXED | 2026-03-24 |
 | 453 | BUG | MEDIUM | Dev.to 공개 API CDN 캐시로 신규 블로그 글이 사이트에 반영되지 않음 | — | FIXED | 2026-03-25 |
 | 454 | BUG | HIGH | Solana WebSocket 429 로그 폭주 — Adaptive Polling Fallback | — | FIXED | 2026-03-25 |
+| 455 | ENHANCEMENT | HIGH | PositionTracker 주기적 동기화로 Solana RPC 429 폭주 — Startup-Once + Action-Triggered Sync | — | FIXED | 2026-03-25 |
 
 ## Type Legend
 
@@ -53,7 +54,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 1
-- **FIXED:** 453
+- **FIXED:** 454
 - **WONTFIX:** 1
-- **Total:** 455
+- **Total:** 456
 - **Archived:** 428 (001–428)

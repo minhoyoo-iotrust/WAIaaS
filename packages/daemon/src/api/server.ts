@@ -174,6 +174,8 @@ export interface CreateAppDeps {
   signerRegistry?: import('../signing/registry.js').ISignerCapabilityRegistry;
   /** v32.0: ContractNameRegistry for notification enrichment */
   contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
+  /** #455: PositionTracker for on-demand sync after action execution */
+  positionTracker?: import('../services/defi/position-tracker.js').PositionTracker;
 }
 
 /**
@@ -745,6 +747,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         eventBus: deps.eventBus,
         reputationCache: deps.reputationCache,
         contractNameRegistry: deps.contractNameRegistry,
+        positionTracker: deps.positionTracker,
       }),
     );
 

@@ -94,6 +94,8 @@ export interface ActionRouteDeps {
   signerRegistry?: ISignerCapabilityRegistry;
   // v32.0: contract name registry for notification enrichment
   contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
+  // #455: PositionTracker for on-demand sync after action execution
+  positionTracker?: import('../../services/defi/position-tracker.js').PositionTracker;
 }
 
 // ---------------------------------------------------------------------------
@@ -719,6 +721,21 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
             const targetAgentId = String((body.params ?? {}).agentId ?? '');
             if (targetAgentId) {
               deps.reputationCache.invalidate(targetAgentId);
+            }
+          }
+
+          // #455: On-demand position sync after successful action execution.
+          // Fire-and-forget: sync the wallet's positions for the relevant category.
+          if (deps.positionTracker) {
+            const categoryMap: Record<string, string> = {
+              kamino: 'LENDING', aave_v3: 'LENDING',
+              drift_perp: 'PERP', hyperliquid_perp: 'PERP', hyperliquid_spot: 'PERP',
+              lido_staking: 'STAKING', jito_staking: 'STAKING',
+              pendle_yield: 'YIELD',
+            };
+            const cat = categoryMap[provider];
+            if (cat) {
+              void deps.positionTracker.syncWallet(walletId, cat as import('@waiaas/core').PositionCategory);
             }
           }
 

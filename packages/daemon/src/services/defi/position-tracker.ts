@@ -1,20 +1,20 @@
 /**
- * PositionTracker: Periodic DeFi position synchronization service.
+ * PositionTracker: DeFi position synchronization service.
  *
- * Maintains per-category timers to sync positions from registered
- * IPositionProvider implementations into the defi_positions table
- * via PositionWriteQueue.
+ * Startup-once + action-triggered sync model (#455):
+ *   - On daemon start: one-time sync for all categories
+ *   - After that: on-demand sync triggered by action execution (syncWallet)
+ *   - No periodic timers — eliminates SDK-driven RPC 429 flood
  *
  * Features:
- *   - Per-category intervals (LENDING=5min, PERP=1min, STAKING=15min, YIELD=1h)
- *   - Overlap prevention per category (running flag)
+ *   - Startup sync for all categories (one-time)
+ *   - syncWallet() for per-wallet on-demand refresh after action execution
+ *   - syncCategory() retained for manual/admin-triggered refresh
  *   - Per-wallet error isolation (one wallet failure does not block others)
- *   - On-demand syncCategory() for urgent refresh (e.g., HealthFactorMonitor)
  *   - Dynamic provider registration/unregistration
  *
  * Design source: m29-00 design doc section 6.2.
- * Pattern: BalanceMonitorService + IncomingTxQueue hybrid.
- * @see LEND-03, LEND-04
+ * @see LEND-03, LEND-04, #455
  */
 
 import type { Database } from 'better-sqlite3';
@@ -34,14 +34,6 @@ export interface PositionTrackerConfig {
   enabled: boolean;
 }
 
-/** Default polling intervals per category (milliseconds). */
-const DEFAULT_INTERVALS: Record<PositionCategory, number> = {
-  LENDING: 300_000, // 5 min
-  PERP: 60_000, // 1 min
-  STAKING: 900_000, // 15 min
-  YIELD: 3_600_000, // 1 hour
-};
-
 // ---------------------------------------------------------------------------
 // PositionTracker
 // ---------------------------------------------------------------------------
@@ -53,7 +45,6 @@ export class PositionTracker {
   private readonly rpcPool?: RpcPool;
   private readonly writeQueue: PositionWriteQueue;
   private readonly providers = new Map<string, IPositionProvider>();
-  private readonly timers = new Map<PositionCategory, NodeJS.Timeout>();
   private readonly running = new Map<PositionCategory, boolean>();
 
   constructor(opts: {
@@ -73,7 +64,7 @@ export class PositionTracker {
   // Provider management
   // -----------------------------------------------------------------------
 
-  /** Register a position provider for periodic sync. */
+  /** Register a position provider. */
   registerProvider(provider: IPositionProvider): void {
     this.providers.set(provider.getProviderName(), provider);
   }
@@ -97,37 +88,22 @@ export class PositionTracker {
   // Lifecycle
   // -----------------------------------------------------------------------
 
-  /** Start per-category polling timers. */
+  /**
+   * Start position tracker: one-time sync for all categories (#455).
+   * No periodic timers — subsequent syncs are triggered by action execution.
+   */
   start(): void {
     for (const category of POSITION_CATEGORIES) {
       this.running.set(category, false);
-      let intervalMs = DEFAULT_INTERVALS[category];
-      // Runtime override from Admin Settings (Phase 278)
-      if (category === 'LENDING' && this.settingsService) {
-        try {
-          const val = this.settingsService.get('actions.aave_v3_position_sync_interval_sec');
-          const parsed = Number(val);
-          if (!Number.isNaN(parsed) && parsed > 0) {
-            intervalMs = parsed * 1000; // seconds -> milliseconds
-          }
-        } catch { /* fallback to default */ }
-      }
-      const timer = setInterval(() => void this.syncCategory(category), intervalMs);
-      timer.unref();
-      this.timers.set(category, timer);
     }
-    // Immediate first sync for all categories
+    // One-time startup sync for all categories
     for (const category of POSITION_CATEGORIES) {
       void this.syncCategory(category);
     }
   }
 
-  /** Stop all polling timers. */
+  /** Stop (no-op since no timers, retained for interface compatibility). */
   stop(): void {
-    for (const timer of this.timers.values()) {
-      clearInterval(timer);
-    }
-    this.timers.clear();
     this.running.clear();
   }
 
@@ -138,8 +114,7 @@ export class PositionTracker {
   /**
    * Synchronize all positions for the given category.
    *
-   * Callable on-demand (e.g., from HealthFactorMonitor for urgent LENDING refresh)
-   * or by the periodic timer.
+   * Callable on-demand (e.g., from admin refresh or startup).
    *
    * Overlap prevention: if a sync for this category is already running, the call
    * returns immediately (no queuing).
@@ -161,31 +136,7 @@ export class PositionTracker {
       for (const provider of categoryProviders) {
         for (const wallet of wallets) {
           try {
-            // Build PositionQueryContext from wallet metadata
-            const chain = wallet.chain as ChainType;
-            const environment = wallet.environment as EnvironmentType;
-            const networks = getNetworksForEnvironment(chain, environment);
-            const rpcUrls: Record<string, string> = {};
-            for (const net of networks) {
-              let url: string | undefined;
-              if (this.rpcPool && this.settingsService) {
-                try {
-                  url = resolveRpcUrlFromPool(this.rpcPool, this.settingsService.get.bind(this.settingsService), chain, net);
-                } catch { /* fall through to legacy */ }
-              }
-              if (!url) {
-                url = resolveRpcUrl(this.rpcConfig, chain, net);
-              }
-              if (url) rpcUrls[net] = url;
-            }
-            const ctx: PositionQueryContext = {
-              walletId: wallet.id,
-              walletAddress: wallet.public_key,
-              chain,
-              networks,
-              environment,
-              rpcUrls,
-            };
+            const ctx = this.buildQueryContext(wallet);
             const positions = await provider.getPositions(ctx);
             for (const pos of positions) {
               pos.environment = wallet.environment;
@@ -208,9 +159,77 @@ export class PositionTracker {
     }
   }
 
+  /**
+   * Sync positions for a single wallet across all providers in the given category (#455).
+   *
+   * Called after action execution (e.g., Kamino supply/borrow, Drift open/close)
+   * to refresh that wallet's positions without scanning all wallets.
+   */
+  async syncWallet(walletId: string, category: PositionCategory): Promise<void> {
+    const categoryProviders = this.getProvidersForCategory(category);
+    if (categoryProviders.length === 0) return;
+
+    const wallet = this.sqlite
+      .prepare("SELECT id, public_key, chain, environment FROM wallets WHERE id = ?")
+      .get(walletId) as { id: string; public_key: string; chain: string; environment: string } | undefined;
+
+    if (!wallet) return;
+
+    for (const provider of categoryProviders) {
+      try {
+        const ctx = this.buildQueryContext(wallet);
+        const positions = await provider.getPositions(ctx);
+        for (const pos of positions) {
+          pos.environment = wallet.environment;
+          this.writeQueue.enqueue(pos);
+        }
+      } catch (err) {
+        console.warn(
+          `PositionTracker: syncWallet error for wallet ${walletId} via ${provider.getProviderName()}:`,
+          err,
+        );
+      }
+    }
+
+    this.writeQueue.flush(this.sqlite);
+  }
+
   // -----------------------------------------------------------------------
   // Internal
   // -----------------------------------------------------------------------
+
+  /** Build PositionQueryContext from wallet metadata. */
+  private buildQueryContext(wallet: {
+    id: string;
+    public_key: string;
+    chain: string;
+    environment: string;
+  }): PositionQueryContext {
+    const chain = wallet.chain as ChainType;
+    const environment = wallet.environment as EnvironmentType;
+    const networks = getNetworksForEnvironment(chain, environment);
+    const rpcUrls: Record<string, string> = {};
+    for (const net of networks) {
+      let url: string | undefined;
+      if (this.rpcPool && this.settingsService) {
+        try {
+          url = resolveRpcUrlFromPool(this.rpcPool, this.settingsService.get.bind(this.settingsService), chain, net);
+        } catch { /* fall through to legacy */ }
+      }
+      if (!url) {
+        url = resolveRpcUrl(this.rpcConfig, chain, net);
+      }
+      if (url) rpcUrls[net] = url;
+    }
+    return {
+      walletId: wallet.id,
+      walletAddress: wallet.public_key,
+      chain,
+      networks,
+      environment,
+      rpcUrls,
+    };
+  }
 
   /** Filter registered providers that support the given category. */
   private getProvidersForCategory(category: PositionCategory): IPositionProvider[] {

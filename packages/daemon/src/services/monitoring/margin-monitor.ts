@@ -76,7 +76,6 @@ export class MarginMonitor implements IDeFiMonitor {
   private readonly sqlite: Database;
   private readonly eventBus: EventBus | null;
   private readonly notificationService: NotificationService | null;
-  private readonly positionTracker: PositionTracker | null;
   private config: MarginMonitorConfig;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private currentSeverity: MonitorSeverity = 'SAFE';
@@ -92,7 +91,6 @@ export class MarginMonitor implements IDeFiMonitor {
     this.sqlite = opts.sqlite;
     this.eventBus = opts.eventBus ?? null;
     this.notificationService = opts.notificationService ?? null;
-    this.positionTracker = opts.positionTracker ?? null;
     this.config = { ...DEFAULT_CONFIG, ...opts.config };
   }
 
@@ -227,10 +225,8 @@ export class MarginMonitor implements IDeFiMonitor {
     // Update current severity
     this.currentSeverity = worstSeverity;
 
-    // On-demand sync for DANGER/CRITICAL
-    if (worstSeverity === 'DANGER' || worstSeverity === 'CRITICAL') {
-      void this.positionTracker?.syncCategory('PERP');
-    }
+    // On-demand sync removed (#455): periodic position sync replaced by
+    // action-triggered sync to avoid RPC 429 flood from SDK calls.
   }
 
   // -----------------------------------------------------------------------

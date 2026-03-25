@@ -72,7 +72,6 @@ export class HealthFactorMonitor implements IDeFiMonitor {
 
   private readonly sqlite: Database;
   private readonly notificationService: NotificationService | null;
-  private readonly positionTracker: PositionTracker | null;
   private config: HealthFactorMonitorConfig;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private currentSeverity: MonitorSeverity = 'SAFE';
@@ -86,7 +85,6 @@ export class HealthFactorMonitor implements IDeFiMonitor {
   }) {
     this.sqlite = opts.sqlite;
     this.notificationService = opts.notificationService ?? null;
-    this.positionTracker = opts.positionTracker ?? null;
     this.config = { ...DEFAULT_CONFIG, ...opts.config };
   }
 
@@ -247,10 +245,8 @@ export class HealthFactorMonitor implements IDeFiMonitor {
     // Update current severity
     this.currentSeverity = worstSeverity;
 
-    // On-demand sync for DANGER/CRITICAL
-    if (worstSeverity === 'DANGER' || worstSeverity === 'CRITICAL') {
-      void this.positionTracker?.syncCategory('LENDING');
-    }
+    // On-demand sync removed (#455): periodic position sync replaced by
+    // action-triggered sync to avoid RPC 429 flood from SDK calls.
   }
 
   // -----------------------------------------------------------------------
