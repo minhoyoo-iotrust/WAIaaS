@@ -242,12 +242,18 @@ async function fetchDevtoBlogPosts(template, blogPages, builtPages) {
   if (process.env.DEVTO_API_KEY) headers['api-key'] = process.env.DEVTO_API_KEY;
   let articles;
   try {
-    const res = await fetch(`https://dev.to/api/articles?username=${DEVTO_USERNAME}&per_page=100&state=all`, { headers });
+    // Use authenticated /articles/me endpoint when API key is available
+    // to bypass Fastly CDN cache that delays new post visibility (#453)
+    const listUrl = process.env.DEVTO_API_KEY
+      ? 'https://dev.to/api/articles/me?per_page=100&state=published'
+      : `https://dev.to/api/articles?username=${DEVTO_USERNAME}&per_page=100`;
+    const res = await fetch(listUrl, { headers });
     if (!res.ok) {
       console.warn(`  Dev.to API error: ${res.status}`);
       return 0;
     }
     articles = await res.json();
+    console.log(`  Dev.to API returned ${articles.length} articles`);
   } catch (err) {
     console.warn(`  Dev.to fetch failed: ${err.message}`);
     return 0;

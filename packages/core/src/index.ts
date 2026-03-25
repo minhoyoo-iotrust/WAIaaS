@@ -451,6 +451,7 @@ export { ConsoleLogger } from './interfaces/index.js';
 export {
   calculateDelay,
   DEFAULT_RECONNECT_CONFIG,
+  SOLANA_RECONNECT_CONFIG,
   reconnectLoop,
 } from './interfaces/index.js';
 

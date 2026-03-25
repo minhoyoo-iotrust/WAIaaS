@@ -76,6 +76,7 @@ export {
   type ReconnectConfig,
   calculateDelay,
   DEFAULT_RECONNECT_CONFIG,
+  SOLANA_RECONNECT_CONFIG,
   reconnectLoop,
 } from './connection-state.js';
 

@@ -586,15 +586,16 @@ poll_interval = 60
 
   // CFG-02 verification: incoming keys registered in setting-keys.ts
   // Superseded by network-setting-keys-completeness.test.ts (#282) for dynamic SSoT verification
-  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 22 incoming.* keys', () => {
+  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 23 incoming.* keys', () => {
     const incomingDefs = SETTING_DEFINITIONS.filter((d) => d.key.startsWith('incoming.'));
-    expect(incomingDefs).toHaveLength(22);
+    expect(incomingDefs).toHaveLength(23);
     const keys = incomingDefs.map((d) => d.key).sort();
     expect(keys).toEqual([
       'incoming.cooldown_minutes',
       'incoming.enabled',
       'incoming.poll_interval',
       'incoming.retention_days',
+      'incoming.solana_mode',
       'incoming.suspicious_amount_multiplier',
       'incoming.suspicious_dust_usd',
       'incoming.wss_url',

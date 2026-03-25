@@ -103,6 +103,7 @@ const EXCLUDED_KEYS: Record<string, string> = {
   'rpc_pool.hyperevm-testnet': 'API-only: RPC pool URLs managed via Admin Settings API',
 
   // --- Incoming TX WSS: per-network overrides, API-only ---
+  'incoming.solana_mode': 'API-only: Solana monitor mode (websocket/polling/adaptive) via Admin Settings API (#454)',
   'incoming.wss_url': 'API-only: global WebSocket URL override via Admin Settings API',
   'incoming.wss_url.solana-mainnet': 'API-only: per-network WSS URL override',
   'incoming.wss_url.solana-devnet': 'API-only: per-network WSS URL override',
