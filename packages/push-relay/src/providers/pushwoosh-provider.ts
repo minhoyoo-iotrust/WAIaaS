@@ -1,6 +1,7 @@
 import type { PushPayload, IPushProvider, PushResult } from './push-provider.js';
 import { withRetry, isRetryableHttpError } from './push-provider.js';
 import type { PushwooshConfig } from '../config.js';
+import { debug } from '../logger.js';
 
 export class PushwooshProvider implements IPushProvider {
   readonly name = 'pushwoosh';
@@ -18,6 +19,8 @@ export class PushwooshProvider implements IPushProvider {
     if (tokens.length === 0) {
       return { sent: 0, failed: 0, invalidTokens: [] };
     }
+
+    debug(`Pushwoosh: sending to ${tokens.length} device(s), title="${payload.title}", category=${payload.category}`);
 
     const body = {
       request: {
@@ -79,6 +82,7 @@ export class PushwooshProvider implements IPushProvider {
 
     // Pushwoosh doesn't return per-token results in the simple API
     void result;
+    debug(`Pushwoosh: sent=${tokens.length}, status=ok`);
     return { sent: tokens.length, failed: 0, invalidTokens: [] };
   }
 

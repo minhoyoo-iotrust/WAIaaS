@@ -97,8 +97,6 @@ export class PushRelaySigningChannel {
     // 4. POST to Push Relay /v1/push (non-throwing per ERR-01)
     if (pushRelayUrl) {
       try {
-        const encoded = Buffer.from(JSON.stringify(request), 'utf-8').toString('base64url');
-
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), SIGNING_CHANNEL_FETCH_TIMEOUT_MS);
         try {
@@ -113,7 +111,16 @@ export class PushRelaySigningChannel {
               payload: {
                 title: 'WAIaaS Sign Request',
                 body: request.displayMessage,
-                request: encoded,
+                version: request.version,
+                requestId: request.requestId,
+                caip2ChainId: request.caip2ChainId,
+                networkName: request.networkName,
+                signerAddress: request.signerAddress,
+                message: request.message,
+                displayMessage: request.displayMessage,
+                expiresAt: request.expiresAt,
+                metadata: JSON.stringify(request.metadata),
+                responseChannel: JSON.stringify(request.responseChannel),
                 universalLinkUrl,
               },
             }),

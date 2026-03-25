@@ -45,7 +45,8 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
     }
 
     const { requestId, action, signature, signerAddress } = parsed.data;
-    debug(`POST /v1/sign-response: requestId=${requestId}, action=${action}`);
+    debug(`POST /v1/sign-response: requestId=${requestId}, action=${action}, signerAddress=${signerAddress}${signature ? `, signature=${signature.slice(0, 20)}...` : ''}`);
+
 
     // Build a full SignResponse object
     const signResponse = {
@@ -76,7 +77,9 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
     const immediate = registry.getSignResponse(requestId);
     if (immediate) {
       registry.deleteSignResponse(requestId);
-      return c.json(JSON.parse(immediate), 200);
+      const parsed = JSON.parse(immediate) as Record<string, unknown>;
+      debug(`GET /v1/sign-response/${requestId}: found (immediate), action=${parsed.action}, signerAddress=${parsed.signerAddress}`);
+      return c.json(parsed, 200);
     }
 
     // Poll every 1 second until timeout
@@ -86,7 +89,9 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
       const response = registry.getSignResponse(requestId);
       if (response) {
         registry.deleteSignResponse(requestId);
-        return c.json(JSON.parse(response), 200);
+        const parsed = JSON.parse(response) as Record<string, unknown>;
+        debug(`GET /v1/sign-response/${requestId}: found (polled), action=${parsed.action}, signerAddress=${parsed.signerAddress}`);
+        return c.json(parsed, 200);
       }
     }
 
@@ -102,7 +107,7 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
     }
 
     const { subscriptionToken, category, payload } = parsed.data;
-    debug(`POST /v1/push: subscriptionToken=${subscriptionToken}, category=${category}`);
+    debug(`POST /v1/push: subscriptionToken=${subscriptionToken}, category=${category}, payload=${JSON.stringify(payload)}`);
 
     const device = registry.getBySubscriptionToken(subscriptionToken);
     if (!device) {
@@ -121,6 +126,7 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
     };
 
     const result = await provider.send([device.pushToken], pushPayload);
+    debug(`POST /v1/push: provider=${provider.name}, sent=${result.sent}, failed=${result.failed}${result.invalidTokens.length > 0 ? `, invalidTokens=${result.invalidTokens.length}` : ''}`);
     if (result.invalidTokens.length > 0) {
       registry.removeTokens(result.invalidTokens);
     }

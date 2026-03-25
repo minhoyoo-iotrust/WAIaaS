@@ -3,6 +3,7 @@ import { createSign } from 'node:crypto';
 import type { PushPayload, IPushProvider, PushResult } from './push-provider.js';
 import { withRetry, isRetryableHttpError } from './push-provider.js';
 import type { FcmConfig } from '../config.js';
+import { debug } from '../logger.js';
 
 const TOKEN_EXPIRY_MS = 3_500_000; // ~58 minutes (tokens last 60 min)
 const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
@@ -29,13 +30,17 @@ export class FcmProvider implements IPushProvider {
     let failed = 0;
     const invalidTokens: string[] = [];
 
+    debug(`FCM: sending to ${tokens.length} token(s), title="${payload.title}", category=${payload.category}`);
+
     // FCM v1 sends one message per token
     for (const token of tokens) {
       try {
         await this.sendSingle(accessToken, token, payload);
         sent++;
+        debug(`FCM: sent to token=${token.slice(0, 12)}...`);
       } catch (err) {
         failed++;
+        debug(`FCM: failed for token=${token.slice(0, 12)}..., error=${err instanceof Error ? err.message : String(err)}`);
         if (err instanceof FcmInvalidTokenError) {
           invalidTokens.push(token);
         }
