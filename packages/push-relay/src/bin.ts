@@ -9,6 +9,8 @@ import { PushwooshProvider } from './providers/pushwoosh-provider.js';
 import { FcmProvider } from './providers/fcm-provider.js';
 import type { IPushProvider } from './providers/push-provider.js';
 import { createServer } from './server.js';
+import { ConfigurablePayloadTransformer } from './transformer/payload-transformer.js';
+import type { IPayloadTransformer } from './transformer/payload-transformer.js';
 import { info, error, debug, setDebug, isDebug } from './logger.js';
 
 const require = createRequire(import.meta.url);
@@ -68,12 +70,20 @@ async function main(): Promise<void> {
   }, 60_000);
   cleanupInterval.unref();
 
+  // Create payload transformer if configured
+  let transformer: IPayloadTransformer | undefined;
+  if (config.relay.push.payload) {
+    transformer = new ConfigurablePayloadTransformer(config.relay.push.payload);
+    info('Payload transformer enabled (static_fields + category_map)');
+  }
+
   // Create and start HTTP server
   const app = createServer({
     registry,
     provider,
     apiKey: config.relay.server.api_key,
     version: VERSION,
+    transformer,
   });
 
   const server = serve({

@@ -2,7 +2,7 @@
 
 - **유형:** ENHANCEMENT
 - **심각도:** MEDIUM
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-03-25
 - **GitHub:** https://github.com/minhoyoo-iotrust/WAIaaS/issues/278
 

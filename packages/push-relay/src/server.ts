@@ -6,17 +6,19 @@ import { createDeviceRoutes } from './registry/device-routes.js';
 import { createSignResponseRoutes } from './relay/sign-response-routes.js';
 import type { DeviceRegistry } from './registry/device-registry.js';
 import type { IPushProvider } from './providers/push-provider.js';
+import type { IPayloadTransformer } from './transformer/payload-transformer.js';
 
 export interface ServerOpts {
   registry: DeviceRegistry;
   provider: IPushProvider;
   apiKey: string;
   version?: string;
+  transformer?: IPayloadTransformer;
 }
 
 export function createServer(opts: ServerOpts): Hono {
   const app = new Hono();
-  const { registry, provider, apiKey, version } = opts;
+  const { registry, provider, apiKey, version, transformer } = opts;
 
   // Request logging (debug mode)
   app.use('/*', async (c, next) => {
@@ -35,7 +37,7 @@ export function createServer(opts: ServerOpts): Hono {
   const deviceRoutes = createDeviceRoutes({ registry, provider, version });
 
   // Sign response routes (POST /v1/sign-response requires API key, POST /v1/push is credential-based)
-  const signResponseRoutes = createSignResponseRoutes({ registry, provider, apiKey });
+  const signResponseRoutes = createSignResponseRoutes({ registry, provider, apiKey, transformer });
 
   // Apply API key auth to device registration/deletion endpoints only
   app.use('/devices/*', apiKeyAuth(apiKey));
