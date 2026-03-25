@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** HIGH
-- **상태:** OPEN
+- **상태:** FIXED
 - **등록일:** 2026-03-26
 - **관련 이슈:** #456 (Push Relay 서명 요청 payload 포맷 불일치)
 - **발견 경위:** Push Relay 디버그 로그에서 Admin 테스트 서명 요청의 `request` 필드가 base64 blob으로 전송되는 것 확인
