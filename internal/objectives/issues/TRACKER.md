@@ -44,6 +44,8 @@
 | 456 | BUG | HIGH | Push Relay 서명 요청 payload가 D'CENT 기대 포맷과 불일치 (base64 래핑 → 플랫 필드) | — | FIXED | 2026-03-25 |
 | 457 | BUG | HIGH | E2E 스모크 테스트 버전 감지 오류 — GitHub Releases API 정렬 비결정성 | — | FIXED | 2026-03-25 |
 | 458 | ENHANCEMENT | MEDIUM | Push Relay 디버그 모드에서 푸시 payload 및 서명 응답 내용 미로그 | — | FIXED | 2026-03-25 |
+| 459 | ENHANCEMENT | MEDIUM | 세션 토큰으로 GET /v1/wallets, GET /v1/wallets/:id 조회 불가 (masterAuth only) | — | OPEN | 2026-03-25 |
+| 460 | BUG | HIGH | Push Relay config.toml static_fields가 푸시 payload에 반영되지 않음 | — | OPEN | 2026-03-25 |
 
 ## Type Legend
 
@@ -55,9 +57,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **PLANNED:** 1
 - **FIXED:** 457
 - **WONTFIX:** 1
-- **Total:** 459
+- **Total:** 461
 - **Archived:** 428 (001–428)
