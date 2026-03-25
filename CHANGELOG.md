@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.8...v2.12.0-rc.9) (2026-03-25)
+
+
+### Bug Fixes
+
+* **site:** pass API key to individual Dev.to article fetches ([a6675ee](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a6675ee2d968e5a5c5a5cba9fae2078970903add))
+
 ## [2.12.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.7...v2.12.0-rc.8) (2026-03-24)
 
 
