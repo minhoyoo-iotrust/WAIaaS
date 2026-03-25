@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.12.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.11...v2.12.0-rc.12) (2026-03-25)
+
+
+### Features
+
+* **push-relay:** enhance debug logging for push payloads and sign responses ([#458](https://github.com/minhoyoo-iotrust/WAIaaS/issues/458)) ([745fcee](https://github.com/minhoyoo-iotrust/WAIaaS/commit/745fcee239c744ee7202ac8b541a0007fca8d26a))
+
+
+### Bug Fixes
+
+* **ci:** read version from package.json instead of GitHub Releases API ([#457](https://github.com/minhoyoo-iotrust/WAIaaS/issues/457)) ([b73449e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b73449ea92fdc7a795996752395b0fb49d7f1e1d))
+* **daemon:** send flat SignRequest fields in Push Relay payload ([#456](https://github.com/minhoyoo-iotrust/WAIaaS/issues/456)) ([8c1d0e5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8c1d0e528f2cee93121874dd64584ac36e5b06a7))
+* resolve open issues [#456](https://github.com/minhoyoo-iotrust/WAIaaS/issues/456), [#457](https://github.com/minhoyoo-iotrust/WAIaaS/issues/457), [#458](https://github.com/minhoyoo-iotrust/WAIaaS/issues/458) ([ff0d22c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ff0d22c757eb6707b264195e642352dd125bff16))
+
 ## [2.12.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.10...v2.12.0-rc.11) (2026-03-25)
 
 
