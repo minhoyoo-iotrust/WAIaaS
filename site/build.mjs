@@ -238,10 +238,10 @@ const LISTING_CSS = `
  */
 async function fetchDevtoBlogPosts(template, blogPages, builtPages) {
   const DEVTO_USERNAME = 'walletguy';
+  const headers = {};
+  if (process.env.DEVTO_API_KEY) headers['api-key'] = process.env.DEVTO_API_KEY;
   let articles;
   try {
-    const headers = {};
-    if (process.env.DEVTO_API_KEY) headers['api-key'] = process.env.DEVTO_API_KEY;
     const res = await fetch(`https://dev.to/api/articles?username=${DEVTO_USERNAME}&per_page=100&state=all`, { headers });
     if (!res.ok) {
       console.warn(`  Dev.to API error: ${res.status}`);
@@ -255,13 +255,17 @@ async function fetchDevtoBlogPosts(template, blogPages, builtPages) {
 
   let count = 0;
   for (const article of articles) {
-    // Fetch full article with body_markdown
+    // Fetch full article with body_markdown (reuse API key headers to avoid rate limiting)
     let full;
     try {
-      const res = await fetch(`https://dev.to/api/articles/${article.id}`);
-      if (!res.ok) continue;
+      const res = await fetch(`https://dev.to/api/articles/${article.id}`, { headers });
+      if (!res.ok) {
+        console.warn(`  Dev.to article fetch failed (${res.status}): ${article.slug}`);
+        continue;
+      }
       full = await res.json();
-    } catch {
+    } catch (err) {
+      console.warn(`  Dev.to article fetch error: ${article.slug} - ${err.message}`);
       continue;
     }
 
