@@ -361,7 +361,24 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
   // ---------------------------------------------------------------------------
 
   router.openapi(listWalletsRoute, async (c) => {
-    const allWallets = await deps.db.select().from(wallets);
+    const sessionId = c.get('sessionId' as never) as string | undefined;
+
+    let allWallets;
+    if (sessionId) {
+      // Session-scoped: only return wallets linked to this session
+      const links = deps.db
+        .select({ walletId: sessionWallets.walletId })
+        .from(sessionWallets)
+        .where(eq(sessionWallets.sessionId, sessionId))
+        .all();
+      const walletIds = links.map((l) => l.walletId);
+      allWallets = walletIds.length > 0
+        ? deps.db.select().from(wallets).where(inArray(wallets.id, walletIds)).all()
+        : [];
+    } else {
+      // masterAuth: return all wallets
+      allWallets = await deps.db.select().from(wallets);
+    }
 
     return c.json(
       {
@@ -400,6 +417,12 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
 
   router.openapi(walletDetailRoute, async (c) => {
     const { id: walletId } = c.req.valid('param');
+
+    // Session-scoped: verify wallet access via session_wallets junction
+    const sessionId = c.get('sessionId' as never) as string | undefined;
+    if (sessionId) {
+      verifyWalletAccess(sessionId, walletId, deps.db);
+    }
 
     const wallet = await deps.db
       .select()

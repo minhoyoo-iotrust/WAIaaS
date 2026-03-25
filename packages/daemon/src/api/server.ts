@@ -223,7 +223,19 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   // Register route-level auth middleware on the app (before sub-routers)
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
     const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
-    app.use('/v1/wallets', masterAuth);
+    // /v1/wallets: GET allows sessionAuth or masterAuth, POST requires masterAuth only
+    app.use('/v1/wallets', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          // sessionAuth will handle GET in the sessionAuth block below
+          await next();
+          return;
+        }
+        // Otherwise fall through to masterAuth (admin GET)
+      }
+      return masterAuth(c, next);
+    });
     // /v1/policies: GET allows sessionAuth or masterAuth, others require masterAuth only
     app.use('/v1/policies', async (c, next) => {
       if (c.req.method === 'GET') {
@@ -261,6 +273,15 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/') || c.req.path.includes('/provider') || c.req.path.includes('/nfts') || c.req.path.includes('/actions')) {
         await next();
         return;
+      }
+      // GET allows sessionAuth or masterAuth (dual-auth)
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          // sessionAuth will handle GET in the sessionAuth block below
+          await next();
+          return;
+        }
       }
       return masterAuthForWalletDetail(c, next);
     });
@@ -357,6 +378,31 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/connect-info', sessionAuth);
     app.use('/v1/erc8004/*', sessionAuth);
     app.use('/v1/erc8128/*', sessionAuth);
+    // sessionAuth for GET /v1/wallets (dual-auth: agent read-only access, scoped to session wallets)
+    app.use('/v1/wallets', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          return sessionAuth(c, next);
+        }
+      }
+      await next();
+    });
+    // sessionAuth for GET /v1/wallets/:id (dual-auth: agent read-only access, verifies wallet access)
+    app.use('/v1/wallets/:id', async (c, next) => {
+      // Skip sub-paths that have their own sessionAuth
+      if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/') || c.req.path.includes('/provider') || c.req.path.includes('/nfts') || c.req.path.includes('/actions')) {
+        await next();
+        return;
+      }
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          return sessionAuth(c, next);
+        }
+      }
+      await next();
+    });
     // sessionAuth for GET /v1/policies and GET /v1/tokens (dual-auth: agent read-only access)
     // Only apply sessionAuth when Bearer token is present; masterAuth GET is handled above.
     app.use('/v1/policies', async (c, next) => {

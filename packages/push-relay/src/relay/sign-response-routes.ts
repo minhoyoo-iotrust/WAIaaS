@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { debug } from '../logger.js';
 import type { DeviceRegistry } from '../registry/device-registry.js';
 import type { IPushProvider } from '../providers/push-provider.js';
+import type { IPayloadTransformer } from '../transformer/payload-transformer.js';
 
 const SignResponseStoreSchema = z.object({
   requestId: z.string().uuid(),
@@ -21,6 +22,7 @@ export interface SignResponseRoutesOpts {
   registry: DeviceRegistry;
   provider: IPushProvider;
   apiKey: string;
+  transformer?: IPayloadTransformer;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -125,7 +127,10 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
       priority: (category === 'sign_request' ? 'high' : 'normal') as 'high' | 'normal',
     };
 
-    const result = await provider.send([device.pushToken], pushPayload);
+    const finalPayload = opts.transformer ? opts.transformer.transform(pushPayload) : pushPayload;
+    debug(`POST /v1/push: finalPayload=${JSON.stringify(finalPayload)}`);
+
+    const result = await provider.send([device.pushToken], finalPayload);
     debug(`POST /v1/push: provider=${provider.name}, sent=${result.sent}, failed=${result.failed}${result.invalidTokens.length > 0 ? `, invalidTokens=${result.invalidTokens.length}` : ''}`);
     if (result.invalidTokens.length > 0) {
       registry.removeTokens(result.invalidTokens);
