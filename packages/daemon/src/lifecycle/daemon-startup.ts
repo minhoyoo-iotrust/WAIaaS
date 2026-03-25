@@ -1432,6 +1432,7 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         polymarketInfra: state.polymarketInfra ?? undefined,
         signerRegistry,
         contractNameRegistry: state.contractNameRegistry ?? undefined,
+        positionTracker: state.positionTracker ?? undefined,
       });
 
       const hostname = state._config!.daemon.hostname;

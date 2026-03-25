@@ -84,21 +84,19 @@ describe('PositionTracker', () => {
     expect(tracker.providerCount).toBe(0);
   });
 
-  it('starts with per-category timers', () => {
+  it('start() does NOT create periodic timers (#455)', () => {
     const setIntervalSpy = vi.spyOn(global, 'setInterval');
     tracker.start();
-    // 4 categories = 4 timers
-    expect(setIntervalSpy).toHaveBeenCalledTimes(4);
+    // No periodic timers -- startup-once model
+    expect(setIntervalSpy).not.toHaveBeenCalled();
     setIntervalSpy.mockRestore();
   });
 
-  it('stop clears all timers', () => {
-    const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+  it('stop() is safe to call (no-op)', () => {
     tracker.start();
+    // Should not throw
     tracker.stop();
-    // 4 timers cleared
-    expect(clearIntervalSpy).toHaveBeenCalledTimes(4);
-    clearIntervalSpy.mockRestore();
+    tracker.stop(); // idempotent
   });
 
   it('syncCategory fetches from providers and flushes to DB', async () => {
@@ -225,73 +223,37 @@ describe('PositionTracker', () => {
     expect(tracker.queueSize).toBe(0);
   });
 
-  it('uses settingsService to override LENDING interval when available', () => {
-    const mockSettingsService = {
-      get: vi.fn().mockReturnValue('60'),
-    } as any;
-    
-    const trackerWithSettings = new PositionTracker({
-      sqlite,
-      settingsService: mockSettingsService,
-    });
-    
-    const setIntervalSpy = vi.spyOn(global, 'setInterval');
-    trackerWithSettings.start();
-    
-    // Should have called settingsService.get for LENDING interval
-    expect(mockSettingsService.get).toHaveBeenCalledWith('actions.aave_v3_position_sync_interval_sec');
-    
-    // The LENDING interval should be 60 * 1000 = 60000ms
-    const lendingCall = setIntervalSpy.mock.calls.find(call => call[1] === 60000);
-    expect(lendingCall).toBeDefined();
-    
-    setIntervalSpy.mockRestore();
-    trackerWithSettings.stop();
+  it('syncWallet syncs a single wallet by ID (#455)', async () => {
+    const provider = makeMockProvider();
+    tracker.registerProvider(provider);
+
+    await tracker.syncWallet('wallet-1', 'LENDING');
+
+    // Should call getPositions only for wallet-1
+    expect(provider.getPositions).toHaveBeenCalledTimes(1);
+    const ctx = (provider.getPositions as ReturnType<typeof vi.fn>).mock.calls[0]![0] as PositionQueryContext;
+    expect(ctx.walletId).toBe('wallet-1');
+
+    const rows = sqlite.prepare("SELECT * FROM defi_positions WHERE wallet_id = 'wallet-1'").all();
+    expect(rows).toHaveLength(1);
   });
 
-  it('falls back to default interval when settingsService throws', () => {
-    const mockSettingsService = {
-      get: vi.fn().mockImplementation(() => { throw new Error('Unknown key'); }),
-    } as any;
-    
-    const trackerWithSettings = new PositionTracker({
-      sqlite,
-      settingsService: mockSettingsService,
-    });
-    
-    const setIntervalSpy = vi.spyOn(global, 'setInterval');
-    trackerWithSettings.start();
-    
-    // Should still start with 4 timers despite error
-    expect(setIntervalSpy).toHaveBeenCalledTimes(4);
-    
-    // LENDING should use default 300000ms (5 min)
-    const lendingCall = setIntervalSpy.mock.calls.find(call => call[1] === 300_000);
-    expect(lendingCall).toBeDefined();
-    
-    setIntervalSpy.mockRestore();
-    trackerWithSettings.stop();
+  it('syncWallet does nothing for non-existent wallet', async () => {
+    const provider = makeMockProvider();
+    tracker.registerProvider(provider);
+
+    await tracker.syncWallet('non-existent', 'LENDING');
+
+    expect(provider.getPositions).not.toHaveBeenCalled();
   });
 
-  it('uses default interval when settingsService returns invalid number', () => {
-    const mockSettingsService = {
-      get: vi.fn().mockReturnValue('not-a-number'),
-    } as any;
+  it('syncWallet does nothing when no providers for category', async () => {
+    const provider = makeMockProvider({ categories: ['PERP'] });
+    tracker.registerProvider(provider);
 
-    const trackerWithSettings = new PositionTracker({
-      sqlite,
-      settingsService: mockSettingsService,
-    });
+    await tracker.syncWallet('wallet-1', 'LENDING');
 
-    const setIntervalSpy = vi.spyOn(global, 'setInterval');
-    trackerWithSettings.start();
-
-    // LENDING should use default 300000ms since parsed value is NaN
-    const lendingCall = setIntervalSpy.mock.calls.find(call => call[1] === 300_000);
-    expect(lendingCall).toBeDefined();
-
-    setIntervalSpy.mockRestore();
-    trackerWithSettings.stop();
+    expect(provider.getPositions).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
