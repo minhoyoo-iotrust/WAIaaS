@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.9...v2.12.0-rc.10) (2026-03-25)
+
+
+### Bug Fixes
+
+* **site,solana:** resolve Dev.to CDN cache and Solana WS 429 flood ([#453](https://github.com/minhoyoo-iotrust/WAIaaS/issues/453), [#454](https://github.com/minhoyoo-iotrust/WAIaaS/issues/454)) ([f2275dd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f2275dd2a3019b617bd2c2a5ba2f52eee22e1ded))
+* **site,solana:** resolve Dev.to CDN cache and Solana WS 429 flood ([#453](https://github.com/minhoyoo-iotrust/WAIaaS/issues/453), [#454](https://github.com/minhoyoo-iotrust/WAIaaS/issues/454)) ([888c902](https://github.com/minhoyoo-iotrust/WAIaaS/commit/888c902ba176a01b322c8e400e5c4f0790380b44))
+* **solana:** resolve eslint no-this-alias and no-unsafe-function-type errors ([187be72](https://github.com/minhoyoo-iotrust/WAIaaS/commit/187be727efcfd14ab3456c920a9da0cc3549806d))
+* **solana:** resolve require-yield lint errors in test async iterables ([54fc046](https://github.com/minhoyoo-iotrust/WAIaaS/commit/54fc0469b248e907dbcb525649e89f4902f616ec))
+
 ## [2.12.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.8...v2.12.0-rc.9) (2026-03-25)
 
 
