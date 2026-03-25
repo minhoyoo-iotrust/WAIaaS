@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.12.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.12...v2.12.0-rc.13) (2026-03-25)
+
+
+### Features
+
+* **daemon,push-relay:** fix [#459](https://github.com/minhoyoo-iotrust/WAIaaS/issues/459) session wallet query, fix [#460](https://github.com/minhoyoo-iotrust/WAIaaS/issues/460) static_fields wiring ([521b7ac](https://github.com/minhoyoo-iotrust/WAIaaS/commit/521b7ac6eb0ac4908efdecaf9d95fefeb0143f55))
+
+
+### Bug Fixes
+
+* resolve open issues [#459](https://github.com/minhoyoo-iotrust/WAIaaS/issues/459) session wallet query, [#460](https://github.com/minhoyoo-iotrust/WAIaaS/issues/460) push relay static_fields ([ae308fb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ae308fb3383eeee52e58235918baf791cfa4be22))
+
 ## [2.12.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.11...v2.12.0-rc.12) (2026-03-25)
 
 
