@@ -41,6 +41,8 @@
 | 453 | BUG | MEDIUM | Dev.to 공개 API CDN 캐시로 신규 블로그 글이 사이트에 반영되지 않음 | — | FIXED | 2026-03-25 |
 | 454 | BUG | HIGH | Solana WebSocket 429 로그 폭주 — Adaptive Polling Fallback | — | FIXED | 2026-03-25 |
 | 455 | ENHANCEMENT | HIGH | PositionTracker 주기적 동기화로 Solana RPC 429 폭주 — Startup-Once + Action-Triggered Sync | — | FIXED | 2026-03-25 |
+| 456 | BUG | HIGH | Push Relay 서명 요청 payload가 D'CENT 기대 포맷과 불일치 (base64 래핑 → 플랫 필드) | — | OPEN | 2026-03-25 |
+| 457 | BUG | HIGH | E2E 스모크 테스트 버전 감지 오류 — GitHub Releases API 정렬 비결정성 | — | OPEN | 2026-03-25 |
 
 ## Type Legend
 
@@ -52,9 +54,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **PLANNED:** 1
 - **FIXED:** 454
 - **WONTFIX:** 1
-- **Total:** 456
+- **Total:** 458
 - **Archived:** 428 (001–428)
