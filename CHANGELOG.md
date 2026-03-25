@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.12.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.10...v2.12.0-rc.11) (2026-03-25)
+
+
+### Bug Fixes
+
+* **daemon:** replace periodic position sync with startup-once + action-triggered ([#455](https://github.com/minhoyoo-iotrust/WAIaaS/issues/455)) ([290fed4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/290fed49d0ddbbc94e90213ac2c4a820bcbd3719))
+* **daemon:** replace periodic position sync with startup-once + action-triggered ([#455](https://github.com/minhoyoo-iotrust/WAIaaS/issues/455)) ([d6c462c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d6c462cc613ce9cf1fed6667e7c57b48d0bb0973))
+
 ## [2.12.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.9...v2.12.0-rc.10) (2026-03-25)
 
 
