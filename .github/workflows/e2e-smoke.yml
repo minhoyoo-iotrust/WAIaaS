@@ -32,23 +32,30 @@ jobs:
 
       - name: Determine version
         id: version
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
             VERSION="${{ inputs.version }}"
           else
-            # Get latest release tag from GitHub API
-            TAG=$(gh api repos/${{ github.repository }}/releases --jq '.[0].tag_name' 2>/dev/null || echo "")
-            if [ -z "$TAG" ]; then
-              echo "::error::Could not determine release version"
+            # Read version from package.json (matches the npm-published version from this commit)
+            VERSION=$(node -p "require('./package.json').version")
+            if [ -z "$VERSION" ]; then
+              echo "::error::Could not determine release version from package.json"
               exit 1
             fi
-            # Strip 'v' prefix if present
-            VERSION="${TAG#v}"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Testing version: $VERSION"
+
+          # Wait for npm registry propagation (max 5 minutes)
+          MAX_WAIT=300; ELAPSED=0
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            if npm view "@waiaas/cli@$VERSION" version >/dev/null 2>&1; then
+              echo "Version $VERSION available on npm"
+              break
+            fi
+            echo "Waiting for npm propagation... (${ELAPSED}s/${MAX_WAIT}s)"
+            sleep 30; ELAPSED=$((ELAPSED + 30))
+          done
 
       - name: Build e2e-tests package
         run: pnpm turbo run build --filter=@waiaas/e2e-tests --filter=@waiaas/push-relay --filter=@waiaas/mcp

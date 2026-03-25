@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** HIGH
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-03-25
 - **관련 파일:** `.github/workflows/e2e-smoke.yml`
 - **실패 런:** https://github.com/minhoyoo-iotrust/WAIaaS/actions/runs/23533923976
