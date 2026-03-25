@@ -781,7 +781,13 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
             const rpcUrl = resolveRpcUrlFromPool(state.rpcPool, sSvc.get.bind(sSvc), chain, network);
             const wssUrl = resolveWssUrl(network, rpcUrl);
             const { SolanaIncomingSubscriber } = await import('@waiaas/adapter-solana');
-            return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
+            const solanaMode = (sSvc.get('incoming.solana_mode') || 'adaptive') as 'websocket' | 'polling' | 'adaptive';
+            return new SolanaIncomingSubscriber({
+              rpcUrl,
+              wsUrl: wssUrl,
+              mode: solanaMode,
+              logger: state.logger,
+            });
           }
           // EVM chains -- dynamic URL resolution via RPC Pool (#199)
           const rpcPool = state.rpcPool;

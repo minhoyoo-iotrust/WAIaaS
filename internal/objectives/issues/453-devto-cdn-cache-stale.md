@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** MEDIUM
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-03-25
 - **관련 파일:** `site/build.mjs` (fetchDevtoBlogPosts, L239–323)
 

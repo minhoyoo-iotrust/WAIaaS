@@ -38,8 +38,8 @@
 | 450 | ENHANCEMENT | MEDIUM | Admin UI: 지갑 앱 테스트 서명 요청 기능 (서명 응답 검증) | — | FIXED | 2026-03-24 |
 | 451 | BUG | MEDIUM | 서명 요청 Push payload에 title/body 누락으로 자체 호스팅 Push Relay Pushwoosh 에러 | — | FIXED | 2026-03-24 |
 | 452 | BUG | LOW | Human Wallet Apps 페이지에서 showToast 인자 순서가 반대 (18곳) | — | FIXED | 2026-03-24 |
-| 453 | BUG | MEDIUM | Dev.to 공개 API CDN 캐시로 신규 블로그 글이 사이트에 반영되지 않음 | — | OPEN | 2026-03-25 |
-| 454 | BUG | HIGH | Solana WebSocket 429 로그 폭주 — Adaptive Polling Fallback | — | OPEN | 2026-03-25 |
+| 453 | BUG | MEDIUM | Dev.to 공개 API CDN 캐시로 신규 블로그 글이 사이트에 반영되지 않음 | — | FIXED | 2026-03-25 |
+| 454 | BUG | HIGH | Solana WebSocket 429 로그 폭주 — Adaptive Polling Fallback | — | FIXED | 2026-03-25 |
 
 ## Type Legend
 
@@ -51,9 +51,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 0
 - **PLANNED:** 1
-- **FIXED:** 451
+- **FIXED:** 453
 - **WONTFIX:** 1
 - **Total:** 455
 - **Archived:** 428 (001–428)

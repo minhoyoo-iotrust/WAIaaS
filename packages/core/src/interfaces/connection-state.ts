@@ -45,6 +45,19 @@ export const DEFAULT_RECONNECT_CONFIG: ReconnectConfig = {
 };
 
 /**
+ * Solana-specific reconnect config with stronger backoff (#454).
+ * - maxDelayMs: 5 minutes (prevents 429 flood during sustained rate limiting)
+ * - pollingFallbackThreshold: 2 (switch to polling sooner)
+ */
+export const SOLANA_RECONNECT_CONFIG: ReconnectConfig = {
+  initialDelayMs: 2000,
+  maxDelayMs: 300_000,
+  maxAttempts: Infinity,
+  jitterFactor: 0.3,
+  pollingFallbackThreshold: 2,
+};
+
+/**
  * Calculate reconnection delay with exponential backoff and jitter.
  *
  * Formula: min(initialDelay * 2^attempt, maxDelay) +/- jitter
