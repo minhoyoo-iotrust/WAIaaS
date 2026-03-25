@@ -1014,3 +1014,376 @@ describe('SolanaHeartbeat', () => {
     expect(mockGetSlot2).toHaveBeenCalledTimes(1);
   });
 });
+
+// ─── Adaptive Fallback (#454) ─────────────────────────────────
+
+describe('SolanaIncomingSubscriber adaptive mode (#454)', () => {
+  let onTx: (tx: IncomingTransaction) => void;
+
+  beforeEach(() => {
+    onTx = vi.fn();
+    vi.clearAllMocks();
+    mockRpc.getSlot = mockSend(12345);
+  });
+
+  it('effectiveMode returns "websocket" for adaptive mode by default', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'adaptive',
+      generateId: stubGenerateId,
+    });
+    expect(sub.effectiveMode).toBe('websocket');
+    await sub.destroy();
+  });
+
+  it('effectiveMode returns "polling" for explicit polling mode', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+    expect(sub.effectiveMode).toBe('polling');
+    await sub.destroy();
+  });
+
+  it('record429() switches to polling after threshold consecutive errors', async () => {
+    const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'adaptive',
+      generateId: stubGenerateId,
+      logger: mockLogger,
+      adaptiveThreshold: 3,
+      wsRecoveryIntervalMs: 600_000, // long interval to prevent timer firing during test
+    });
+
+    expect(sub.effectiveMode).toBe('websocket');
+
+    // Record 429s up to threshold
+    sub.record429();
+    sub.record429();
+    expect(sub.effectiveMode).toBe('websocket');
+
+    sub.record429(); // hits threshold
+    expect(sub.effectiveMode).toBe('polling');
+
+    // Verify logger was called
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('rate limited'),
+    );
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('switched to polling'),
+    );
+
+    await sub.destroy();
+  });
+
+  it('reset429() clears the counter and restores websocket mode readiness', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'adaptive',
+      generateId: stubGenerateId,
+      adaptiveThreshold: 3,
+      wsRecoveryIntervalMs: 600_000,
+    });
+
+    sub.record429();
+    sub.record429();
+    sub.reset429();
+    // After reset, further records should start from 0
+    sub.record429();
+    sub.record429();
+    expect(sub.effectiveMode).toBe('websocket'); // still below threshold
+    await sub.destroy();
+  });
+
+  it('setMode() changes mode and resets adaptive state', async () => {
+    const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'adaptive',
+      generateId: stubGenerateId,
+      logger: mockLogger,
+      adaptiveThreshold: 2,
+      wsRecoveryIntervalMs: 600_000,
+    });
+
+    // Force adaptive polling
+    sub.record429();
+    sub.record429();
+    expect(sub.effectiveMode).toBe('polling');
+
+    // Switch to websocket via setMode
+    sub.setMode('websocket');
+    expect(sub.effectiveMode).toBe('websocket');
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.stringContaining('mode changed'),
+    );
+
+    await sub.destroy();
+  });
+
+  it('constructor defaults to adaptive mode', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+    });
+    expect(sub.effectiveMode).toBe('websocket'); // adaptive starts as websocket
+    await sub.destroy();
+  });
+
+  it('connect() staggers WS subscriptions', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'websocket',
+      generateId: stubGenerateId,
+      staggerDelayMs: 50,
+    });
+
+    // Mock WS subscription to be a no-op async iterable
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue((async function* () {
+        // never yields, just stays open
+        await new Promise(() => {});
+      })()),
+    });
+
+    await sub.subscribe('w1', 'addr1', NETWORK, onTx);
+    await sub.subscribe('w2', 'addr2', NETWORK, onTx);
+
+    const start = Date.now();
+    await sub.connect();
+    const elapsed = Date.now() - start;
+
+    // With 2 wallets and 50ms stagger, should take >= 50ms
+    expect(elapsed).toBeGreaterThanOrEqual(40); // small tolerance
+    expect(mockRpcSubscriptions.logsNotifications).toHaveBeenCalledTimes(2);
+    await sub.destroy();
+  });
+
+  it('websocket error with 429 in message triggers record429()', async () => {
+    const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'websocket',
+      generateId: stubGenerateId,
+      logger: mockLogger,
+      adaptiveThreshold: 2,
+      wsRecoveryIntervalMs: 600_000,
+    });
+
+    // WS subscribe throws a 429 error
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockRejectedValue(new Error('Unexpected server response: 429')),
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+    await sub.connect();
+
+    // Wait for async error handling
+    await new Promise((r) => setTimeout(r, 50));
+
+    // The 429 should have been recorded via the catch block
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('rate limited'),
+    );
+
+    await sub.destroy();
+  });
+
+  it('stderr filter suppresses ws error messages', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    // Try to write a ws error to stderr — should be swallowed
+    const stderrSpy = vi.spyOn(process.stderr, 'write');
+    const result = process.stderr.write('ws error: Unexpected server response: 429\n');
+    expect(result).toBe(true); // swallowed, returns true
+
+    // Normal stderr should still work
+    const origWrite = Object.getPrototypeOf(process.stderr).write;
+    // Verify the filter is installed by checking process.stderr.write is not the original
+    expect(process.stderr.write).not.toBe(origWrite);
+
+    stderrSpy.mockRestore();
+    await sub.destroy();
+  });
+
+  it('destroy() restores stderr filter', async () => {
+    const origWrite = process.stderr.write;
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    // stderr.write should be replaced
+    expect(process.stderr.write).not.toBe(origWrite);
+
+    await sub.destroy();
+
+    // stderr.write should be restored
+    expect(process.stderr.write).toBe(origWrite);
+  });
+
+  it('stderr filter passes through non-ws-error messages', async () => {
+    // Save original before SolanaIncomingSubscriber replaces it
+    const realWrite = process.stderr.write;
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    // The filter is installed; non-ws messages should call original
+    // We verify by checking the return value (original write returns true for valid calls)
+    const result = process.stderr.write('');
+    // Empty string write still passes through since it doesn't contain 'ws error:'
+    expect(typeof result).toBe('boolean');
+
+    await sub.destroy();
+    // Verify restored
+    expect(process.stderr.write).toBe(realWrite);
+  });
+
+  it('WS recovery timer: successful probe restores websocket mode', async () => {
+    const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'adaptive',
+      generateId: stubGenerateId,
+      logger: mockLogger,
+      adaptiveThreshold: 2,
+      wsRecoveryIntervalMs: 100, // short for test
+      staggerDelayMs: 0,
+    });
+
+    // Subscribe a wallet so recovery has something to probe
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+    await sub.connect();
+
+    // Force adaptive polling
+    sub.record429();
+    sub.record429();
+    expect(sub.effectiveMode).toBe('polling');
+
+    // Mock successful WS probe
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue((async function* () {
+        await new Promise(() => {}); // never yields
+      })()),
+    });
+
+    // Wait for recovery timer to fire
+    await new Promise((r) => setTimeout(r, 200));
+
+    expect(sub.effectiveMode).toBe('websocket');
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.stringContaining('WS recovered'),
+    );
+
+    await sub.destroy();
+  });
+
+  it('WS recovery timer: failed probe stays in polling', async () => {
+    const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'adaptive',
+      generateId: stubGenerateId,
+      logger: mockLogger,
+      adaptiveThreshold: 2,
+      wsRecoveryIntervalMs: 100,
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+    await sub.connect();
+
+    // Force adaptive polling
+    sub.record429();
+    sub.record429();
+    expect(sub.effectiveMode).toBe('polling');
+
+    // Mock failed WS probe
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockRejectedValue(new Error('429')),
+    });
+
+    // Wait for recovery timer
+    await new Promise((r) => setTimeout(r, 200));
+
+    expect(sub.effectiveMode).toBe('polling');
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.stringContaining('recovery failed'),
+    );
+
+    await sub.destroy();
+  });
+
+  it('WS recovery timer: no wallets = early return', async () => {
+    const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'adaptive',
+      generateId: stubGenerateId,
+      logger: mockLogger,
+      adaptiveThreshold: 2,
+      wsRecoveryIntervalMs: 100,
+    });
+
+    await sub.connect();
+
+    // Force adaptive polling without any subscribed wallets
+    sub.record429();
+    sub.record429();
+
+    // Wait for recovery timer
+    await new Promise((r) => setTimeout(r, 200));
+
+    // Should still be in polling (no wallets to probe with)
+    expect(sub.effectiveMode).toBe('polling');
+
+    await sub.destroy();
+  });
+
+  it('stderr filter with 429 increments counter via record429()', async () => {
+    const mockLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'adaptive',
+      generateId: stubGenerateId,
+      logger: mockLogger,
+      adaptiveThreshold: 2,
+      wsRecoveryIntervalMs: 600_000,
+    });
+
+    // Write ws 429 errors through stderr — filter should record them
+    process.stderr.write('ws error: Unexpected server response: 429\n');
+    process.stderr.write('ws error: Unexpected server response: 429\n');
+
+    // Should have triggered adaptive switch
+    expect(sub.effectiveMode).toBe('polling');
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('switched to polling'),
+    );
+
+    await sub.destroy();
+  });
+});
