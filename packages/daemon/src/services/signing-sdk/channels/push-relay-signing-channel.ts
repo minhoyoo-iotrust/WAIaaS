@@ -55,6 +55,52 @@ export interface SendRequestResult {
 }
 
 // ---------------------------------------------------------------------------
+// Shared payload builder (also used by admin test-sign-request endpoint)
+// ---------------------------------------------------------------------------
+
+export interface SignRequestPayloadInput {
+  version: string;
+  requestId: string;
+  caip2ChainId?: string;
+  networkName?: string;
+  signerAddress: string;
+  message: string;
+  displayMessage: string;
+  expiresAt: string;
+  metadata: Record<string, unknown>;
+  responseChannel: Record<string, unknown>;
+}
+
+/**
+ * Build a flat-field push payload for Push Relay.
+ * D'CENT expects individual top-level fields — NOT a base64-encoded blob.
+ *
+ * @see internal/objectives/issues/456-push-relay-flat-payload.md
+ * @see internal/objectives/issues/461-admin-test-sign-request-base64-format.md
+ */
+export function buildSignRequestPushPayload(
+  request: SignRequestPayloadInput,
+  opts?: { title?: string; universalLinkUrl?: string },
+): Record<string, string> {
+  const payload: Record<string, string> = {
+    title: opts?.title ?? 'WAIaaS Sign Request',
+    body: request.displayMessage,
+    version: request.version,
+    requestId: request.requestId,
+    signerAddress: request.signerAddress,
+    message: request.message,
+    displayMessage: request.displayMessage,
+    expiresAt: request.expiresAt,
+    metadata: JSON.stringify(request.metadata),
+    responseChannel: JSON.stringify(request.responseChannel),
+  };
+  if (request.caip2ChainId) payload.caip2ChainId = request.caip2ChainId;
+  if (request.networkName) payload.networkName = request.networkName;
+  if (opts?.universalLinkUrl) payload.universalLinkUrl = opts.universalLinkUrl;
+  return payload;
+}
+
+// ---------------------------------------------------------------------------
 // PushRelaySigningChannel
 // ---------------------------------------------------------------------------
 
@@ -108,21 +154,7 @@ export class PushRelaySigningChannel {
             body: JSON.stringify({
               subscriptionToken: requestTopic,
               category: 'sign_request',
-              payload: {
-                title: 'WAIaaS Sign Request',
-                body: request.displayMessage,
-                version: request.version,
-                requestId: request.requestId,
-                caip2ChainId: request.caip2ChainId,
-                networkName: request.networkName,
-                signerAddress: request.signerAddress,
-                message: request.message,
-                displayMessage: request.displayMessage,
-                expiresAt: request.expiresAt,
-                metadata: JSON.stringify(request.metadata),
-                responseChannel: JSON.stringify(request.responseChannel),
-                universalLinkUrl,
-              },
+              payload: buildSignRequestPushPayload(request, { universalLinkUrl }),
             }),
             signal: controller.signal,
           });

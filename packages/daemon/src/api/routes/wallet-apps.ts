@@ -14,6 +14,7 @@ import { WAIaaSError, SignResponseSchema } from '@waiaas/core';
 import { generateId } from '../../infrastructure/database/id.js';
 import type { WalletAppService, WalletApp, WalletAppWithUsedBy } from '../../services/signing-sdk/wallet-app-service.js';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
+import { buildSignRequestPushPayload } from '../../services/signing-sdk/channels/index.js';
 import {
   WalletAppListResponseSchema,
   WalletAppCreateRequestSchema,
@@ -366,8 +367,23 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         expiresAt: expiresAt.toISOString(),
       };
 
-      const encoded = Buffer.from(JSON.stringify(testRequest), 'utf-8').toString('base64url');
       const pushRelayUrl = app.pushRelayUrl.replace(/\/$/, '');
+
+      // Build flat-field payload (same format as PushRelaySigningChannel)
+      const payload = buildSignRequestPushPayload(
+        {
+          version: testRequest.version,
+          requestId: testRequest.requestId,
+          caip2ChainId: testRequest.chainId,
+          signerAddress: testRequest.signerAddress,
+          message: testRequest.message,
+          displayMessage: testRequest.displayMessage,
+          expiresAt: testRequest.expiresAt,
+          metadata: testRequest.metadata,
+          responseChannel: testRequest.responseChannel,
+        },
+        { title: 'WAIaaS Test Sign Request' },
+      );
 
       // Send sign request to Push Relay
       const pushRes = await fetch(`${pushRelayUrl}/v1/push`, {
@@ -376,11 +392,7 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         body: JSON.stringify({
           subscriptionToken: app.subscriptionToken,
           category: 'sign_request',
-          payload: {
-            title: 'WAIaaS Test Sign Request',
-            body: `Test sign request for ${app.displayName}`,
-            request: encoded,
-          },
+          payload,
         }),
       });
       if (!pushRes.ok) {

@@ -4,11 +4,12 @@
  * @see internal/design/73-signing-protocol-v1.md
  */
 
-export { PushRelaySigningChannel } from './push-relay-signing-channel.js';
+export { PushRelaySigningChannel, buildSignRequestPushPayload } from './push-relay-signing-channel.js';
 export type {
   PushRelaySigningChannelOpts,
   SendRequestParams,
   SendRequestResult,
+  SignRequestPayloadInput,
 } from './push-relay-signing-channel.js';
 
 export { TelegramSigningChannel } from './telegram-signing-channel.js';

@@ -18,7 +18,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { SignRequest, SignResponse } from '@waiaas/core';
-import { PushRelaySigningChannel } from '../services/signing-sdk/channels/push-relay-signing-channel.js';
+import { PushRelaySigningChannel, buildSignRequestPushPayload } from '../services/signing-sdk/channels/push-relay-signing-channel.js';
 
 // ---------------------------------------------------------------------------
 // Mock fetch
@@ -517,6 +517,67 @@ describe('PushRelaySigningChannel', () => {
   // -----------------------------------------------------------------------
   // Test 11: POST non-2xx status logs error without throwing
   // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // Test: buildSignRequestPushPayload produces flat fields (no base64)
+  // -----------------------------------------------------------------------
+
+  it('buildSignRequestPushPayload returns flat fields without base64 encoding', () => {
+    const input = {
+      version: '1',
+      requestId: 'req-123',
+      caip2ChainId: 'eip155:1',
+      networkName: 'ethereum-mainnet',
+      signerAddress: '0xabc',
+      message: 'Sign this',
+      displayMessage: 'Transfer 1 ETH',
+      expiresAt: '2026-03-26T12:00:00Z',
+      metadata: { txId: 'tx-1', type: 'TRANSFER' },
+      responseChannel: { type: 'push_relay', pushRelayUrl: 'https://relay.example.com' },
+    };
+
+    const payload = buildSignRequestPushPayload(input, { title: 'Test Title', universalLinkUrl: 'https://link.example.com' });
+
+    // Flat string fields
+    expect(payload.title).toBe('Test Title');
+    expect(payload.body).toBe('Transfer 1 ETH');
+    expect(payload.version).toBe('1');
+    expect(payload.requestId).toBe('req-123');
+    expect(payload.caip2ChainId).toBe('eip155:1');
+    expect(payload.networkName).toBe('ethereum-mainnet');
+    expect(payload.signerAddress).toBe('0xabc');
+    expect(payload.message).toBe('Sign this');
+    expect(payload.displayMessage).toBe('Transfer 1 ETH');
+    expect(payload.expiresAt).toBe('2026-03-26T12:00:00Z');
+    expect(payload.universalLinkUrl).toBe('https://link.example.com');
+
+    // metadata/responseChannel are JSON-stringified
+    expect(JSON.parse(payload.metadata)).toEqual({ txId: 'tx-1', type: 'TRANSFER' });
+    expect(JSON.parse(payload.responseChannel)).toEqual({ type: 'push_relay', pushRelayUrl: 'https://relay.example.com' });
+
+    // No base64-encoded 'request' field
+    expect(payload).not.toHaveProperty('request');
+  });
+
+  it('buildSignRequestPushPayload omits optional fields when absent', () => {
+    const input = {
+      version: '1',
+      requestId: 'req-456',
+      signerAddress: '0xdef',
+      message: 'Sign this',
+      displayMessage: 'Approve',
+      expiresAt: '2026-03-26T12:00:00Z',
+      metadata: {},
+      responseChannel: { type: 'push_relay' },
+    };
+
+    const payload = buildSignRequestPushPayload(input);
+
+    expect(payload.title).toBe('WAIaaS Sign Request'); // default title
+    expect(payload).not.toHaveProperty('caip2ChainId');
+    expect(payload).not.toHaveProperty('networkName');
+    expect(payload).not.toHaveProperty('universalLinkUrl');
+  });
 
   it('POST non-2xx logs error without throwing', async () => {
     fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
