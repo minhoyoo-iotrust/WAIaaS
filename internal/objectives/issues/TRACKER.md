@@ -46,6 +46,7 @@
 | 458 | ENHANCEMENT | MEDIUM | Push Relay 디버그 모드에서 푸시 payload 및 서명 응답 내용 미로그 | — | FIXED | 2026-03-25 |
 | 459 | ENHANCEMENT | MEDIUM | 세션 토큰으로 GET /v1/wallets, GET /v1/wallets/:id 조회 불가 (masterAuth only) | — | FIXED | 2026-03-25 |
 | 460 | BUG | HIGH | Push Relay config.toml static_fields가 푸시 payload에 반영되지 않음 | — | FIXED | 2026-03-25 |
+| 461 | BUG | HIGH | Admin UI 테스트 서명 요청이 여전히 base64 래핑 포맷으로 전송됨 (#456 수정 누락) | — | OPEN | 2026-03-26 |
 
 ## Type Legend
 
@@ -57,9 +58,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **PLANNED:** 1
 - **FIXED:** 459
 - **WONTFIX:** 1
-- **Total:** 461
+- **Total:** 462
 - **Archived:** 428 (001–428)
