@@ -521,16 +521,16 @@ export class SolanaIncomingSubscriber implements IChainSubscriber {
   private installStderrFilter(): void {
     if (this.origStderrWrite) return; // already installed
     this.origStderrWrite = process.stderr.write;
-    const self = this;
+    const record = this.record429.bind(this);
+    const orig = this.origStderrWrite;
     process.stderr.write = ((chunk: string | Uint8Array, ...args: unknown[]) => {
       if (typeof chunk === 'string' && chunk.includes('ws error:')) {
-        // Detect 429 specifically for adaptive counter
         if (chunk.includes('429')) {
-          self.record429();
+          record();
         }
         return true; // swallow
       }
-      return (self.origStderrWrite as Function).call(process.stderr, chunk, ...args);
+      return (orig as (...a: unknown[]) => boolean).call(process.stderr, chunk, ...args);
     }) as typeof process.stderr.write;
   }
 
