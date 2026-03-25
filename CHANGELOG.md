@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.12.0-rc.14](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.13...v2.12.0-rc.14) (2026-03-25)
+
+
+### Bug Fixes
+
+* **daemon:** extract buildSignRequestPushPayload helper to fix [#461](https://github.com/minhoyoo-iotrust/WAIaaS/issues/461) base64 format bug ([7788c66](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7788c669d6d936df5b56c0d49b00aeae5a7dcba6))
+* **daemon:** fix [#461](https://github.com/minhoyoo-iotrust/WAIaaS/issues/461) admin test sign request base64 format bug ([1981a78](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1981a78f21ad0f9bc2050f1c962685515afa7e11))
+
 ## [2.12.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.12...v2.12.0-rc.13) (2026-03-25)
 
 
