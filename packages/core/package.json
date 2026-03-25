@@ -1,6 +1,6 @@
 {
   "name": "@waiaas/core",
-  "version": "2.12.0-rc.12",
+  "version": "2.12.0-rc.13",
   "description": "WAIaaS core types, schemas, and shared utilities",
   "license": "MIT",
   "type": "module",
