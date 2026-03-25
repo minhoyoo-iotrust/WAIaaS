@@ -259,17 +259,17 @@ describe('HealthFactorMonitor', () => {
   // On-demand sync
   // -----------------------------------------------------------------------
 
-  describe('on-demand sync', () => {
-    it('requests PositionTracker sync when entering DANGER', async () => {
+  describe('on-demand sync (#455: removed to avoid RPC 429 flood)', () => {
+    it('does NOT request PositionTracker sync on DANGER', async () => {
       insertPosition(sqlite, 'wallet-1', 1.3); // DANGER
       await monitor.checkAllPositions();
-      expect(mockTracker.syncCategory).toHaveBeenCalledWith('LENDING');
+      expect(mockTracker.syncCategory).not.toHaveBeenCalled();
     });
 
-    it('requests PositionTracker sync when entering CRITICAL', async () => {
+    it('does NOT request PositionTracker sync on CRITICAL', async () => {
       insertPosition(sqlite, 'wallet-1', 1.1); // CRITICAL
       await monitor.checkAllPositions();
-      expect(mockTracker.syncCategory).toHaveBeenCalledWith('LENDING');
+      expect(mockTracker.syncCategory).not.toHaveBeenCalled();
     });
 
     it('does NOT request sync for SAFE/WARNING', async () => {
