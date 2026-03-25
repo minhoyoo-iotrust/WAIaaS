@@ -1148,10 +1148,9 @@ describe('SolanaIncomingSubscriber adaptive mode (#454)', () => {
 
     // Mock WS subscription to be a no-op async iterable
     mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
-      subscribe: vi.fn().mockResolvedValue((async function* () {
-        // never yields, just stays open
-        await new Promise(() => {});
-      })()),
+      subscribe: vi.fn().mockResolvedValue({
+        [Symbol.asyncIterator]: () => ({ next: () => new Promise(() => {}) }),
+      }),
     });
 
     await sub.subscribe('w1', 'addr1', NETWORK, onTx);
@@ -1283,9 +1282,9 @@ describe('SolanaIncomingSubscriber adaptive mode (#454)', () => {
 
     // Mock successful WS probe
     mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
-      subscribe: vi.fn().mockResolvedValue((async function* () {
-        await new Promise(() => {}); // never yields
-      })()),
+      subscribe: vi.fn().mockResolvedValue({
+        [Symbol.asyncIterator]: () => ({ next: () => new Promise(() => {}) }),
+      }),
     });
 
     // Wait for recovery timer to fire
