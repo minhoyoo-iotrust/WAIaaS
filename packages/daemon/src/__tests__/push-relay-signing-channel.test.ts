@@ -176,11 +176,24 @@ describe('PushRelaySigningChannel', () => {
     expect(postBody.category).toBe('sign_request');
     expect(postBody.payload.universalLinkUrl).toBe(mockUniversalLinkUrl);
 
-    // Decode base64url request payload
-    const decodedRequest = JSON.parse(
-      Buffer.from(postBody.payload.request, 'base64url').toString('utf-8'),
-    );
-    expect(decodedRequest.requestId).toBe(requestId);
+    // Verify flat SignRequest fields (not base64-encoded)
+    expect(postBody.payload.request).toBeUndefined();
+    expect(postBody.payload.version).toBe('1');
+    expect(postBody.payload.requestId).toBe(requestId);
+    expect(postBody.payload.caip2ChainId).toBe('eip155:1');
+    expect(postBody.payload.networkName).toBe('ethereum-mainnet');
+    expect(postBody.payload.signerAddress).toBe(mockSignRequest.signerAddress);
+    expect(postBody.payload.message).toBe(mockSignRequest.message);
+    expect(postBody.payload.displayMessage).toBe(mockSignRequest.displayMessage);
+    expect(postBody.payload.expiresAt).toBe(mockSignRequest.expiresAt);
+
+    // metadata and responseChannel are JSON-stringified
+    const parsedMetadata = JSON.parse(postBody.payload.metadata);
+    expect(parsedMetadata.txId).toBe(txId);
+    expect(parsedMetadata.type).toBe('TRANSFER');
+    const parsedResponseChannel = JSON.parse(postBody.payload.responseChannel);
+    expect(parsedResponseChannel.type).toBe('push_relay');
+    expect(parsedResponseChannel.pushRelayUrl).toBe(pushRelayUrl);
 
     // Verify result
     expect(result.requestId).toBe(requestId);
