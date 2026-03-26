@@ -69,7 +69,7 @@ The project is organized as a monorepo with 12 npm packages plus a Python SDK:
 | `@waiaas/cli` | Command-line interface for daemon management | Yes |
 | `@waiaas/admin` | Preact-based Admin Web UI (bundled into daemon) | Yes |
 | `@waiaas/wallet-sdk` | Wallet Signing SDK for wallet app integration | Yes |
-| `@waiaas/push-relay` | Push Relay Server — bridges ntfy to push services | Yes |
+| `@waiaas/push-relay` | Push Relay Server — bridges daemon to push services (Pushwoosh/FCM) | Yes |
 | `@waiaas/skills` | Pre-built `.skill.md` instruction files for AI agents | Yes |
 | `waiaas-sdk` (Python) | Python client library for the daemon API | Yes |
 
@@ -319,7 +319,7 @@ The owner registration follows a 3-state progression:
 
 5 methods for owner approval of high-value transactions:
 
-`sdk_ntfy` · `sdk_telegram` · `walletconnect` · `telegram_bot` · `rest`
+`sdk_push_relay` · `sdk_telegram` · `walletconnect` · `telegram_bot` · `rest`
 
 ## Policy Engine
 
@@ -394,17 +394,16 @@ All providers are toggleable via Admin Settings (`actions.{name}_enabled`).
 
 ## Notification System
 
-Notifications are delivered through 4 primary channels plus 1 side channel:
+Notifications are delivered through 3 primary channels plus 1 side channel:
 
 ```mermaid
 graph LR
   Events["38 Event Types<br>(6 Categories)"] --> Router["NotificationService"]
-  Router --> Ntfy["ntfy"]
   Router --> Telegram["Telegram"]
   Router --> Slack["Slack"]
   Router --> Discord["Discord"]
 
-  SigningSDK["SigningSdkService"] --> WalletCh["WalletNotificationChannel<br>(side channel via ntfy)"]
+  SigningSDK["SigningSdkService"] --> WalletCh["WalletNotificationChannel<br>(side channel via Push Relay)"]
 ```
 
 ### Event Categories

@@ -13,24 +13,20 @@ This guide walks through integrating an external wallet application with the WAI
 ## Architecture Overview
 
 ```
-                          Scenario 1: ntfy Direct
-+------------------+  ─────────────────────────>  +------------------+
-|  WAIaaS Daemon   |  <─────────────────────────  |   Wallet App     |
-|  (manages keys)  |                              |  (signs txs)     |
-|                  |      Scenario 2: Telegram    |                  |
-|  Policy Engine   |  ────────> Telegram Bot ──>  |  @waiaas/        |
-|  Kill Switch     |  <─────── Telegram Bot <──   |  wallet-sdk      |
-|                  |                              |                  |
-|                  |      Scenario 3: Push Relay  |                  |
-|                  |  ──> Push Relay ──> FCM ──>  |  (native push)   |
-|                  |  <─────────────────────────  |                  |
-+------------------+                              +------------------+
+                          Scenario 1: Push Relay (Recommended)
++------------------+  ──> Push Relay ──> FCM/Pushwoosh ──>  +------------------+
+|  WAIaaS Daemon   |  <─────────────────────────────────  |   Wallet App     |
+|  (manages keys)  |                                      |  (signs txs)     |
+|                  |      Scenario 2: Telegram             |                  |
+|  Policy Engine   |  ────────> Telegram Bot ──>           |  @waiaas/        |
+|  Kill Switch     |  <─────── Telegram Bot <──            |  wallet-sdk      |
++------------------+                                      +------------------+
 ```
 
 When a transaction requires owner approval (APPROVAL or DELAY policy tier), the WAIaaS daemon:
 
 1. Creates a **SignRequest** containing the transaction details and raw message to sign
-2. Sends it to the owner's wallet via **ntfy** push, **Telegram** bot, or **Push Relay** (Pushwoosh/FCM native push)
+2. Sends it to the owner's wallet via **Push Relay** (Pushwoosh/FCM native push) or **Telegram** bot
 3. Waits for a **SignResponse** (approve with signature, or reject)
 4. If approved, broadcasts the signed transaction to the blockchain
 
@@ -38,18 +34,17 @@ The wallet app uses `@waiaas/wallet-sdk` to parse requests, display them to the 
 
 ### Choosing an Integration Option
 
-**We recommend Scenario 3 (Push Relay)** for production wallet apps. It provides the best end-user experience — users only need to select their wallet app in the Admin UI, with no additional setup for ntfy topics or Telegram bots. The Push Relay bridges WAIaaS signing requests to your existing push notification infrastructure.
+**We recommend Scenario 1 (Push Relay)** for production wallet apps. It provides the best end-user experience — users only need to select their wallet app in the Admin UI, with no additional setup. The Push Relay bridges WAIaaS signing requests to your existing push notification infrastructure.
 
 | Option | Server Required | User Setup | Best For |
 |--------|----------------|------------|----------|
-| **Scenario 3:** Push Relay (Recommended) | Push Relay server | Wallet app selection only | Production wallet apps with native push (D'CENT, etc.) |
-| **Scenario 1:** ntfy Direct | No | ntfy topic configuration | Server-side bots, hardware wallet bridges, development |
+| **Scenario 1:** Push Relay (Recommended) | Push Relay server | Wallet app selection only | Production wallet apps with native push (D'CENT, etc.) |
 | **Scenario 2:** Telegram Relay | No | Telegram bot + chat ID setup | Apps without push infra, using Telegram as notification channel |
 
 ## Prerequisites
 
 - WAIaaS daemon running with owner address registered
-- ntfy topic or Telegram bot configured for the signing channel
+- Push Relay server or Telegram bot configured
 - Node.js >= 18.0.0
 
 ### WAIaaS Daemon Setup
@@ -62,95 +57,14 @@ waiaas init && waiaas start
 Then in the Admin UI (`http://127.0.0.1:3100/admin`):
 
 1. **Register Owner Address** -- Wallets > select wallet > Owner tab > set the wallet address that will sign approval transactions
-2. **Configure Notification Channel** -- Notifications > Settings tab > enable ntfy or Telegram
+2. **Configure Wallet App** -- Human Wallet Apps > register your wallet app with Push Relay URL and subscription token
 3. **Set Approval Policy** -- Policies > create a policy with APPROVAL tier for high-value transactions
 
 ## Integration Scenarios
 
-### Scenario 1: ntfy Direct Push (No Messenger)
+### Scenario 1: Push Relay Server (Native Push) — Recommended
 
-Best for server-side wallet apps, bots, or hardware wallet bridges.
-
-```typescript
-import {
-  subscribeToRequests,
-  buildSignResponse,
-  sendViaNtfy,
-  formatDisplayMessage,
-} from '@waiaas/wallet-sdk';
-
-// 1. Subscribe to incoming sign requests
-const sub = subscribeToRequests('waiaas-sign-requests', async (request) => {
-  // 2. Display transaction details to the user
-  console.log(formatDisplayMessage(request));
-
-  // 3. Get user approval (your UI logic)
-  const approved = await promptUser(request);
-
-  if (approved) {
-    // 4. Sign the raw message with owner's private key
-    const signature = await ownerWallet.sign(request.message);
-
-    // 5. Build and send approval response
-    const response = buildSignResponse(
-      request.requestId,
-      'approve',
-      signature,
-      ownerWallet.address,
-    );
-    await sendViaNtfy(response, request.responseChannel.responseTopic);
-  } else {
-    // 5. Build and send rejection response
-    const response = buildSignResponse(
-      request.requestId,
-      'reject',
-      undefined,
-      ownerWallet.address,
-    );
-    await sendViaNtfy(response, request.responseChannel.responseTopic);
-  }
-});
-
-// Stop listening when done
-sub.unsubscribe();
-```
-
-### Scenario 2: Telegram Messenger Relay
-
-Best for mobile wallet apps where the user receives notifications via Telegram.
-
-```typescript
-import {
-  parseSignRequest,
-  buildSignResponse,
-  formatDisplayMessage,
-  sendViaTelegram,
-} from '@waiaas/wallet-sdk';
-
-// 1. Receive sign request via universal link (e.g., from Telegram message button)
-const request = parseSignRequest(universalLinkUrl);
-
-// 2. Display to user
-const displayText = formatDisplayMessage(request);
-showApprovalDialog(displayText);
-
-// 3. On user approval
-const signature = await ownerWallet.sign(request.message);
-const response = buildSignResponse(
-  request.requestId,
-  'approve',
-  signature,
-  ownerWallet.address,
-);
-
-// 4. Generate Telegram deeplink and open it
-const telegramUrl = sendViaTelegram(response, request.responseChannel.botUsername);
-openUrl(telegramUrl);  // Opens Telegram with the response message
-```
-
-### Scenario 3: Push Relay Server (Native Push)
-
-Best for wallet apps with existing push notification infrastructure (Pushwoosh, FCM). The `@waiaas/push-relay` server subscribes to ntfy topics on behalf of wallet apps and forwards sign requests as native push notifications.
+Best for wallet apps with existing push notification infrastructure (Pushwoosh, FCM). The `@waiaas/push-relay` server receives sign requests from the daemon via HTTP POST and forwards them as native push notifications.
 
 #### Push Relay Setup
 
@@ -164,12 +78,6 @@ docker run -d -p 3200:3200 -v /data:/data waiaas/push-relay
 Push Relay `config.toml`:
 
 ```toml
-[relay]
-ntfy_server = "https://ntfy.sh"
-sign_topic_prefix = "waiaas-sign"
-notify_topic_prefix = "waiaas-notify"
-wallet_names = ["my-wallet"]
-
 [relay.push]
 provider = "pushwoosh"    # or "fcm"
 
@@ -215,7 +123,7 @@ Categories: `sign_request` (owner approval requests) and `notification` (general
 The transformation pipeline:
 
 ```
-ntfy SSE → buildPushPayload() → ConfigurablePayloadTransformer → Push Provider (FCM/Pushwoosh)
+Daemon HTTP POST → Push Relay → ConfigurablePayloadTransformer → Push Provider (FCM/Pushwoosh)
 ```
 
 #### Device Registration
@@ -263,14 +171,13 @@ import {
   formatDisplayMessage,
 } from '@waiaas/wallet-sdk';
 
-const PUSH_RELAY_URL = 'https://your-push-relay.example.com';
-
 // 1. Handle incoming native push notification
 onPushReceived((push) => {
-  const { signRequest, responseTopic, ntfyServer } = JSON.parse(push.data.payload);
+  // Push payload contains flat fields including a universal link URL
+  const dataUrl = push.data.universalLinkUrl;
 
-  // 2. Parse and validate the sign request
-  const request = parseSignRequest(signRequest);
+  // 2. Parse and validate the sign request from the universal link
+  const request = parseSignRequest(dataUrl);
 
   // 3. Display transaction details
   const displayText = formatDisplayMessage(request);
@@ -287,14 +194,47 @@ async function onApprove(request: SignRequest) {
     ownerWallet.address,
   );
 
-  // 5. Send response via Push Relay (wallet only needs the relay URL)
-  await sendViaRelay(response, request.responseChannel.responseTopic, PUSH_RELAY_URL);
+  // 5. Send response via Push Relay
+  await sendViaRelay(response, request.responseChannel.pushRelayUrl);
 }
 ```
 
-> **Tip:** `sendViaRelay()` posts the response to Push Relay's `/v1/sign-response` endpoint, which forwards it to the ntfy response topic. This means the wallet app only needs to know the Push Relay URL — no direct ntfy access required. For server-side or testing use cases, `sendViaNtfy()` is still available as a direct ntfy alternative.
+> **Tip:** `sendViaRelay()` posts the response to Push Relay's `/v1/sign-response` endpoint. The daemon retrieves it via long-polling on the same endpoint. The wallet app only needs to know the Push Relay URL.
 
 For more details, see the [`@waiaas/push-relay` package on npm](https://www.npmjs.com/package/@waiaas/push-relay).
+
+### Scenario 2: Telegram Messenger Relay
+
+Best for mobile wallet apps where the user receives notifications via Telegram.
+
+```typescript
+import {
+  parseSignRequest,
+  buildSignResponse,
+  formatDisplayMessage,
+  sendViaTelegram,
+} from '@waiaas/wallet-sdk';
+
+// 1. Receive sign request via universal link (e.g., from Telegram message button)
+const request = parseSignRequest(universalLinkUrl);
+
+// 2. Display to user
+const displayText = formatDisplayMessage(request);
+showApprovalDialog(displayText);
+
+// 3. On user approval
+const signature = await ownerWallet.sign(request.message);
+const response = buildSignResponse(
+  request.requestId,
+  'approve',
+  signature,
+  ownerWallet.address,
+);
+
+// 4. Generate Telegram deeplink and open it
+const telegramUrl = sendViaTelegram(response, request.responseChannel.botUsername);
+openUrl(telegramUrl);  // Opens Telegram with the response message
+```
 
 ## SignRequest Structure
 
@@ -304,8 +244,9 @@ Each SignRequest contains:
 |-------|------|-------------|
 | `version` | `'1'` | Protocol version |
 | `requestId` | `string` | UUID identifying this request |
-| `chain` | `'solana' \| 'evm'` | Blockchain family |
-| `network` | `string` | Network name (e.g., `'ethereum'`, `'solana'`) |
+| `caip2ChainId` | `string` | CAIP-2 chain identifier (e.g., `eip155:1`, `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`) |
+| `networkName` | `string` | Network name (e.g., `ethereum-mainnet`, `solana-devnet`) |
+| `signerAddress` | `string` | Owner address that should sign the request |
 | `message` | `string` | Raw message/transaction to sign |
 | `displayMessage` | `string` | Human-readable summary |
 | `metadata.txId` | `string` | Internal transaction UUID |
@@ -315,31 +256,29 @@ Each SignRequest contains:
 | `metadata.amount` | `string?` | Amount (if applicable) |
 | `metadata.symbol` | `string?` | Token symbol (if applicable) |
 | `metadata.policyTier` | `string` | Policy tier (`APPROVAL` or `DELAY`) |
-| `responseChannel` | `object` | How to send the response back |
+| `responseChannel` | `object` | How to send the response back (`push_relay` or `telegram`) |
 | `expiresAt` | `string` | ISO 8601 expiration time |
 
 ## Signing Flow
 
 ```
 1. [Daemon]      Creates SignRequest with raw tx message
-2. [Daemon]      Sends via ntfy topic (all scenarios use ntfy as transport)
-3a. [ntfy]       Direct SSE push to wallet app (Scenario 1)
-3b. [Telegram]   Bot forwards as message with deep link (Scenario 2)
-3c. [Push Relay] Subscribes to ntfy, converts to Pushwoosh/FCM native push (Scenario 3)
-4. [Wallet SDK]  parseSignRequest() or subscribeToRequests()
-5. [Wallet SDK]  formatDisplayMessage() -> show to user
-6. [User]        Reviews and approves/rejects
-7. [Wallet App]  Signs raw message with owner private key
-8. [Wallet SDK]  buildSignResponse() with signature
-9. [Wallet SDK]  sendViaRelay() (Scenario 3) / sendViaNtfy() (Scenario 1) / sendViaTelegram() (Scenario 2)
-10. [Daemon]     Receives response, broadcasts if approved
+2a. [Push Relay] Daemon POSTs to Push Relay, converts to FCM/Pushwoosh native push (Scenario 1)
+2b. [Telegram]   Bot forwards as message with deep link (Scenario 2)
+3. [Wallet SDK]  parseSignRequest() extracts request from universal link
+4. [Wallet SDK]  formatDisplayMessage() -> show to user
+5. [User]        Reviews and approves/rejects
+6. [Wallet App]  Signs raw message with owner private key
+7. [Wallet SDK]  buildSignResponse() with signature
+8. [Wallet SDK]  sendViaRelay() (Scenario 1) / sendViaTelegram() (Scenario 2)
+9. [Daemon]      Receives response via long-polling (Push Relay) or Telegram bot, broadcasts if approved
 ```
 
 ## Security Considerations
 
 ### Request Expiration
 
-Always check that the request hasn't expired before displaying to the user. The SDK automatically validates expiration in `parseSignRequest()` and `subscribeToRequests()`, throwing `SignRequestExpiredError` for expired requests.
+Always check that the request hasn't expired before displaying to the user. The SDK automatically validates expiration in `parseSignRequest()`, throwing `SignRequestExpiredError` for expired requests.
 
 ### Message Verification
 
@@ -355,9 +294,8 @@ Each `requestId` is a UUID. The daemon rejects duplicate responses for the same 
 
 ### Channel Security
 
-- **ntfy:** Messages are transmitted in plaintext over HTTPS. For production, consider running a self-hosted ntfy server
-- **Telegram:** Messages pass through Telegram's servers. The base64url-encoded payload doesn't contain private keys but does contain transaction details
 - **Push Relay:** The relay server sees all sign requests in transit. Deploy it in a trusted environment. The Push Relay API requires `X-API-Key` authentication for device management endpoints
+- **Telegram:** Messages pass through Telegram's servers. The base64url-encoded payload doesn't contain private keys but does contain transaction details
 
 ## Testing Guide
 
@@ -366,10 +304,10 @@ Each `requestId` is a UUID. The daemon rejects duplicate responses for the same 
 1. Start daemon: `waiaas start`
 2. Create testnet wallet: `waiaas quickset --mode testnet`
 3. Register owner address in Admin UI
-4. Configure ntfy channel with a test topic
+4. Register a wallet app with Push Relay URL in Human Wallet Apps
 5. Set an APPROVAL policy with low USD threshold (e.g., $0.01)
-6. Trigger a transaction via MCP or REST API
-7. Your wallet app should receive the SignRequest
+6. Use Admin UI "Test Sign" button to send a test sign request
+7. Your wallet app should receive the SignRequest via push notification
 
 ### Mock Testing
 
@@ -380,8 +318,9 @@ import type { SignRequest } from '@waiaas/wallet-sdk';
 const mockRequest: SignRequest = {
   version: '1',
   requestId: '550e8400-e29b-41d4-a716-446655440000',
-  chain: 'evm',
-  network: 'ethereum',
+  caip2ChainId: 'eip155:1',
+  networkName: 'ethereum-mainnet',
+  signerAddress: '0xOwner...',
   message: '0x...',
   displayMessage: 'Transfer 100 USDC to 0x123...',
   metadata: {
@@ -394,8 +333,9 @@ const mockRequest: SignRequest = {
     policyTier: 'APPROVAL',
   },
   responseChannel: {
-    type: 'ntfy',
-    responseTopic: 'test-responses',
+    type: 'push_relay',
+    pushRelayUrl: 'http://localhost:3200',
+    requestId: '550e8400-e29b-41d4-a716-446655440000',
   },
   expiresAt: new Date(Date.now() + 3600_000).toISOString(),
 };
@@ -413,11 +353,11 @@ console.log('Response:', response);
 
 ## FAQ
 
-**Q: Can I use this without ntfy or Telegram?**
-A: The SDK requires a communication channel. ntfy is the simplest option (free, open-source). You can also use Push Relay to deliver sign requests via your existing push infrastructure (Pushwoosh/FCM).
+**Q: What communication channels does WAIaaS support for signing?**
+A: WAIaaS supports two signing channels: **Push Relay** (recommended, native push via Pushwoosh/FCM) and **Telegram** (messenger-based relay). Push Relay is the recommended option for production wallet apps.
 
 **Q: What is Push Relay and when should I use it?**
-A: `@waiaas/push-relay` is a bridge server that subscribes to WAIaaS ntfy topics and forwards sign requests as native push notifications (Pushwoosh/FCM). It also relays signing responses back to ntfy via `POST /v1/sign-response`, so wallet apps only need to know the Push Relay URL. Use it when your wallet app already has native push infrastructure and you want to avoid integrating ntfy directly.
+A: `@waiaas/push-relay` is a bridge server that receives sign requests from the WAIaaS daemon via HTTP POST and forwards them as native push notifications (Pushwoosh/FCM). It also stores signing responses for the daemon to retrieve via long-polling. Use it when your wallet app has native push infrastructure.
 
 **Q: What happens if my wallet app is offline?**
 A: Sign requests have an expiration time (configured in WAIaaS daemon). If no response is received before expiry, the transaction is rejected automatically.
@@ -426,7 +366,7 @@ A: Sign requests have an expiration time (configured in WAIaaS daemon). If no re
 A: The daemon accepts only the first valid response per requestId. Subsequent responses are rejected.
 
 **Q: How do I handle different chains (EVM vs Solana)?**
-A: The `chain` field in SignRequest tells you which signing algorithm to use. For EVM, use `eth_sign` or equivalent. For Solana, use `ed25519` signing.
+A: The `caip2ChainId` field in SignRequest tells you which chain and signing algorithm to use. For EVM (`eip155:*`), use `eth_sign` or equivalent. For Solana (`solana:*`), use `ed25519` signing.
 
 ## Related
 

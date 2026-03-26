@@ -1,5 +1,7 @@
 # 75. 알림 채널 + Push Relay Server
 
+> **Note (v32.9):** ntfy.sh 중계 구조는 v32.9에서 제거됨. Push Relay는 데몬으로부터 직접 HTTP POST를 수신하여 FCM/Pushwoosh 네이티브 푸시로 전달. 본 문서의 ntfy SSE 구독 등 설명은 초기 설계 기록으로 보존.
+
 ## 목차
 
 1. [개요](#1-개요)

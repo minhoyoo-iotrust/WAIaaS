@@ -113,8 +113,8 @@ Rules are configurable per wallet via Admin Settings.
 |---------|--------|----------|
 | **Telegram** | Bot API (Long Polling) | 10 commands, 2-tier auth, i18n (en/ko), inline approval buttons |
 | **Discord** | Webhook | Rich embeds with transaction details |
-| **ntfy** | HTTP push | Self-hosted notification relay |
 | **Slack** | Incoming Webhook | Channel-based alerts |
+| **Push Relay** | HTTP POST + Long-polling | Native push delivery (Pushwoosh/FCM) for wallet app signing |
 
 Events that trigger notifications: transaction execution, policy tier escalation, Kill Switch activation, AutoStop trigger, session creation/revocation, balance threshold alerts, owner approval requests.
 

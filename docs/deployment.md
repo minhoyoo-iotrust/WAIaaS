@@ -336,8 +336,6 @@ enabled = false
 telegram_bot_token = ""
 telegram_chat_id = ""
 discord_webhook_url = ""
-ntfy_topic = ""
-ntfy_server = "https://ntfy.sh"
 ```
 
 ### Environment Variable Override
@@ -483,13 +481,12 @@ This copies `.skill.md` files to your current directory. Include them in your AI
 
 ## Notifications Setup
 
-WAIaaS supports four notification channels: **Telegram**, **Discord**, **ntfy**, and **Slack**. Notifications fire on 8 event types including transaction execution, approval requests, and kill switch activation.
+WAIaaS supports three notification channels: **Telegram**, **Discord**, and **Slack**. Notifications fire on 8 event types including transaction execution, approval requests, and kill switch activation. Signing requests are delivered to wallet apps via **Push Relay** (Pushwoosh/FCM native push).
 
 | Channel | Config Key | Setup |
 |---------|-----------|-------|
 | Telegram | `telegram_bot_token` + `telegram_chat_id` | Create bot via @BotFather |
 | Discord | `discord_webhook_url` | Server Settings > Integrations > Webhooks |
-| ntfy | `ntfy_topic` + `ntfy_server` | Choose topic, subscribe via app |
 | Slack | `slack_webhook_url` | Create incoming webhook |
 
 ### Via Admin Settings (Recommended)

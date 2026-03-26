@@ -335,7 +335,7 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
 
 ## 9. WalletConnect Session Management
 
-> **Note:** Wallets using `sdk_ntfy` approval method (e.g., D'CENT preset) do not require WalletConnect.
+> **Note:** Wallets using `sdk_push_relay` approval method (e.g., D'CENT preset) do not require WalletConnect.
 
 ### REST API Endpoints (sessionAuth)
 

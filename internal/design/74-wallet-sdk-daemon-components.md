@@ -1,5 +1,7 @@
 # 74. Wallet SDK + Daemon Components
 
+> **Note (v32.9):** ntfy.sh 직접 연동은 v32.9에서 제거됨. SDK에서 ntfy 채널 함수(sendViaNtfy, subscribeToRequests 등)와 responseTopic 파라미터는 삭제됨. 본 문서의 ntfy 관련 설명은 초기 설계 기록으로 보존.
+
 ## 목차
 
 1. [개요](#1-개요)

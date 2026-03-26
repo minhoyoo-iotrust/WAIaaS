@@ -49,7 +49,7 @@
 | 461 | BUG | HIGH | Admin UI 테스트 서명 요청이 여전히 base64 래핑 포맷으로 전송됨 (#456 수정 누락) | — | FIXED | 2026-03-26 |
 | 462 | ENHANCEMENT | MEDIUM | Admin 테스트 서명 요청에 오너 주소 지정 불가 (signerAddress 하드코딩) | — | FIXED | 2026-03-26 |
 | 463 | ENHANCEMENT | LOW | wallet-sdk 및 데몬에 ntfy.sh 잔재 코드 잔존 (responseTopic, ntfy 채널 함수) | — | FIXED | 2026-03-26 |
-| 464 | ENHANCEMENT | MEDIUM | 문서에 ntfy.sh 잔재 설명 잔존 (docs/, skills/, internal/design/) | — | OPEN | 2026-03-26 |
+| 464 | ENHANCEMENT | MEDIUM | 문서에 ntfy.sh 잔재 설명 잔존 (docs/, skills/, internal/design/) | — | FIXED | 2026-03-26 |
 
 ## Type Legend
 
@@ -61,9 +61,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 0
 - **PLANNED:** 1
-- **FIXED:** 462
+- **FIXED:** 463
 - **WONTFIX:** 1
 - **Total:** 465
 - **Archived:** 428 (001–428)
