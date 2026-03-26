@@ -189,11 +189,10 @@ describe('signing-sdk E2E integration', () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, status: 200 }) // POST /v1/push
       .mockImplementationOnce(() => {
-        const encodedResponse = Buffer.from(JSON.stringify(approveResponse), 'utf-8').toString('base64url');
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ response: encodedResponse }),
+          json: () => Promise.resolve(approveResponse),
         });
       });
 
@@ -270,11 +269,10 @@ describe('signing-sdk E2E integration', () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, status: 200 }) // POST
       .mockImplementationOnce(() => {
-        const encodedResponse = Buffer.from(JSON.stringify(rejectResponse), 'utf-8').toString('base64url');
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ response: encodedResponse }),
+          json: () => Promise.resolve(rejectResponse),
         });
       });
 
@@ -458,11 +456,10 @@ describe('signing-sdk E2E integration', () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, status: 200 }) // POST /v1/push
       .mockImplementationOnce(() => {
-        const encodedResponse = Buffer.from(JSON.stringify(signResponse), 'utf-8').toString('base64url');
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ response: encodedResponse }),
+          json: () => Promise.resolve(signResponse),
         });
       });
 
