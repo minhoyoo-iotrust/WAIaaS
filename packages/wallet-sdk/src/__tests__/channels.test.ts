@@ -61,13 +61,13 @@ describe('sendViaRelay', () => {
     fetchMock.mockResolvedValue({ ok: true });
 
     const response = makeValidResponse();
-    await sendViaRelay(response, 'https://relay.example.com');
+    await sendViaRelay(response, 'https://relay.example.com', 'test-api-key');
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, opts] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://relay.example.com/v1/sign-response');
     expect(opts.method).toBe('POST');
-    expect(opts.headers).toEqual({ 'Content-Type': 'application/json' });
+    expect(opts.headers).toEqual({ 'Content-Type': 'application/json', 'X-API-Key': 'test-api-key' });
 
     const body = JSON.parse(opts.body as string) as {
       requestId: string;
@@ -85,7 +85,7 @@ describe('sendViaRelay', () => {
   it('should strip trailing slash from relay URL', async () => {
     fetchMock.mockResolvedValue({ ok: true });
 
-    await sendViaRelay(makeValidResponse(), 'https://relay.example.com/');
+    await sendViaRelay(makeValidResponse(), 'https://relay.example.com/', 'test-api-key');
 
     const [url] = fetchMock.mock.calls[0] as [string];
     expect(url).toBe('https://relay.example.com/v1/sign-response');
@@ -99,7 +99,7 @@ describe('sendViaRelay', () => {
       action: 'reject',
       signature: undefined,
     };
-    await sendViaRelay(response, 'https://relay.example.com');
+    await sendViaRelay(response, 'https://relay.example.com', 'test-api-key');
 
     const body = JSON.parse(
       (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string,
@@ -111,7 +111,7 @@ describe('sendViaRelay', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 502 });
 
     await expect(
-      sendViaRelay(makeValidResponse(), 'https://relay.example.com'),
+      sendViaRelay(makeValidResponse(), 'https://relay.example.com', 'test-api-key'),
     ).rejects.toThrow('Failed to send response via Push Relay: HTTP 502');
   });
 });

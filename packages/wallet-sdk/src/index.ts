@@ -7,7 +7,7 @@
  *   - parseSignRequest(url) - Extract SignRequest from universal link URL
  *   - buildSignResponse(requestId, action, signature?, signerAddress) - Create SignResponse
  *   - formatDisplayMessage(request) - Human-readable transaction summary
- *   - sendViaRelay(response, pushRelayUrl) - Send via Push Relay server
+ *   - sendViaRelay(response, pushRelayUrl, apiKey) - Send via Push Relay server
  *   - registerDevice(pushRelayUrl, apiKey, opts) - Register device with Push Relay
  *   - unregisterDevice(pushRelayUrl, apiKey, pushToken) - Unregister device from Push Relay
  *   - getSubscriptionToken(pushRelayUrl, apiKey, pushToken) - Get subscription token for device

@@ -243,10 +243,8 @@ export class PushRelaySigningChannel {
           if (abortController.signal.aborted) break;
 
           if (res.status === 200) {
-            // Response found -- parse and handle
-            const body = (await res.json()) as { response: string };
-            const json = Buffer.from(body.response, 'base64url').toString('utf-8');
-            const parsed: unknown = JSON.parse(json);
+            // Response found -- parse and handle (Push Relay returns direct JSON)
+            const parsed: unknown = await res.json();
             const signResponse = SignResponseSchema.parse(parsed) as SignResponse;
 
             await this.signResponseHandler.handle(signResponse);
