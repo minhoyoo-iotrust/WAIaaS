@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.0-rc.15](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.14...v2.12.0-rc.15) (2026-03-26)
+
+
+### Bug Fixes
+
+* **daemon,wallet-sdk:** add owner address to test sign request ([#462](https://github.com/minhoyoo-iotrust/WAIaaS/issues/462)) and remove ntfy remnants ([#463](https://github.com/minhoyoo-iotrust/WAIaaS/issues/463)) ([81092e7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/81092e71bc3df8df792fdc8c7314b9fd52128816))
+* **daemon:** remove OpenAPI body schema from test-sign-request to allow empty body ([d8e63d1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d8e63d1545a40afe9bf8f0704b4b2f2828c1ee80))
+* resolve open issues [#462](https://github.com/minhoyoo-iotrust/WAIaaS/issues/462)-[#464](https://github.com/minhoyoo-iotrust/WAIaaS/issues/464) — owner address, ntfy cleanup, docs update ([825f4aa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/825f4aa6f9dd0d48f9bee754e5b79877b35b86b5))
+* **wallet-sdk:** simplify decodeInlineData to restore 100% coverage ([7780a24](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7780a24cd07c6be65f611a92542cdfbed7360142))
+
 ## [2.12.0-rc.14](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.13...v2.12.0-rc.14) (2026-03-25)
 
 
