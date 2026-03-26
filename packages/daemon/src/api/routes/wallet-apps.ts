@@ -148,6 +148,7 @@ const testSignRequestRoute = createRoute({
   path: '/admin/wallet-apps/{id}/test-sign-request',
   tags: ['Admin'],
   summary: 'Send a test sign request to a wallet app and wait for response',
+  description: 'Optional JSON body: { "ownerAddress": "0x..." } to specify signerAddress (defaults to zero address)',
   request: {
     params: z.object({ id: z.string() }),
   },
@@ -346,6 +347,11 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 30_000); // 30s timeout
 
+      // Extract optional ownerAddress from request body
+      let body: { ownerAddress?: string } | undefined;
+      try { body = await c.req.json(); } catch { /* no body */ }
+      const ownerAddress = body?.ownerAddress || '0x0000000000000000000000000000000000000000';
+
       // Build a minimal test SignRequest
       const testRequest = {
         version: '1' as const,
@@ -353,13 +359,13 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         walletName: app.name,
         chain: 'evm' as const,
         chainId: 'eip155:1',
-        signerAddress: '0x0000000000000000000000000000000000000000',
+        signerAddress: ownerAddress,
         message: `WAIaaS Test Sign Request for ${app.displayName}\nThis is a connectivity test. Approve or reject to verify the signing flow.`,
         displayMessage: `Test sign request for ${app.displayName}`,
         metadata: {
           txId: `test-${requestId.slice(0, 8)}`,
           type: 'SIGN',
-          from: '0x0000000000000000000000000000000000000000',
+          from: ownerAddress,
           to: '0x0000000000000000000000000000000000000000',
           policyTier: 'APPROVAL' as const,
         },

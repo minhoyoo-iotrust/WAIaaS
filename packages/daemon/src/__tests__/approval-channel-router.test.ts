@@ -58,7 +58,6 @@ function createMockPushRelayChannel(): PushRelaySigningChannel {
     sendRequest: vi.fn().mockResolvedValue({
       requestId: 'push-req-001',
       requestTopic: 'dcent',
-      responseTopic: '',
     }),
     shutdown: vi.fn(),
   } as unknown as PushRelaySigningChannel;
@@ -69,7 +68,6 @@ function createMockTelegramChannel(): TelegramSigningChannel {
     sendRequest: vi.fn().mockResolvedValue({
       requestId: 'telegram-req-001',
       requestTopic: 'waiaas-req-telegram',
-      responseTopic: '',
     }),
     shutdown: vi.fn(),
   } as unknown as TelegramSigningChannel;

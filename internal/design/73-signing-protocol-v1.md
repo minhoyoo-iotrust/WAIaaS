@@ -1,5 +1,7 @@
 # 73. WAIaaS Signing Protocol v1
 
+> **Note (v32.9):** ntfy.sh 직접 연동은 v32.9에서 제거됨. 현재는 Push Relay HTTP POST + long-polling 방식으로 동작. 본 문서의 ntfy 관련 설명은 초기 설계 기록으로 보존.
+
 ## 목차
 
 1. [개요](#1-개요)

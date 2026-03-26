@@ -69,7 +69,7 @@ graph LR
 - **@waiaas/cli** — Command-line interface
 - **@waiaas/admin** — Preact-based Admin Web UI
 - **@waiaas/wallet-sdk** — Wallet Signing SDK for wallet app integration
-- **@waiaas/push-relay** — Push Relay Server (ntfy → push services)
+- **@waiaas/push-relay** — Push Relay Server (daemon → Pushwoosh/FCM native push)
 - **@waiaas/skills** — Pre-built `.skill.md` instruction files for AI agents
 
 See [Architecture](docs/architecture.md) for the full technical deep-dive.
@@ -179,7 +179,7 @@ Access the admin panel at `http://127.0.0.1:3100/admin` with your master passwor
 - **Wallets** -- Create, manage, and monitor wallets across chains; RPC endpoints, balance monitoring, and WalletConnect settings
 - **Sessions** -- Issue and revoke agent session tokens; session lifetime and rate limit settings
 - **Policies** -- Configure 12 policy types with visual form editors; default deny and tier settings
-- **Notifications** -- Channel status and delivery logs; Telegram, Discord, ntfy, and Slack settings
+- **Notifications** -- Channel status and delivery logs; Telegram, Discord, and Slack settings
 - **Security** -- Kill Switch emergency controls, AutoStop protection rules, JWT rotation
 - **System** -- API keys, display currency, price oracle, rate limits, log level, and daemon shutdown
 
