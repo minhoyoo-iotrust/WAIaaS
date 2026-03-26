@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.12.0-rc.16](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.15...v2.12.0-rc.16) (2026-03-26)
+
+
+### Bug Fixes
+
+* **signing:** add missing API key to sendViaRelay and fix base64 response parsing ([3848624](https://github.com/minhoyoo-iotrust/WAIaaS/commit/384862499a0eb9a3f399501eb0a6202bf30088d5))
+* **signing:** add missing API key to sendViaRelay and fix base64 response parsing ([#465](https://github.com/minhoyoo-iotrust/WAIaaS/issues/465), [#466](https://github.com/minhoyoo-iotrust/WAIaaS/issues/466), [#467](https://github.com/minhoyoo-iotrust/WAIaaS/issues/467)) ([038ee36](https://github.com/minhoyoo-iotrust/WAIaaS/commit/038ee36ca0772382b68b7bc7926a4e554737b194))
+
 ## [2.12.0-rc.15](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.14...v2.12.0-rc.15) (2026-03-26)
 
 
