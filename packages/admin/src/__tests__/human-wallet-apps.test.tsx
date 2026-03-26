@@ -482,6 +482,38 @@ describe('HumanWalletAppsPage', () => {
     );
   });
 
+  it('T-HWUI-27: Test Sign with ownerAddress sends body', async () => {
+    mockApiCalls();
+    mockApiPost.mockResolvedValue({
+      data: {
+        success: true,
+        result: { action: 'approve', signature: '0xabc', signerAddress: '0x742d35Cc', signedAt: '2026-03-26T12:00:00Z' },
+      },
+    });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // Type owner address into the input field
+    const ownerInput = document.querySelector('input[placeholder="Owner address (optional)"]') as HTMLInputElement;
+    expect(ownerInput).toBeTruthy();
+    fireEvent.input(ownerInput, { target: { value: '0x742d35Cc' } });
+
+    fireEvent.click(screen.getByText('Test Sign'));
+
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/v1/admin/wallet-apps/{id}/test-sign-request',
+        expect.objectContaining({
+          params: { path: { id: 'app-1' } },
+          body: { ownerAddress: '0x742d35Cc' },
+        }),
+      );
+    });
+  });
+
   it('T-HWUI-25: Test Sign timeout shows error message', async () => {
     mockApiCalls();
     mockApiPost.mockResolvedValue({
