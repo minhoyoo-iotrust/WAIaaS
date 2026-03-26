@@ -6110,7 +6110,10 @@ export type paths = {
         };
         get?: never;
         put?: never;
-        /** Send a test sign request to a wallet app and wait for response */
+        /**
+         * Send a test sign request to a wallet app and wait for response
+         * @description Optional JSON body: { "ownerAddress": "0x..." } to specify signerAddress (defaults to zero address)
+         */
         post: {
             parameters: {
                 query?: never;
@@ -6120,14 +6123,7 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description Owner address to use as signerAddress (defaults to zero address) */
-                        ownerAddress?: string;
-                    };
-                };
-            };
+            requestBody?: never;
             responses: {
                 /** @description Test sign request result */
                 200: {

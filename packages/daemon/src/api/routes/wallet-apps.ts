@@ -143,18 +143,14 @@ const testNotificationRoute = createRoute({
   },
 });
 
-const TestSignRequestBodySchema = z.object({
-  ownerAddress: z.string().min(1).optional().openapi({ description: 'Owner address to use as signerAddress (defaults to zero address)' }),
-}).optional();
-
 const testSignRequestRoute = createRoute({
   method: 'post',
   path: '/admin/wallet-apps/{id}/test-sign-request',
   tags: ['Admin'],
   summary: 'Send a test sign request to a wallet app and wait for response',
+  description: 'Optional JSON body: { "ownerAddress": "0x..." } to specify signerAddress (defaults to zero address)',
   request: {
     params: z.object({ id: z.string() }),
-    body: { content: { 'application/json': { schema: TestSignRequestBodySchema } }, required: false },
   },
   responses: {
     200: {
