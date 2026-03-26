@@ -416,9 +416,8 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
       }
 
       if (pollRes.status === 200) {
-        const body = (await pollRes.json()) as { response: string };
-        const json = Buffer.from(body.response, 'base64url').toString('utf-8');
-        const parsed: unknown = JSON.parse(json);
+        // Push Relay returns direct JSON (not base64 wrapped)
+        const parsed: unknown = await pollRes.json();
         const signResponse = SignResponseSchema.parse(parsed);
         return c.json({
           success: true,

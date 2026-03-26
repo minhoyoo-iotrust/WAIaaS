@@ -16,16 +16,18 @@ import type { SignResponse } from '@waiaas/core';
  *
  * @param response - Validated SignResponse object
  * @param pushRelayUrl - Push Relay server URL (e.g., "https://push-relay.example.com")
+ * @param apiKey - Push Relay API key (`X-API-Key`)
  */
 export async function sendViaRelay(
   response: SignResponse,
   pushRelayUrl: string,
+  apiKey: string,
 ): Promise<void> {
   const url = `${pushRelayUrl.replace(/\/$/, '')}/v1/sign-response`;
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
     body: JSON.stringify({
       requestId: response.requestId,
       action: response.action,

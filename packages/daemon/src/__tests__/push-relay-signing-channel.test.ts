@@ -278,14 +278,13 @@ describe('PushRelaySigningChannel', () => {
 
   it('long-polling receives sign response and delegates to SignResponseHandler', async () => {
     const approveResponse = createApproveResponse();
-    const encodedResponse = Buffer.from(JSON.stringify(approveResponse), 'utf-8').toString('base64url');
 
     fetchMock
       .mockResolvedValueOnce({ ok: true, status: 200 }) // POST /v1/push
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ response: encodedResponse }),
+        json: () => Promise.resolve(approveResponse),
       }); // GET long-poll returns response
 
     await channel.sendRequest({
@@ -317,7 +316,6 @@ describe('PushRelaySigningChannel', () => {
     vi.useFakeTimers();
 
     const approveResponse = createApproveResponse();
-    const encodedResponse = Buffer.from(JSON.stringify(approveResponse), 'utf-8').toString('base64url');
 
     fetchMock
       .mockResolvedValueOnce({ ok: true, status: 200 }) // POST /v1/push
@@ -325,7 +323,7 @@ describe('PushRelaySigningChannel', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ response: encodedResponse }),
+        json: () => Promise.resolve(approveResponse),
       }); // GET attempt 2: success
 
     await channel.sendRequest({
@@ -483,7 +481,6 @@ describe('PushRelaySigningChannel', () => {
 
   it('continues polling on 204 without counting as error retry', async () => {
     const approveResponse = createApproveResponse();
-    const encodedResponse = Buffer.from(JSON.stringify(approveResponse), 'utf-8').toString('base64url');
 
     fetchMock
       .mockResolvedValueOnce({ ok: true, status: 200 }) // POST /v1/push
@@ -492,7 +489,7 @@ describe('PushRelaySigningChannel', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ response: encodedResponse }),
+        json: () => Promise.resolve(approveResponse),
       }); // GET: 200 (response found)
 
     await channel.sendRequest({

@@ -50,6 +50,9 @@
 | 462 | ENHANCEMENT | MEDIUM | Admin 테스트 서명 요청에 오너 주소 지정 불가 (signerAddress 하드코딩) | — | FIXED | 2026-03-26 |
 | 463 | ENHANCEMENT | LOW | wallet-sdk 및 데몬에 ntfy.sh 잔재 코드 잔존 (responseTopic, ntfy 채널 함수) | — | FIXED | 2026-03-26 |
 | 464 | ENHANCEMENT | MEDIUM | 문서에 ntfy.sh 잔재 설명 잔존 (docs/, skills/, internal/design/) | — | FIXED | 2026-03-26 |
+| 465 | BUG | HIGH | Wallet SDK sendViaRelay에 X-API-Key 헤더 누락 — 서명 응답 전송 시 401 | — | FIXED | 2026-03-26 |
+| 466 | BUG | HIGH | 데몬 PushRelaySigningChannel이 서명 응답을 base64 래핑 포맷으로 기대 (서버는 직접 JSON 반환) | — | FIXED | 2026-03-26 |
+| 467 | BUG | HIGH | Admin 테스트 서명 요청의 long-polling 응답 파싱도 base64 래핑 포맷으로 기대 (#466 동일 원인) | — | FIXED | 2026-03-26 |
 
 ## Type Legend
 
@@ -63,7 +66,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 1
-- **FIXED:** 463
+- **FIXED:** 466
 - **WONTFIX:** 1
-- **Total:** 465
+- **Total:** 468
 - **Archived:** 428 (001–428)
