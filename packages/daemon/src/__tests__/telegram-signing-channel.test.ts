@@ -147,7 +147,7 @@ describe('TelegramSigningChannel', () => {
 
     expect(builder.buildRequest).toHaveBeenCalledWith(params);
     expect(result.requestId).toBe('01234567-abcd-7000-8000-000000000001');
-    expect(result.responseTopic).toBe('');
+    expect(result).not.toHaveProperty('responseTopic');
   });
 
   it('sendRequest() sends Telegram message with inline_keyboard containing universal link', async () => {

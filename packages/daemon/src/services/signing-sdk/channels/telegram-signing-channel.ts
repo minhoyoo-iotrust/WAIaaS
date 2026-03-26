@@ -41,7 +41,6 @@ export interface SendRequestParams extends BuildRequestParams {
 export interface SendRequestResult {
   requestId: string;
   requestTopic: string;
-  responseTopic: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,7 +68,7 @@ export class TelegramSigningChannel {
    * Send a SignRequest via Telegram message with an inline "Open in Wallet" button.
    *
    * @param params - Transaction metadata + walletId
-   * @returns requestId, requestTopic (empty for Telegram), responseTopic (empty)
+   * @returns requestId, requestTopic (empty for Telegram)
    * @throws Error if telegram chat_id is not configured
    */
   async sendRequest(params: SendRequestParams): Promise<SendRequestResult> {
@@ -104,11 +103,9 @@ export class TelegramSigningChannel {
       ],
     });
 
-    // 6. Return result (no ntfy topics for Telegram channel)
     return {
       requestId: request.requestId,
       requestTopic,
-      responseTopic: '',
     };
   }
 

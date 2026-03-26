@@ -12,67 +12,48 @@ npm install @waiaas/wallet-sdk
 
 ```typescript
 import {
-  subscribeToRequests,
   parseSignRequest,
   buildSignResponse,
   formatDisplayMessage,
-  sendViaNtfy,
+  sendViaRelay,
 } from '@waiaas/wallet-sdk';
 
-// Subscribe to incoming sign requests via ntfy SSE
-const sub = subscribeToRequests('my-topic', async (request) => {
-  // Display to user
-  console.log(formatDisplayMessage(request));
+// Parse a sign request from a universal link
+const request = parseSignRequest('dcent://sign?data=eyJ...');
 
-  // Sign the transaction (your wallet's signing logic)
-  const signature = await myWallet.sign(request.message);
+// Display to user
+console.log(formatDisplayMessage(request));
 
-  // Build and send response
-  const response = buildSignResponse(
-    request.requestId,
-    'approve',
-    signature,
-    myWallet.address,
-  );
+// Sign the transaction (your wallet's signing logic)
+const signature = await myWallet.sign(request.message);
 
-  if (request.responseChannel.type === 'ntfy') {
-    await sendViaNtfy(
-      response,
-      request.responseChannel.responseTopic,
-      request.responseChannel.serverUrl,
-    );
-  }
-});
+// Build and send response via Push Relay
+const response = buildSignResponse(
+  request.requestId,
+  'approve',
+  signature,
+  myWallet.address,
+);
 
-// Stop listening
-sub.unsubscribe();
+if (request.responseChannel.type === 'push_relay') {
+  await sendViaRelay(response, request.responseChannel.pushRelayUrl);
+}
 ```
 
 ## API Reference
 
 ### Core Functions
 
-#### `parseSignRequest(url: string): SignRequest | Promise<SignRequest>`
+#### `parseSignRequest(url: string): SignRequest`
 
-Extract a SignRequest from a universal link URL.
+Extract a SignRequest from a universal link URL containing a `?data=` parameter with base64url-encoded SignRequest.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `url` | `string` | Universal link URL with query parameters |
-
-**Supported URL modes:**
-
-- **Inline:** `?data={base64url-encoded-SignRequest}` -- synchronous, returns `SignRequest`
-- **Remote:** `?requestId={uuid}&topic={topic}&serverUrl={url}` -- asynchronous, fetches from ntfy
+| `url` | `string` | Universal link URL with `?data=` query parameter |
 
 ```typescript
-// Inline mode (sync)
 const request = parseSignRequest('https://wallet.app/sign?data=eyJ...');
-
-// Remote mode (async)
-const request = await parseSignRequest(
-  'https://wallet.app/sign?requestId=550e8400-...&topic=my-topic'
-);
 ```
 
 **Throws:** `InvalidSignRequestUrlError`, `SignRequestExpiredError`, `SignRequestValidationError`
@@ -119,29 +100,14 @@ const text = formatDisplayMessage(request);
 
 ### Channel Functions
 
-#### `sendViaNtfy(response, responseTopic, serverUrl?): Promise<void>`
+#### `sendViaRelay(response, pushRelayUrl): Promise<void>`
 
-Publish a SignResponse to an ntfy topic.
+Send a SignResponse via Push Relay server.
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `response` | `SignResponse` | | Validated response |
-| `responseTopic` | `string` | | ntfy topic for responses |
-| `serverUrl` | `string` | `'https://ntfy.sh'` | ntfy server URL |
-
----
-
-#### `subscribeToRequests(topic, callback, serverUrl?): { unsubscribe: () => void }`
-
-Subscribe to incoming sign requests via ntfy SSE stream.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `topic` | `string` | | ntfy topic for requests |
-| `callback` | `(request: SignRequest) => void` | | Called for each valid request |
-| `serverUrl` | `string` | `'https://ntfy.sh'` | ntfy server URL |
-
-Auto-reconnects up to 3 times with 5-second delays. Expired requests are silently skipped.
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `response` | `SignResponse` | Validated response |
+| `pushRelayUrl` | `string` | Push Relay server URL |
 
 ---
 
@@ -214,12 +180,12 @@ import type { SignRequest, SignResponse, WalletLinkConfig } from '@waiaas/wallet
 
 WAIaaS supports two response channels:
 
-### ntfy (Direct Push)
+### Push Relay (Native Push)
 
-No messenger required. Wallet app subscribes to an ntfy topic for requests and publishes responses to a separate topic.
+Uses `@waiaas/push-relay` as a bridge. Wallet apps register via `registerDevice()`, receive sign requests as native push notifications, and send responses back via `sendViaRelay()`.
 
 ```
-WAIaaS Daemon → ntfy server → Wallet App → ntfy server → WAIaaS Daemon
+WAIaaS Daemon → Push Relay → FCM/Pushwoosh → Wallet App → Push Relay → WAIaaS Daemon
 ```
 
 ### Telegram (Messenger Relay)
@@ -230,26 +196,12 @@ Uses a Telegram bot as relay. Wallet app receives requests via Telegram and send
 WAIaaS Daemon → Telegram Bot → User → Wallet App → Telegram Bot → WAIaaS Daemon
 ```
 
-### Push Relay (Native Push)
-
-Uses `@waiaas/push-relay` as a bridge. Wallet apps register via `registerDevice()`, receive sign requests as native push notifications, and send responses back via `sendViaRelay()`.
-
-```
-WAIaaS Daemon → ntfy → Push Relay → FCM/Pushwoosh → Wallet App → Push Relay → ntfy → WAIaaS Daemon
-```
-
 ## Universal Link Format
 
 Wallet apps must handle URLs in this format:
 
 ```
 https://{wallet-host}/sign?data={base64url-encoded-SignRequest}
-```
-
-Or remote fetch format:
-
-```
-https://{wallet-host}/sign?requestId={uuid}&topic={topic}&serverUrl={ntfy-server}
 ```
 
 ## Integration Guide

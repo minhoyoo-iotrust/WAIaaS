@@ -47,8 +47,8 @@
 | 459 | ENHANCEMENT | MEDIUM | 세션 토큰으로 GET /v1/wallets, GET /v1/wallets/:id 조회 불가 (masterAuth only) | — | FIXED | 2026-03-25 |
 | 460 | BUG | HIGH | Push Relay config.toml static_fields가 푸시 payload에 반영되지 않음 | — | FIXED | 2026-03-25 |
 | 461 | BUG | HIGH | Admin UI 테스트 서명 요청이 여전히 base64 래핑 포맷으로 전송됨 (#456 수정 누락) | — | FIXED | 2026-03-26 |
-| 462 | ENHANCEMENT | MEDIUM | Admin 테스트 서명 요청에 오너 주소 지정 불가 (signerAddress 하드코딩) | — | OPEN | 2026-03-26 |
-| 463 | ENHANCEMENT | LOW | wallet-sdk 및 데몬에 ntfy.sh 잔재 코드 잔존 (responseTopic, ntfy 채널 함수) | — | OPEN | 2026-03-26 |
+| 462 | ENHANCEMENT | MEDIUM | Admin 테스트 서명 요청에 오너 주소 지정 불가 (signerAddress 하드코딩) | — | FIXED | 2026-03-26 |
+| 463 | ENHANCEMENT | LOW | wallet-sdk 및 데몬에 ntfy.sh 잔재 코드 잔존 (responseTopic, ntfy 채널 함수) | — | FIXED | 2026-03-26 |
 
 ## Type Legend
 
@@ -60,9 +60,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 0
 - **PLANNED:** 1
-- **FIXED:** 460
+- **FIXED:** 462
 - **WONTFIX:** 1
 - **Total:** 464
 - **Archived:** 428 (001–428)

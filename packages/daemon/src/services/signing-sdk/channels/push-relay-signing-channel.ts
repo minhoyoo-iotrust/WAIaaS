@@ -51,7 +51,6 @@ export interface SendRequestParams extends BuildRequestParams {
 export interface SendRequestResult {
   requestId: string;
   requestTopic: string;
-  responseTopic: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +123,7 @@ export class PushRelaySigningChannel {
    * Send a SignRequest via Push Relay HTTP POST and start long-polling for response.
    *
    * @param params - Transaction metadata + walletId
-   * @returns requestId, requestTopic, responseTopic (empty for push relay)
+   * @returns requestId, requestTopic
    */
   async sendRequest(params: SendRequestParams): Promise<SendRequestResult> {
     // 1. Build SignRequest via SignRequestBuilder
@@ -179,7 +178,6 @@ export class PushRelaySigningChannel {
     return {
       requestId: request.requestId,
       requestTopic,
-      responseTopic: '',
     };
   }
 

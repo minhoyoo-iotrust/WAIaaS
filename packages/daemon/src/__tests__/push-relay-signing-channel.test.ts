@@ -198,7 +198,7 @@ describe('PushRelaySigningChannel', () => {
     // Verify result
     expect(result.requestId).toBe(requestId);
     expect(result.requestTopic).toBe('dcent');
-    expect(result.responseTopic).toBe('');
+    expect(result).not.toHaveProperty('responseTopic');
   });
 
   // -----------------------------------------------------------------------

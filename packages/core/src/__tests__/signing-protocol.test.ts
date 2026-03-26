@@ -280,12 +280,13 @@ describe('ResponseChannelSchema', () => {
     expect(result.type).toBe('push_relay');
   });
 
-  it('rejects type ntfy', () => {
-    const channel = {
-      type: 'ntfy',
-      responseTopic: 'waiaas-response-test',
-    };
-    expect(() => ResponseChannelSchema.parse(channel)).toThrow();
+  it('rejects unsupported channel type', () => {
+    expect(() =>
+      ResponseChannelSchema.parse({ type: 'ntfy', responseTopic: 'test' }),
+    ).toThrow();
+    expect(() =>
+      ResponseChannelSchema.parse({ type: 'discord', topic: 'test' }),
+    ).toThrow();
   });
 
   it('parses telegram channel', () => {
@@ -295,12 +296,6 @@ describe('ResponseChannelSchema', () => {
     };
     const result = ResponseChannelSchema.parse(channel);
     expect(result.type).toBe('telegram');
-  });
-
-  it('rejects invalid channel type', () => {
-    expect(() =>
-      ResponseChannelSchema.parse({ type: 'discord', responseTopic: 'test' }),
-    ).toThrow();
   });
 });
 

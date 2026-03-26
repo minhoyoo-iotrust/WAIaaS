@@ -6120,7 +6120,14 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Owner address to use as signerAddress (defaults to zero address) */
+                        ownerAddress?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Test sign request result */
                 200: {

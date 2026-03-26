@@ -32,6 +32,7 @@ export default function HumanWalletAppsPage() {
   const testSignSending = useSignal<string | null>(null);
   const testSignError = useSignal<Record<string, string>>({});
   const testSignResult = useSignal<Record<string, { action: string; signature?: string; signerAddress: string; signedAt: string } | null>>({});
+  const testSignOwnerAddress = useSignal<Record<string, string>>({});
 
   // Register modal
   const registerModal = useSignal(false);
@@ -156,8 +157,10 @@ export default function HumanWalletAppsPage() {
     delete nextRes[app.id];
     testSignResult.value = nextRes;
     try {
+      const addr = testSignOwnerAddress.value[app.id]?.trim();
       const { data: result } = await api.POST('/v1/admin/wallet-apps/{id}/test-sign-request', {
         params: { path: { id: app.id } },
+        ...(addr ? { body: { ownerAddress: addr } } : {}),
       });
       if (result!.timeout) {
         testSignError.value = { ...testSignError.value, [app.id]: 'No response within 30 seconds. Check device connection.' };
@@ -409,16 +412,28 @@ export default function HumanWalletAppsPage() {
                     {app.signing_enabled && (() => {
                       const canTest = !!(app.subscription_token && app.push_relay_url);
                       return (
-                        <span title={canTest ? undefined : 'Set subscription token and Push Relay URL first'}>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleTestSignRequest(app)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input
+                            type="text"
+                            placeholder="Owner address (optional)"
+                            value={testSignOwnerAddress.value[app.id] || ''}
+                            onInput={(e) => {
+                              testSignOwnerAddress.value = { ...testSignOwnerAddress.value, [app.id]: (e.target as HTMLInputElement).value };
+                            }}
                             disabled={!canTest || testSignSending.value === app.id}
-                          >
-                            {testSignSending.value === app.id ? 'Waiting...' : 'Test Sign'}
-                          </Button>
-                        </span>
+                            style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', width: '240px', fontFamily: 'monospace' }}
+                          />
+                          <span title={canTest ? undefined : 'Set subscription token and Push Relay URL first'}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleTestSignRequest(app)}
+                              disabled={!canTest || testSignSending.value === app.id}
+                            >
+                              {testSignSending.value === app.id ? 'Waiting...' : 'Test Sign'}
+                            </Button>
+                          </span>
+                        </div>
                       );
                     })()}
                   </div>

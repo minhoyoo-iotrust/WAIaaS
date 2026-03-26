@@ -2,7 +2,7 @@
 
 - **유형:** ENHANCEMENT
 - **심각도:** LOW
-- **상태:** OPEN
+- **상태:** FIXED
 - **등록일:** 2026-03-26
 - **관련:** v32.9 (Push Relay 직접 연동, ntfy.sh 제거)
 

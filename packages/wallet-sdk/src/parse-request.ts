@@ -1,10 +1,7 @@
 /**
  * parseSignRequest - Extract SignRequest from a universal link URL.
  *
- * Supports two modes:
- *   1. Inline data: URL contains ?data={base64url-encoded-SignRequest}
- *   2. Remote fetch: URL contains ?requestId={uuid}&topic={topic}&serverUrl={url}
- *      (fetches from ntfy topic)
+ * Supports inline data mode: URL contains ?data={base64url-encoded-SignRequest}
  *
  * @see internal/design/74-wallet-sdk-daemon-components.md Section 2.1
  */
@@ -62,81 +59,15 @@ function decodeInlineData(data: string): SignRequest {
 }
 
 /**
- * Fetch a SignRequest from an ntfy topic by requestId.
- */
-async function fetchSignRequestFromNtfy(
-  requestId: string,
-  topic: string,
-  serverUrl: string,
-): Promise<SignRequest> {
-  const url = `${serverUrl}/${topic}/json?poll=1&since=all`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new InvalidSignRequestUrlError(
-      `Failed to fetch from ntfy: HTTP ${String(res.status)}`,
-    );
-  }
-
-  const text = await res.text();
-  // ntfy returns newline-delimited JSON messages
-  const lines = text.trim().split('\n');
-
-  for (const line of lines) {
-    if (!line.trim()) continue;
-
-    let msg: { message?: string };
-    try {
-      msg = JSON.parse(line) as { message?: string };
-    } catch {
-      continue;
-    }
-
-    if (!msg.message) continue;
-
-    let json: string;
-    try {
-      json = Buffer.from(msg.message, 'base64url').toString('utf-8');
-    } catch {
-      continue;
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(json);
-    } catch {
-      continue;
-    }
-
-    let request: SignRequest;
-    try {
-      request = SignRequestSchema.parse(parsed);
-    } catch {
-      continue;
-    }
-
-    if (request.requestId === requestId) {
-      assertNotExpired(request);
-      return request;
-    }
-  }
-
-  throw new InvalidSignRequestUrlError(
-    `Sign request ${requestId} not found in ntfy topic ${topic}`,
-  );
-}
-
-/**
  * Parse a SignRequest from a universal link URL.
  *
- * @param url - Universal link URL with ?data= or ?requestId= parameters
- * @returns SignRequest (sync for inline data, async for ntfy fetch)
+ * @param url - Universal link URL with ?data= parameter
+ * @returns Validated SignRequest
  * @throws InvalidSignRequestUrlError - URL is invalid or missing parameters
  * @throws SignRequestExpiredError - Request has expired
  * @throws SignRequestValidationError - Decoded data fails Zod validation
  */
-export function parseSignRequest(
-  url: string,
-): SignRequest | Promise<SignRequest> {
+export function parseSignRequest(url: string): SignRequest {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -149,16 +80,7 @@ export function parseSignRequest(
     return decodeInlineData(data);
   }
 
-  const requestId = parsed.searchParams.get('requestId');
-  if (requestId) {
-    const topic =
-      parsed.searchParams.get('topic') ?? 'waiaas-sign-requests';
-    const serverUrl =
-      parsed.searchParams.get('serverUrl') ?? 'https://ntfy.sh';
-    return fetchSignRequestFromNtfy(requestId, topic, serverUrl);
-  }
-
   throw new InvalidSignRequestUrlError(
-    'URL must contain either "data" or "requestId" parameter',
+    'URL must contain a "data" parameter',
   );
 }
