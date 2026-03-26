@@ -30,12 +30,7 @@ function assertNotExpired(request: SignRequest): void {
  * Decode inline data parameter (base64url -> JSON -> Zod validated SignRequest).
  */
 function decodeInlineData(data: string): SignRequest {
-  let json: string;
-  try {
-    json = Buffer.from(data, 'base64url').toString('utf-8');
-  } catch {
-    throw new InvalidSignRequestUrlError('Invalid base64url data parameter');
-  }
+  const json = Buffer.from(data, 'base64url').toString('utf-8');
 
   let parsed: unknown;
   try {
@@ -44,18 +39,16 @@ function decodeInlineData(data: string): SignRequest {
     throw new InvalidSignRequestUrlError('Invalid JSON in data parameter');
   }
 
-  let request: SignRequest;
   try {
-    request = SignRequestSchema.parse(parsed);
+    const request = SignRequestSchema.parse(parsed);
+    assertNotExpired(request);
+    return request;
   } catch (err) {
     if (err instanceof ZodError) {
       throw new SignRequestValidationError(err.message);
     }
     throw err;
   }
-
-  assertNotExpired(request);
-  return request;
 }
 
 /**
