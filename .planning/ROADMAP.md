@@ -83,7 +83,7 @@ See `.planning/milestones/v32.9-ROADMAP.md` for full details.
 
 See `.planning/milestones/v32.10-ROADMAP.md` for full details.
 
-### 🚧 v33.0 Desktop App 아키텍처 재설계 (In Progress)
+### v33.0 Desktop App 아키텍처 재설계 (In Progress)
 
 **Milestone Goal:** 설계 문서 39를 React 18 SPA 별도 구현에서 기존 Admin Web UI(Preact 10.x) 재사용 아키텍처로 전면 변경하고, Desktop 환경 감지/IPC/번들 전략을 신규 설계하며, m33-02 구현 objectives와의 정합성을 확보한다.
 
@@ -99,13 +99,16 @@ See `.planning/milestones/v32.10-ROADMAP.md` for full details.
 **Goal**: 설계 문서 39의 기존 6개 섹션이 React 18 SPA 대신 Admin Web UI WebView 로드 아키텍처를 정확히 기술한다
 **Depends on**: Nothing (first phase)
 **Requirements**: DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, DOC-06
+**Plans:** 2 plans
+Plans:
+- [ ] 456-01-PLAN.md — 아키텍처 다이어그램 + 계층 분리 + HTTP 통신 재작성 (Section 2.1, 2.2, 3.3)
+- [ ] 456-02-PLAN.md — 프로젝트 구조 + UI 플로우 + 구현 노트 재작성 (Section 6, 7, 13)
 **Success Criteria** (what must be TRUE):
   1. 아키텍처 다이어그램이 WebView에서 Admin Web UI(localhost)를 로드하는 구조를 보여준다
   2. 계층 역할 분리 섹션에서 React 18 언급이 완전히 제거되고 Preact Admin Web UI 재사용이 기술되어 있다
   3. HTTP localhost 통신 섹션이 apiCall() 상대 경로 재사용 패턴으로 갱신되어 있다
   4. 프로젝트 구조에서 apps/desktop/src/pages/ 8화면이 제거되고 packages/admin/src/ 확장으로 대체되어 있다
   5. UI 화면별 플로우가 기존 19페이지 + Desktop 전용 확장(Wizard, WalletConnect, Sidecar Status)으로 기술되어 있다
-**Plans**: TBD
 
 ### Phase 457: Desktop 환경 감지 + IPC + 번들 설계
 **Goal**: Desktop 전용 기능의 환경 감지, IPC 브릿지, CSP 예외, 조건부 렌더링, 번들 경계가 설계 문서에 완전히 명세된다
@@ -161,6 +164,6 @@ Phases execute in numeric order: 456 → 457 → 458
 | 453. Skills Cleanup + Admin Manual | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 454. OpenClaw Plugin Package | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 455. CI/CD, Documentation, SEO | v32.10 | 2/2 | Complete | 2026-03-18 |
-| 456. 설계 문서 39 기존 섹션 재작성 | v33.0 | 0/TBD | Not started | - |
+| 456. 설계 문서 39 기존 섹션 재작성 | v33.0 | 0/2 | Not started | - |
 | 457. Desktop 환경 감지 + IPC + 번들 설계 | v33.0 | 0/TBD | Not started | - |
 | 458. 구조 검증 + Objectives 정합 | v33.0 | 0/TBD | Not started | - |
