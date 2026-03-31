@@ -50,7 +50,7 @@ Requirements for Tauri Desktop App milestone. Each maps to roadmap phases.
 
 ### WalletConnect
 
-- [ ] **WCON-01**: Phase 0 스파이크에서 Tauri WebView 내 @reown/appkit QR 페어링 가능 여부를 검증한다
+- [x] **WCON-01**: Phase 0 스파이크에서 Tauri WebView 내 @reown/appkit QR 페어링 가능 여부를 검증한다
 - [ ] **WCON-02**: WalletConnect QR 코드로 Phantom/MetaMask 등 외부 지갑과 페어링할 수 있다
 - [ ] **WCON-03**: 페어링된 지갑으로 SIWS(Solana) / SIWE(EVM) 서명을 요청하여 Owner를 등록할 수 있다
 - [ ] **WCON-04**: WalletConnect 컴포넌트가 Desktop 환경에서만 활성화된다 (브라우저에서는 숨김)
@@ -124,7 +124,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WIZA-02 | Phase 462 | Pending |
 | WIZA-03 | Phase 462 | Pending |
 | WIZA-04 | Phase 462 | Pending |
-| WCON-01 | Phase 459 | Pending |
+| WCON-01 | Phase 459 | Complete |
 | WCON-02 | Phase 462 | Pending |
 | WCON-03 | Phase 462 | Pending |
 | WCON-04 | Phase 462 | Pending |
