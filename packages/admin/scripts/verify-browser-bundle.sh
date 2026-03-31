@@ -15,10 +15,15 @@ fi
 # These patterns indicate Tauri/Desktop module imports leaked into the browser bundle.
 # We check for import-style references, not content strings like "walletconnect" which
 # may appear legitimately in Admin UI settings forms.
+# Desktop-only module identifiers (from dynamic imports) must NOT appear in output.
 FORBIDDEN_PATTERNS=(
   "@tauri-apps"
   "__TAURI_INTERNALS__"
   "@reown/appkit"
+  "wc-connector"
+  "wc-qr-modal"
+  "setup-wizard"
+  "wizard-store"
 )
 
 FAILED=0
