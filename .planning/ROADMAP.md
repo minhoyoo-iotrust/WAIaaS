@@ -89,7 +89,7 @@ See `.planning/milestones/v32.10-ROADMAP.md` for full details.
 
 ## Phases
 
-- [ ] **Phase 456: 설계 문서 39 기존 섹션 재작성** - React 18 SPA 구조를 Admin Web UI 재사용 구조로 6개 섹션 전면 변경
+- [x] **Phase 456: 설계 문서 39 기존 섹션 재작성** - React 18 SPA 구조를 Admin Web UI 재사용 구조로 6개 섹션 전면 변경 (2/2 plans) -- completed 2026-03-31
 - [ ] **Phase 457: Desktop 환경 감지 + IPC + 번들 설계** - isDesktop() 전략, IPC 브릿지, CSP 예외, 조건부 렌더링, 번들 경계 신규 설계
 - [ ] **Phase 458: 구조 검증 + Objectives 정합** - 포트 동적 할당 설계, 변경/미변경 섹션 일관성 검증, m33-02 objectives 갱신
 
@@ -164,6 +164,6 @@ Phases execute in numeric order: 456 → 457 → 458
 | 453. Skills Cleanup + Admin Manual | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 454. OpenClaw Plugin Package | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 455. CI/CD, Documentation, SEO | v32.10 | 2/2 | Complete | 2026-03-18 |
-| 456. 설계 문서 39 기존 섹션 재작성 | v33.0 | 0/2 | Not started | - |
+| 456. 설계 문서 39 기존 섹션 재작성 | v33.0 | 2/2 | Complete | 2026-03-31 |
 | 457. Desktop 환경 감지 + IPC + 번들 설계 | v33.0 | 0/TBD | Not started | - |
 | 458. 구조 검증 + Objectives 정합 | v33.0 | 0/TBD | Not started | - |

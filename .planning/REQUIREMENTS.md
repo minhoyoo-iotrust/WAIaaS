@@ -9,12 +9,12 @@ Requirements for milestone v33.0. Each maps to roadmap phases.
 
 ### 설계 문서 39 수정 (DOC)
 
-- [ ] **DOC-01**: 설계 문서 39 아키텍처 다이어그램이 WebView→Admin Web UI(localhost) 로드 구조로 변경됨
-- [ ] **DOC-02**: 계층 역할 분리가 React 18 SPA 대신 기존 Preact Admin Web UI 재사용으로 기술됨
-- [ ] **DOC-03**: HTTP localhost 통신 섹션이 apiCall() 상대 경로 재사용 패턴으로 갱신됨
-- [ ] **DOC-04**: 프로젝트 구조 섹션에서 apps/desktop/src/pages/ 8화면이 제거되고 packages/admin/src/ 확장으로 대체됨
-- [ ] **DOC-05**: UI 화면별 플로우가 기존 Admin Web UI 19페이지 + Desktop 전용 확장(Wizard, WalletConnect, Sidecar 상태)으로 갱신됨
-- [ ] **DOC-06**: 구현 노트가 React 18 관련 내용에서 Admin Web UI 재사용 + isDesktop() 패턴으로 변경됨
+- [x] **DOC-01**: 설계 문서 39 아키텍처 다이어그램이 WebView→Admin Web UI(localhost) 로드 구조로 변경됨
+- [x] **DOC-02**: 계층 역할 분리가 React 18 SPA 대신 기존 Preact Admin Web UI 재사용으로 기술됨
+- [x] **DOC-03**: HTTP localhost 통신 섹션이 apiCall() 상대 경로 재사용 패턴으로 갱신됨
+- [x] **DOC-04**: 프로젝트 구조 섹션에서 apps/desktop/src/pages/ 8화면이 제거되고 packages/admin/src/ 확장으로 대체됨
+- [x] **DOC-05**: UI 화면별 플로우가 기존 Admin Web UI 19페이지 + Desktop 전용 확장(Wizard, WalletConnect, Sidecar 상태)으로 갱신됨
+- [x] **DOC-06**: 구현 노트가 React 18 관련 내용에서 Admin Web UI 재사용 + isDesktop() 패턴으로 변경됨
 
 ### Desktop 환경 감지 + IPC 설계 (IPC)
 
@@ -66,12 +66,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOC-01 | Phase 456 | Pending |
-| DOC-02 | Phase 456 | Pending |
-| DOC-03 | Phase 456 | Pending |
-| DOC-04 | Phase 456 | Pending |
-| DOC-05 | Phase 456 | Pending |
-| DOC-06 | Phase 456 | Pending |
+| DOC-01 | Phase 456 | Complete |
+| DOC-02 | Phase 456 | Complete |
+| DOC-03 | Phase 456 | Complete |
+| DOC-04 | Phase 456 | Complete |
+| DOC-05 | Phase 456 | Complete |
+| DOC-06 | Phase 456 | Complete |
 | IPC-01 | Phase 457 | Pending |
 | IPC-02 | Phase 457 | Pending |
 | IPC-03 | Phase 457 | Pending |
