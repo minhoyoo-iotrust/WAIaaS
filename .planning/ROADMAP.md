@@ -107,7 +107,9 @@ See `.planning/milestones/v33.0-ROADMAP.md` for full details.
   1. Tauri WebView 내에서 `<w3m-modal>` Web Component가 렌더링되고 QR 코드가 표시된다
   2. WebSocket이 `wss://relay.walletconnect.com`에 CSP 충돌 없이 연결된다
   3. 외부 지갑(Phantom 또는 MetaMask)으로 QR 스캔 후 SIWS/SIWE 서명 플로우가 완료된다 (또는 실패 시 Plan B 전환 결정이 문서화된다)
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 459-01-PLAN.md — Tauri spike 프로젝트 + @reown/appkit QR 페어링 + Go/No-Go 결정
 
 ### Phase 460: Tauri Shell + Sidecar Manager
 **Goal**: Tauri 앱이 WAIaaS 데몬 SEA 바이너리를 사이드카로 시작하고, 동적 포트를 발견하여 WebView에 Admin Web UI를 로드한다
@@ -163,7 +165,7 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 459. WalletConnect Spike | 0/TBD | Not started | - |
+| 459. WalletConnect Spike | 0/1 | Planned | - |
 | 460. Tauri Shell + Sidecar Manager | 0/TBD | Not started | - |
 | 461. IPC Bridge + System Tray | 0/TBD | Not started | - |
 | 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 0/TBD | Not started | - |
