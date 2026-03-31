@@ -8,7 +8,7 @@ description = "WAIaaS Desktop App - AI Agent Wallet Manager"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
+tauri = { version = "2", features = ["devtools", "tray-icon", "image-png"] }
 tauri-plugin-notification = "2"
 tauri-plugin-process = "2"
 tauri-plugin-shell = "2"

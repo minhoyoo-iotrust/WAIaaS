@@ -4,6 +4,7 @@
 mod commands;
 mod lockfile;
 mod sidecar;
+mod tray;
 mod types;
 
 use serde_json::json;
@@ -36,6 +37,9 @@ fn main() {
             quit_app,
         ])
         .setup(|app| {
+            // Initialize system tray with 3-color status icon and context menu
+            tray::setup_tray(app)?;
+
             let app_handle = app.handle().clone();
 
             // Remote WebView capability for localhost URLs
@@ -95,6 +99,12 @@ fn main() {
                             .ok();
                     }
                 }
+            });
+
+            // Start 30-second tray icon polling for health status updates
+            let tray_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                tray::start_tray_polling(tray_handle).await;
             });
 
             Ok(())
