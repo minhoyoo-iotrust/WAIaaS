@@ -91,7 +91,7 @@ See `.planning/milestones/v32.10-ROADMAP.md` for full details.
 
 - [x] **Phase 456: 설계 문서 39 기존 섹션 재작성** - React 18 SPA 구조를 Admin Web UI 재사용 구조로 6개 섹션 전면 변경 (2/2 plans) -- completed 2026-03-31
 - [x] **Phase 457: Desktop 환경 감지 + IPC + 번들 설계** - isDesktop() 전략, IPC 브릿지, CSP 예외, 조건부 렌더링, 번들 경계 신규 설계 (completed 2026-03-31)
-- [ ] **Phase 458: 구조 검증 + Objectives 정합** - 포트 동적 할당 설계, 변경/미변경 섹션 일관성 검증, m33-02 objectives 갱신
+- [x] **Phase 458: 구조 검증 + Objectives 정합** - 포트 동적 할당 설계, 변경/미변경 섹션 일관성 검증, m33-02 objectives 갱신 (completed 2026-03-31)
 
 ## Phase Details
 
@@ -133,10 +133,10 @@ Plans:
   1. 데몬 포트 동적 할당 프로토콜(TCP bind(0) + stdout/tempfile 전달)이 설계되어 있다
   2. 설계 문서 39의 변경하지 않는 섹션(4,5,8,9,10,11,12)과 변경 섹션 간에 모순이 없다
   3. m33-02 Desktop App 구현 objectives가 변경된 아키텍처를 반영하도록 갱신되어 있다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 458-01-PLAN.md — 데몬 포트 동적 할당 프로토콜 설계 + 미변경 섹션 일관성 수정
-- [ ] 458-02-PLAN.md — m33-02 Desktop App objectives 갱신 + m33-00 상태 업데이트
+- [x] 458-01-PLAN.md — 데몬 포트 동적 할당 프로토콜 설계 + 미변경 섹션 일관성 수정
+- [x] 458-02-PLAN.md — m33-02 Desktop App objectives 갱신 + m33-00 상태 업데이트
 
 ## Progress
 
@@ -172,4 +172,4 @@ Phases execute in numeric order: 456 → 457 → 458
 | 455. CI/CD, Documentation, SEO | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 456. 설계 문서 39 기존 섹션 재작성 | v33.0 | 2/2 | Complete    | 2026-03-31 |
 | 457. Desktop 환경 감지 + IPC + 번들 설계 | v33.0 | 2/2 | Complete    | 2026-03-31 |
-| 458. 구조 검증 + Objectives 정합 | v33.0 | 0/2 | Not started | - |
+| 458. 구조 검증 + Objectives 정합 | v33.0 | 2/2 | Complete   | 2026-03-31 |

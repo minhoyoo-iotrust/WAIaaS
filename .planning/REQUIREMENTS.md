@@ -33,9 +33,9 @@ Requirements for milestone v33.0. Each maps to roadmap phases.
 
 ### 프로젝트 구조 + 정합성 (STR)
 
-- [ ] **STR-01**: 데몬 포트 동적 할당 프로토콜(TCP bind(0) + stdout/tempfile 전달)이 설계됨
-- [ ] **STR-02**: m33-02 Desktop App 구현 objectives가 변경된 아키텍처와 정합하도록 갱신됨
-- [ ] **STR-03**: 설계 문서 39의 변경하지 않는 섹션(4,5,8,9,10,11,12)과 변경 섹션 간 일관성이 검증됨
+- [x] **STR-01**: 데몬 포트 동적 할당 프로토콜(TCP bind(0) + stdout/tempfile 전달)이 설계됨
+- [x] **STR-02**: m33-02 Desktop App 구현 objectives가 변경된 아키텍처와 정합하도록 갱신됨
+- [x] **STR-03**: 설계 문서 39의 변경하지 않는 섹션(4,5,8,9,10,11,12)과 변경 섹션 간 일관성이 검증됨
 
 ## v2 Requirements
 
@@ -81,9 +81,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BLD-02 | Phase 457 | Complete |
 | BLD-03 | Phase 457 | Complete |
 | BLD-04 | Phase 457 | Complete |
-| STR-01 | Phase 458 | Pending |
-| STR-02 | Phase 458 | Pending |
-| STR-03 | Phase 458 | Pending |
+| STR-01 | Phase 458 | Complete |
+| STR-02 | Phase 458 | Complete |
+| STR-03 | Phase 458 | Complete |
 
 **Coverage:**
 - v1 requirements: 18 total
