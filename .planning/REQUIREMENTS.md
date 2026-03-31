@@ -9,20 +9,20 @@ Requirements for Tauri Desktop App milestone. Each maps to roadmap phases.
 
 ### Sidecar Manager
 
-- [ ] **SIDE-01**: Sidecar Manager가 Node.js SEA 바이너리로 데몬을 시작하고, `--port=0`으로 OS가 빈 포트를 할당한다
-- [ ] **SIDE-02**: Sidecar Manager가 stdout `WAIAAS_PORT={port}` 파싱(primary) / `{data_dir}/daemon.port` 파일(fallback)로 데몬 포트를 확인한다
-- [ ] **SIDE-03**: Sidecar Manager가 데몬 프로세스 crash를 감지하고 자동 재시작한다
-- [ ] **SIDE-04**: Sidecar Manager가 graceful shutdown(SIGTERM → 5초 타임아웃 → SIGKILL)으로 데몬을 종료한다
-- [ ] **SIDE-05**: Sidecar Manager가 PID lockfile로 다중 인스턴스를 방지한다
-- [ ] **SIDE-06**: Windows에서 Job Object로 Sidecar 종료 시 데몬 zombie 프로세스를 방지한다
-- [ ] **SIDE-07**: esbuild single-file 번들 → Node.js SEA config로 3 플랫폼(macOS arm64/x64, Windows x64, Linux x64) 바이너리를 생성한다
-- [ ] **SIDE-08**: native addon(sodium-native, better-sqlite3)을 sidecar와 함께 배포하고 올바르게 로드한다
+- [x] **SIDE-01**: Sidecar Manager가 Node.js SEA 바이너리로 데몬을 시작하고, `--port=0`으로 OS가 빈 포트를 할당한다
+- [x] **SIDE-02**: Sidecar Manager가 stdout `WAIAAS_PORT={port}` 파싱(primary) / `{data_dir}/daemon.port` 파일(fallback)로 데몬 포트를 확인한다
+- [x] **SIDE-03**: Sidecar Manager가 데몬 프로세스 crash를 감지하고 자동 재시작한다
+- [x] **SIDE-04**: Sidecar Manager가 graceful shutdown(SIGTERM → 5초 타임아웃 → SIGKILL)으로 데몬을 종료한다
+- [x] **SIDE-05**: Sidecar Manager가 PID lockfile로 다중 인스턴스를 방지한다
+- [x] **SIDE-06**: Windows에서 Job Object로 Sidecar 종료 시 데몬 zombie 프로세스를 방지한다
+- [x] **SIDE-07**: esbuild single-file 번들 → Node.js SEA config로 3 플랫폼(macOS arm64/x64, Windows x64, Linux x64) 바이너리를 생성한다
+- [x] **SIDE-08**: native addon(sodium-native, better-sqlite3)을 sidecar와 함께 배포하고 올바르게 로드한다
 
 ### WebView + Desktop 감지
 
-- [ ] **VIEW-01**: Tauri WebView가 스플래시 페이지를 표시한 후, Sidecar 준비 완료 시 `http://localhost:{port}/admin`으로 navigate한다
+- [x] **VIEW-01**: Tauri WebView가 스플래시 페이지를 표시한 후, Sidecar 준비 완료 시 `http://localhost:{port}/admin`으로 navigate한다
 - [ ] **VIEW-02**: `isDesktop()` 함수가 `window.__TAURI_INTERNALS__` 기반으로 Desktop 환경을 감지하고 모듈 레벨 캐싱한다
-- [ ] **VIEW-03**: `tauri.conf.json`의 `remote.urls` 설정으로 localhost URL에서 IPC 명령이 동작한다
+- [x] **VIEW-03**: `tauri.conf.json`의 `remote.urls` 설정으로 localhost URL에서 IPC 명령이 동작한다
 - [ ] **VIEW-04**: Desktop 전용 코드가 4-layer tree-shaking(dynamic import + optional peer deps + build constant + CI verification)으로 브라우저 번들에 포함되지 않는다
 
 ### IPC 브릿지
@@ -98,17 +98,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIDE-01 | Phase 460 | Pending |
-| SIDE-02 | Phase 460 | Pending |
-| SIDE-03 | Phase 460 | Pending |
-| SIDE-04 | Phase 460 | Pending |
-| SIDE-05 | Phase 460 | Pending |
-| SIDE-06 | Phase 460 | Pending |
-| SIDE-07 | Phase 460 | Pending |
-| SIDE-08 | Phase 460 | Pending |
-| VIEW-01 | Phase 460 | Pending |
+| SIDE-01 | Phase 460 | Complete |
+| SIDE-02 | Phase 460 | Complete |
+| SIDE-03 | Phase 460 | Complete |
+| SIDE-04 | Phase 460 | Complete |
+| SIDE-05 | Phase 460 | Complete |
+| SIDE-06 | Phase 460 | Complete |
+| SIDE-07 | Phase 460 | Complete |
+| SIDE-08 | Phase 460 | Complete |
+| VIEW-01 | Phase 460 | Complete |
 | VIEW-02 | Phase 461 | Pending |
-| VIEW-03 | Phase 460 | Pending |
+| VIEW-03 | Phase 460 | Complete |
 | VIEW-04 | Phase 461 | Pending |
 | IPC-01 | Phase 461 | Pending |
 | IPC-02 | Phase 461 | Pending |

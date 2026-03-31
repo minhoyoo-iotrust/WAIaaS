@@ -92,7 +92,7 @@ See `.planning/milestones/v33.0-ROADMAP.md` for full details.
 - Phase 459 and Phase 460 are parallelizable (no dependency between them)
 
 - [x] **Phase 459: WalletConnect Spike** - @reown/appkit Tauri WebView 호환성 Go/No-Go 검증 (completed 2026-03-31)
-- [ ] **Phase 460: Tauri Shell + Sidecar Manager** - Tauri 프로젝트 구조 + SEA 바이너리 빌드 + 사이드카 라이프사이클 + WebView 로드
+- [x] **Phase 460: Tauri Shell + Sidecar Manager** - Tauri 프로젝트 구조 + SEA 바이너리 빌드 + 사이드카 라이프사이클 + WebView 로드 (completed 2026-03-31)
 - [ ] **Phase 461: IPC Bridge + System Tray** - 7개 IPC 명령 + 시스템 트레이 3색 상태 + isDesktop() + 4-layer tree-shaking
 - [ ] **Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장** - 5단계 Setup Wizard + WalletConnect QR 페어링 + Desktop 전용 컴포넌트
 - [ ] **Phase 463: GitHub Releases CI + Auto-Update** - 3 플랫폼 빌드 매트릭스 + 코드 사이닝 + 자동 업데이트
@@ -121,11 +121,11 @@ Plans:
   3. 데몬 crash 시 자동 재시작되고, graceful shutdown(SIGTERM -> 5s -> SIGKILL)이 동작한다
   4. PID lockfile로 다중 인스턴스가 방지되고, Windows에서 Job Object로 zombie 프로세스가 방지된다
   5. esbuild + SEA config로 3 플랫폼 바이너리가 생성되고, sodium-native/better-sqlite3 native addon이 올바르게 로드된다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 460-01-PLAN.md — Tauri 2 프로젝트 스캐폴딩 + SidecarManager 구현 (Rust)
-- [ ] 460-02-PLAN.md — SEA 바이너리 빌드 파이프라인 + native-loader + 동적 포트 출력
-- [ ] 460-03-PLAN.md — 스플래시 -> 데몬 시작 -> WebView navigate 통합 + 검증
+- [x] 460-01-PLAN.md — Tauri 2 프로젝트 스캐폴딩 + SidecarManager 구현 (Rust)
+- [x] 460-02-PLAN.md — SEA 바이너리 빌드 파이프라인 + native-loader + 동적 포트 출력
+- [x] 460-03-PLAN.md — 스플래시 -> 데몬 시작 -> WebView navigate 통합 + 검증
 
 ### Phase 461: IPC Bridge + System Tray
 **Goal**: Desktop 전용 코드 아키텍처(isDesktop, tree-shaking)가 확립되고, 7개 IPC 명령으로 네이티브 기능을 사용할 수 있으며, 시스템 트레이에 데몬 상태가 표시된다
@@ -170,7 +170,7 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 459. WalletConnect Spike | 1/1 | Complete   | 2026-03-31 |
-| 460. Tauri Shell + Sidecar Manager | 0/3 | Planned | - |
+| 460. Tauri Shell + Sidecar Manager | 3/3 | Complete   | 2026-03-31 |
 | 461. IPC Bridge + System Tray | 0/TBD | Not started | - |
 | 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 0/TBD | Not started | - |
 | 463. GitHub Releases CI + Auto-Update | 0/TBD | Not started | - |

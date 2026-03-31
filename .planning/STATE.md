@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v33.2
 milestone_name: Tauri Desktop App
-status: active
-stopped_at: Completed 459-01-PLAN.md (WalletConnect Spike)
-last_updated: "2026-03-31T15:20:00.000Z"
-last_activity: 2026-03-31 — Phase 459 complete (1/1 plans)
+status: executing
+stopped_at: Completed Phase 460 (3/3 plans, Tauri Shell + Sidecar Manager)
+last_updated: "2026-03-31T16:00:04.275Z"
+last_activity: 2026-03-31
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 4
   percent: 25
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 ## Current Position
 
 Phase: 460 of 463 (Tauri Shell + Sidecar Manager)
-Plan: 0 of 3 in current phase
-Status: Phase 459 complete, Phase 460 next
-Last activity: 2026-03-31 — Phase 459 WalletConnect Spike complete (1/1 plans, 4min)
+Plan: 3 of 3 in current phase
+Status: Ready to execute
+Last activity: 2026-03-31
 
 Progress: [███░░░░░░░] 25%
 
@@ -43,6 +43,7 @@ Progress: [███░░░░░░░] 25%
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 459 | 01 | 4min | 3 | 11 |
+| Phase 460 P01-03 | 35min | 4 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -54,6 +55,9 @@ Progress: [███░░░░░░░] 25%
 - Vanilla TS for spike (no framework) since @reown/appkit uses lit Web Components
 - CSP includes web3modal.org/com domains for Reown Cloud APIs
 - SPIKE-RESULT.md PENDING status — manual pnpm tauri dev verification required
+- [Phase 460]: Tauri 2 app-level IPC commands via generate_handler (not plugin system) -- capabilities via default.json remote block
+- [Phase 460]: SEA build pipeline: CLI entry -> esbuild CJS -> SEA blob -> postject -> Tauri externalBin
+- [Phase 460]: WAIAAS_PORT stdout + daemon.port file dual port discovery protocol
 
 ### Pending Todos
 
@@ -67,6 +71,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31
-Stopped at: Completed 459-01-PLAN.md (WalletConnect Spike). Phase 460 next.
+Last session: 2026-03-31T16:00:04.271Z
+Stopped at: Completed Phase 460 (3/3 plans, Tauri Shell + Sidecar Manager)
 Resume file: None
