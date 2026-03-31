@@ -18,18 +18,18 @@ Requirements for milestone v33.0. Each maps to roadmap phases.
 
 ### Desktop 환경 감지 + IPC 설계 (IPC)
 
-- [ ] **IPC-01**: isDesktop() 환경 감지 전략(window.__TAURI_INTERNALS__ 체크)이 문서화됨
-- [ ] **IPC-02**: IPC 브릿지 설계가 6개 명령(start/stop/restart/status/logs/notification)으로 문서화됨
-- [ ] **IPC-03**: Tauri CapabilityBuilder.remote() URL 패턴(http://127.0.0.1:*/*) 설계가 포함됨
-- [ ] **IPC-04**: CSP 예외 전략(Tauri WebView에서의 connect-src 조정)이 문서화됨
-- [ ] **IPC-05**: 조건부 렌더링 전략(isDesktop() 가드 + dynamic import)이 Desktop 전용 컴포넌트별로 명세됨
+- [x] **IPC-01**: isDesktop() 환경 감지 전략(window.__TAURI_INTERNALS__ 체크)이 문서화됨
+- [x] **IPC-02**: IPC 브릿지 설계가 6개 명령(start/stop/restart/status/logs/notification)으로 문서화됨
+- [x] **IPC-03**: Tauri CapabilityBuilder.remote() URL 패턴(http://127.0.0.1:*/*) 설계가 포함됨
+- [x] **IPC-04**: CSP 예외 전략(Tauri WebView에서의 connect-src 조정)이 문서화됨
+- [x] **IPC-05**: 조건부 렌더링 전략(isDesktop() 가드 + dynamic import)이 Desktop 전용 컴포넌트별로 명세됨
 
 ### 번들 + 빌드 설계 (BLD)
 
-- [ ] **BLD-01**: packages/admin/src/desktop/ 모듈 경계가 정의되고 dynamic import 규칙이 문서화됨
-- [ ] **BLD-02**: Desktop-only 의존성 목록(@tauri-apps/api, @reown/appkit 등)이 명시되고 lazy load 대상으로 지정됨
-- [ ] **BLD-03**: 브라우저 배포 번들에 Desktop 전용 코드가 포함되지 않는 tree-shaking 전략이 문서화됨
-- [ ] **BLD-04**: Vite 빌드 설정 변경사항(dev 서버 + Tauri 개발 워크플로우)이 설계됨
+- [x] **BLD-01**: packages/admin/src/desktop/ 모듈 경계가 정의되고 dynamic import 규칙이 문서화됨
+- [x] **BLD-02**: Desktop-only 의존성 목록(@tauri-apps/api, @reown/appkit 등)이 명시되고 lazy load 대상으로 지정됨
+- [x] **BLD-03**: 브라우저 배포 번들에 Desktop 전용 코드가 포함되지 않는 tree-shaking 전략이 문서화됨
+- [x] **BLD-04**: Vite 빌드 설정 변경사항(dev 서버 + Tauri 개발 워크플로우)이 설계됨
 
 ### 프로젝트 구조 + 정합성 (STR)
 
@@ -72,15 +72,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOC-04 | Phase 456 | Complete |
 | DOC-05 | Phase 456 | Complete |
 | DOC-06 | Phase 456 | Complete |
-| IPC-01 | Phase 457 | Pending |
-| IPC-02 | Phase 457 | Pending |
-| IPC-03 | Phase 457 | Pending |
-| IPC-04 | Phase 457 | Pending |
-| IPC-05 | Phase 457 | Pending |
-| BLD-01 | Phase 457 | Pending |
-| BLD-02 | Phase 457 | Pending |
-| BLD-03 | Phase 457 | Pending |
-| BLD-04 | Phase 457 | Pending |
+| IPC-01 | Phase 457 | Complete |
+| IPC-02 | Phase 457 | Complete |
+| IPC-03 | Phase 457 | Complete |
+| IPC-04 | Phase 457 | Complete |
+| IPC-05 | Phase 457 | Complete |
+| BLD-01 | Phase 457 | Complete |
+| BLD-02 | Phase 457 | Complete |
+| BLD-03 | Phase 457 | Complete |
+| BLD-04 | Phase 457 | Complete |
 | STR-01 | Phase 458 | Pending |
 | STR-02 | Phase 458 | Pending |
 | STR-03 | Phase 458 | Pending |
