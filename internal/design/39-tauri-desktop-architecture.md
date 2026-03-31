@@ -829,111 +829,103 @@ fn main() {
 
 ## 6. 프로젝트 구조
 
-### 6.1 packages/desktop 디렉토리 트리
+> **(v33.0 변경)** Desktop 앱의 프론트엔드는 별도로 존재하지 않는다. `apps/desktop/`은 Tauri Rust 셸만 포함하고, UI는 Sidecar Manager가 시작한 데몬의 Admin Web UI(`http://localhost:{port}/admin`)를 WebView에서 로드한다.
+
+### 6.1 apps/desktop + packages/admin 확장 구조
 
 ```
-packages/desktop/
+apps/desktop/                    # Tauri Desktop 앱 (Rust 셸만 포함)
   src-tauri/
     src/
-      main.rs              # Tauri entry point (setup, plugins, invoke_handler)
-      sidecar.rs           # SidecarManager 구조체 (start/stop/health/restart)
-      tray.rs              # 시스템 트레이 (3색 아이콘, 메뉴 동적 업데이트)
-      commands.rs          # IPC commands (#[tauri::command] 함수들)
-    binaries/              # Sidecar 바이너리 (빌드 시 배치)
+      main.rs                    # Tauri entry point + WebView URL 설정 (http://localhost:{port}/admin)
+      sidecar.rs                 # SidecarManager 구조체 (start/stop/health/restart) (변경 없음)
+      tray.rs                    # 시스템 트레이 (3색 아이콘, 메뉴 동적 업데이트) (변경 없음)
+      commands.rs                # IPC commands (#[tauri::command] 함수들) (변경 없음)
+    binaries/                    # Sidecar 바이너리 (빌드 시 배치)
       waiaas-daemon-aarch64-apple-darwin
       waiaas-daemon-x86_64-apple-darwin
       waiaas-daemon-x86_64-pc-windows-msvc.exe
       waiaas-daemon-x86_64-unknown-linux-gnu
     icons/
-      tray-green.png       # 정상 상태 아이콘
-      tray-green@2x.png    # Retina 지원
-      tray-yellow.png      # 경고 상태 아이콘
+      tray-green.png             # 정상 상태 아이콘
+      tray-green@2x.png         # Retina 지원
+      tray-yellow.png            # 경고 상태 아이콘
       tray-yellow@2x.png
-      tray-red.png         # 위험 상태 아이콘
+      tray-red.png               # 위험 상태 아이콘
       tray-red@2x.png
-      icon.icns            # macOS 앱 아이콘
-      icon.ico             # Windows 앱 아이콘
-      icon.png             # Linux 앱 아이콘
-    tauri.conf.json        # Tauri 앱 설정 (externalBin, plugins, CSP)
-    Cargo.toml             # Rust 의존성
+      icon.icns                  # macOS 앱 아이콘
+      icon.ico                   # Windows 앱 아이콘
+      icon.png                   # Linux 앱 아이콘
+    tauri.conf.json              # window.url = http://localhost:{port}/admin
+    Cargo.toml                   # Rust 의존성
     capabilities/
-      default.json         # Tauri capability 정의 (허용 IPC 커맨드)
-  src/
-    App.tsx                # React Router (라우트 정의)
-    main.tsx               # React entry point (createRoot)
-    pages/
-      Dashboard.tsx        # 메인 대시보드 (잔액, 거래, 시스템 상태)
-      Approvals.tsx        # 대기 거래 승인/거부
-      Sessions.tsx         # 세션 목록 + 관리
-      Agents.tsx           # 에이전트 목록 + 상세
-      Settings.tsx         # 알림, 정책, 시스템 설정
-      Setup.tsx            # 초기 설정 위자드 (5 steps)
-      OwnerConnect.tsx     # WalletConnect QR 연결
-      KillSwitch.tsx       # Kill Switch 발동/복구
-    components/
-      Layout.tsx           # 사이드바 + 헤더 + 콘텐츠 영역
-      Sidebar.tsx          # 네비게이션 사이드바
-      TxCard.tsx           # 거래 카드 컴포넌트
-      SessionCard.tsx      # 세션 카드 컴포넌트
-      AgentCard.tsx        # 에이전트 카드 컴포넌트
-      StatusBadge.tsx      # 상태 배지 (NORMAL/WARNING/CRITICAL)
-      ConfirmDialog.tsx    # 확인 다이얼로그 (Kill Switch 등)
-      EmptyState.tsx       # 빈 상태 메시지 컴포넌트
-    hooks/
-      useDaemon.ts         # IPC 커맨드 래퍼 (start/stop/status/logs)
-      useOwnerApi.ts       # Owner API 호출 래퍼 (@waiaas/sdk)
-      usePolling.ts        # 주기적 데이터 갱신 (5초 간격 fetch)
-      useWalletConnect.ts  # @reown/appkit 상태 관리
-    lib/
-      api.ts               # @waiaas/sdk WAIaaSOwnerClient 인스턴스 생성
-      wallet-connect.ts    # @reown/appkit 초기화 + 이벤트 처리
-      notifications.ts     # OS 알림 트리거 로직
-    styles/
-      globals.css          # TailwindCSS global styles
-  index.html               # WebView entry HTML
-  vite.config.ts           # Vite 빌드 설정
-  tailwind.config.ts       # TailwindCSS 설정
-  tsconfig.json            # TypeScript 설정
-  package.json             # 프론트엔드 의존성
+      default.json               # Tauri capability 정의 (허용 IPC 커맨드)
+
+packages/admin/src/              # 기존 Admin Web UI (Desktop에서 그대로 재사용)
+  api/
+    client.ts                    # apiCall() -- 상대 경로 fetch + X-Master-Password 자동 첨부
+  pages/                         # 기존 19페이지 (변경 없음 -- Desktop WebView에서 동일하게 렌더링)
+    dashboard.tsx
+    wallets.tsx
+    sessions.tsx
+    policies.tsx
+    tokens.tsx
+    transactions.tsx
+    actions.tsx
+    audit-logs.tsx
+    credentials.tsx
+    erc8004.tsx
+    hyperliquid.tsx
+    polymarket.tsx
+    rpc-proxy.tsx
+    security.tsx
+    notifications.tsx
+    telegram-users.tsx
+    human-wallet-apps.tsx
+    walletconnect.tsx
+    system.tsx
+    setup-wizard.tsx             # [신규] Desktop 전용 -- Setup Wizard 5단계
+  components/
+    ... (기존 컴포넌트)
+    desktop-status.tsx           # [신규] Desktop 전용 -- Sidecar 상태 카드
+  utils/
+    ... (기존 유틸)
+    platform.ts                  # [신규] isDesktop() 환경 감지
+    tauri-bridge.ts              # [신규] window.__TAURI_INTERNALS__.invoke() 래퍼
+  desktop/                       # [신규] Desktop 전용 모듈 (dynamic import 대상)
+    wizard/                      # Setup Wizard 단계별 컴포넌트
+    sidecar-panel/               # Sidecar 상태 패널
 ```
 
+> **참고:** `apps/desktop/`에는 `src/` 프론트엔드 디렉토리가 없다. `index.html`, `vite.config.ts`, `tailwind.config.ts` 등 별도 프론트엔드 빌드 설정 파일이 불필요하다. WebView는 Admin Web UI를 URL로 로드하므로 별도 빌드가 필요 없다.
+
 ### 6.2 package.json 의존성
+
+**apps/desktop/package.json** -- Tauri CLI만 포함 (프론트엔드 의존성 없음):
 
 ```json
 {
   "name": "@waiaas/desktop",
   "private": true,
   "version": "0.2.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
     "tauri": "tauri"
   },
-  "dependencies": {
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-shell": "^2.0.0",
-    "@tauri-apps/plugin-notification": "^2.0.0",
-    "@tauri-apps/plugin-updater": "^2.0.0",
-    "@tauri-apps/plugin-process": "^2.0.0",
-    "@waiaas/sdk": "workspace:*",
-    "@reown/appkit": "latest",
-    "@reown/appkit-adapter-solana": "latest",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "react-router-dom": "^7.0.0",
-    "tailwindcss": "^4.0.0"
-  },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.0.0",
-    "typescript": "^5.7.0",
-    "vite": "^6.0.0"
+    "@tauri-apps/cli": "^2.0.0"
   }
 }
 ```
+
+**packages/admin/package.json** -- Desktop 전용 optional dependencies 추가:
+
+| 의존성 | 용도 | 로딩 방식 |
+|--------|------|-----------|
+| `@tauri-apps/api` | IPC invoke 래퍼 (Desktop 전용) | dynamic import (isDesktop() 가드 내) |
+| `@reown/appkit` | WalletConnect QR 페어링 (Desktop 전용) | dynamic import (isDesktop() 가드 내) |
+| `@reown/appkit-adapter-solana` | Solana 체인 어댑터 (Desktop 전용) | dynamic import |
+
+이들 Desktop 전용 의존성은 브라우저 빌드에서 tree-shake out된다. `isDesktop()` 가드 내의 dynamic import만 사용하므로 Vite 빌드 시 브라우저 번들에 포함되지 않는다.
 
 ### 6.3 Cargo.toml (Rust 의존성)
 
