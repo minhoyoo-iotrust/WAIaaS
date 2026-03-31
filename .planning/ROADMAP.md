@@ -94,7 +94,7 @@ See `.planning/milestones/v33.0-ROADMAP.md` for full details.
 - [x] **Phase 459: WalletConnect Spike** - @reown/appkit Tauri WebView 호환성 Go/No-Go 검증 (completed 2026-03-31)
 - [x] **Phase 460: Tauri Shell + Sidecar Manager** - Tauri 프로젝트 구조 + SEA 바이너리 빌드 + 사이드카 라이프사이클 + WebView 로드 (completed 2026-03-31)
 - [x] **Phase 461: IPC Bridge + System Tray** - 7개 IPC 명령 + 시스템 트레이 3색 상태 + isDesktop() + 4-layer tree-shaking (completed 2026-03-31)
-- [ ] **Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장** - 5단계 Setup Wizard + WalletConnect QR 페어링 + Desktop 전용 컴포넌트
+- [x] **Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장** - 5단계 Setup Wizard + WalletConnect QR 페어링 + Desktop 전용 컴포넌트 (completed 2026-03-31)
 - [ ] **Phase 463: GitHub Releases CI + Auto-Update** - 3 플랫폼 빌드 매트릭스 + 코드 사이닝 + 자동 업데이트
 
 ## Phase Details
@@ -151,7 +151,7 @@ Plans:
   2. Owner 연결 단계에서 "나중에" 스킵이 가능하고, 설정 완료 후 재실행 시 대시보드로 직행한다
   3. WalletConnect QR 코드로 외부 지갑(Phantom/MetaMask)과 페어링하여 SIWS/SIWE Owner 등록이 가능하다 (Plan A 실패 시 Plan B 대체)
   4. Setup Wizard와 WalletConnect 컴포넌트가 Desktop 환경에서만 렌더링되고 브라우저에서는 숨겨진다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 462-01-PLAN.md — Setup Wizard 5단계 컴포넌트 + wizard-store + App.tsx 통합
 - [x] 462-02-PLAN.md — WalletConnect QR 페어링 커넥터 + QR 모달 + tree-shaking 검증
@@ -167,7 +167,11 @@ Plans:
   2. macOS 빌드에 Developer ID 코드 사이닝 + notarization이 적용되어 Gatekeeper를 통과한다
   3. 앱 시작 시 `latest.json`에서 최신 버전을 확인하고, 사용자 확인 후 업데이트 다운로드 + 패치가 완료된다
   4. 변조된 바이너리의 업데이트가 Ed25519 서명 검증 실패로 거부된다
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 463-01-PLAN.md — Tauri updater 플러그인 등록 + Ed25519 키 설정
+- [ ] 463-02-PLAN.md — GitHub Actions 3-platform 빌드 매트릭스 + desktop-release.yml
+- [ ] 463-03-PLAN.md — 자동 업데이트 UI (UpdateBanner) + 전체 검증
 
 ## Progress
 
@@ -180,4 +184,4 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 | 460. Tauri Shell + Sidecar Manager | 3/3 | Complete   | 2026-03-31 |
 | 461. IPC Bridge + System Tray | 2/2 | Complete   | 2026-03-31 |
 | 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 3/3 | Complete   | 2026-03-31 |
-| 463. GitHub Releases CI + Auto-Update | 0/TBD | Not started | - |
+| 463. GitHub Releases CI + Auto-Update | 0/3 | Not started | - |
