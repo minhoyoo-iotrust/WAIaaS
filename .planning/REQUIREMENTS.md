@@ -66,30 +66,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOC-01 | — | Pending |
-| DOC-02 | — | Pending |
-| DOC-03 | — | Pending |
-| DOC-04 | — | Pending |
-| DOC-05 | — | Pending |
-| DOC-06 | — | Pending |
-| IPC-01 | — | Pending |
-| IPC-02 | — | Pending |
-| IPC-03 | — | Pending |
-| IPC-04 | — | Pending |
-| IPC-05 | — | Pending |
-| BLD-01 | — | Pending |
-| BLD-02 | — | Pending |
-| BLD-03 | — | Pending |
-| BLD-04 | — | Pending |
-| STR-01 | — | Pending |
-| STR-02 | — | Pending |
-| STR-03 | — | Pending |
+| DOC-01 | Phase 456 | Pending |
+| DOC-02 | Phase 456 | Pending |
+| DOC-03 | Phase 456 | Pending |
+| DOC-04 | Phase 456 | Pending |
+| DOC-05 | Phase 456 | Pending |
+| DOC-06 | Phase 456 | Pending |
+| IPC-01 | Phase 457 | Pending |
+| IPC-02 | Phase 457 | Pending |
+| IPC-03 | Phase 457 | Pending |
+| IPC-04 | Phase 457 | Pending |
+| IPC-05 | Phase 457 | Pending |
+| BLD-01 | Phase 457 | Pending |
+| BLD-02 | Phase 457 | Pending |
+| BLD-03 | Phase 457 | Pending |
+| BLD-04 | Phase 457 | Pending |
+| STR-01 | Phase 458 | Pending |
+| STR-02 | Phase 458 | Pending |
+| STR-03 | Phase 458 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after initial definition*
+*Last updated: 2026-03-31 after roadmap creation*
