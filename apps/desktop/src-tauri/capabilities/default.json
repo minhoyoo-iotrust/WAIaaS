@@ -1,0 +1,34 @@
+{
+  "identifier": "default",
+  "description": "WAIaaS Desktop default capabilities",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "waiaas-daemon",
+          "cmd": "waiaas-daemon",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
+    "shell:allow-spawn",
+    "notification:default",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "notification:allow-notify",
+    "notification:allow-show",
+    "process:allow-restart",
+    "process:allow-exit",
+    "core:event:default"
+  ],
+  "remote": {
+    "urls": [
+      "http://127.0.0.1:*/*",
+      "http://localhost:*/*"
+    ]
+  }
+}
