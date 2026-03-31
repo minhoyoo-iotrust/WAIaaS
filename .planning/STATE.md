@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v33.2
 milestone_name: Tauri Desktop App
 status: verifying
-stopped_at: Completed Phase 461 (2/2 plans, IPC Bridge + System Tray)
-last_updated: "2026-03-31T16:16:48.682Z"
+stopped_at: Completed Phase 462 (3/3 plans, Setup Wizard + WalletConnect + Desktop UI)
+last_updated: "2026-03-31T16:35:44Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 25
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
+  percent: 80
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** v33.2 Tauri Desktop App — Phase 459/460 (parallelizable)
+**Current focus:** v33.2 Tauri Desktop App — Phase 463 (GitHub Releases CI + Auto-Update)
 
 ## Current Position
 
-Phase: 460 of 463 (Tauri Shell + Sidecar Manager)
+Phase: 462 of 463 (Setup Wizard + WalletConnect + Desktop UI)
 Plan: 3 of 3 in current phase
-Status: Phase complete — ready for verification
+Status: Phase complete — ready for Phase 463
 Last activity: 2026-03-31
 
-Progress: [███░░░░░░░] 25%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [███░░░░░░░] 25%
 | 459 | 01 | 4min | 3 | 11 |
 | Phase 460 P01-03 | 35min | 4 tasks | 17 files |
 | Phase 461 P01-02 | 8min | 4 tasks | 17 files |
+| Phase 462 P01-03 | 10min | 5 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,10 @@ Progress: [███░░░░░░░] 25%
 - [Phase 461]: Dynamic import @tauri-apps/api/core inside getInvoke() for tree-shaking safety
 - [Phase 461]: 4-layer tree-shaking: dynamic import, rollup externals, __DESKTOP__ define, CI verification
 - [Phase 461]: Tray icon include_bytes! with image-png feature, show_menu_on_left_click(false) for UX separation
+- [Phase 462]: Plan B (daemon REST API WC pair) selected over Plan A (@reown/appkit) -- zero bundle impact
+- [Phase 462]: wizard-store uses localStorage waiaas_setup_complete for first-run detection
+- [Phase 462]: App.tsx dynamic import pattern: signal<ComponentType | null> for lazy wizard loading
+- [Phase 462]: Owner step uses dynamic import for wc-connector + wc-qr-modal tree-shaking
 
 ### Pending Todos
 
@@ -75,6 +80,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T16:16:48.677Z
-Stopped at: Completed Phase 461 (2/2 plans, IPC Bridge + System Tray)
+Last session: 2026-03-31T16:35:44Z
+Stopped at: Completed Phase 462 (3/3 plans, Setup Wizard + WalletConnect + Desktop UI)
 Resume file: None

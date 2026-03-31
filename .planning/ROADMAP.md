@@ -153,9 +153,9 @@ Plans:
   4. Setup Wizard와 WalletConnect 컴포넌트가 Desktop 환경에서만 렌더링되고 브라우저에서는 숨겨진다
 **Plans:** 3 plans
 Plans:
-- [ ] 462-01-PLAN.md — Setup Wizard 5단계 컴포넌트 + wizard-store + App.tsx 통합
-- [ ] 462-02-PLAN.md — WalletConnect QR 페어링 커넥터 + QR 모달 + tree-shaking 검증
-- [ ] 462-03-PLAN.md — Owner 단계 WC 와이어링 + 전체 플로우 통합 검증
+- [x] 462-01-PLAN.md — Setup Wizard 5단계 컴포넌트 + wizard-store + App.tsx 통합
+- [x] 462-02-PLAN.md — WalletConnect QR 페어링 커넥터 + QR 모달 + tree-shaking 검증
+- [x] 462-03-PLAN.md — Owner 단계 WC 와이어링 + 전체 플로우 통합 검증
 **UI hint**: yes
 
 ### Phase 463: GitHub Releases CI + Auto-Update
@@ -179,5 +179,5 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 | 459. WalletConnect Spike | 1/1 | Complete   | 2026-03-31 |
 | 460. Tauri Shell + Sidecar Manager | 3/3 | Complete   | 2026-03-31 |
 | 461. IPC Bridge + System Tray | 2/2 | Complete   | 2026-03-31 |
-| 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 0/3 | Not started | - |
+| 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 3/3 | Complete   | 2026-03-31 |
 | 463. GitHub Releases CI + Auto-Update | 0/TBD | Not started | - |

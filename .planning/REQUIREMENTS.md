@@ -43,18 +43,18 @@ Requirements for Tauri Desktop App milestone. Each maps to roadmap phases.
 
 ### Setup Wizard
 
-- [ ] **WIZA-01**: Desktop 최초 실행 시 Setup Wizard 5단계(패스워드 → 체인 선택 → 월렛 생성 → Owner 연결 → 완료)가 자동 진입한다
-- [ ] **WIZA-02**: 4단계 Owner 연결에서 "나중에" 스킵이 가능하다
-- [ ] **WIZA-03**: 초기 설정 완료 후 재실행 시 Wizard를 건너뛰고 대시보드로 직행한다
-- [ ] **WIZA-04**: Setup Wizard가 Desktop 환경에서만 렌더링된다 (브라우저에서는 숨김)
+- [x] **WIZA-01**: Desktop 최초 실행 시 Setup Wizard 5단계(패스워드 → 체인 선택 → 월렛 생성 → Owner 연결 → 완료)가 자동 진입한다
+- [x] **WIZA-02**: 4단계 Owner 연결에서 "나중에" 스킵이 가능하다
+- [x] **WIZA-03**: 초기 설정 완료 후 재실행 시 Wizard를 건너뛰고 대시보드로 직행한다
+- [x] **WIZA-04**: Setup Wizard가 Desktop 환경에서만 렌더링된다 (브라우저에서는 숨김)
 
 ### WalletConnect
 
 - [x] **WCON-01**: Phase 0 스파이크에서 Tauri WebView 내 @reown/appkit QR 페어링 가능 여부를 검증한다
-- [ ] **WCON-02**: WalletConnect QR 코드로 Phantom/MetaMask 등 외부 지갑과 페어링할 수 있다
-- [ ] **WCON-03**: 페어링된 지갑으로 SIWS(Solana) / SIWE(EVM) 서명을 요청하여 Owner를 등록할 수 있다
-- [ ] **WCON-04**: WalletConnect 컴포넌트가 Desktop 환경에서만 활성화된다 (브라우저에서는 숨김)
-- [ ] **WCON-05**: Plan A(@reown/appkit) 실패 시 Plan B(WC Relay WebSocket 직접 연결)로 대체한다
+- [x] **WCON-02**: WalletConnect QR 코드로 Phantom/MetaMask 등 외부 지갑과 페어링할 수 있다
+- [x] **WCON-03**: 페어링된 지갑으로 SIWS(Solana) / SIWE(EVM) 서명을 요청하여 Owner를 등록할 수 있다
+- [x] **WCON-04**: WalletConnect 컴포넌트가 Desktop 환경에서만 활성화된다 (브라우저에서는 숨김)
+- [x] **WCON-05**: Plan A(@reown/appkit) 실패 시 Plan B(WC Relay WebSocket 직접 연결)로 대체한다
 
 ### GitHub Releases CI
 
@@ -120,15 +120,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRAY-01 | Phase 461 | Complete |
 | TRAY-02 | Phase 461 | Complete |
 | TRAY-03 | Phase 461 | Complete |
-| WIZA-01 | Phase 462 | Pending |
-| WIZA-02 | Phase 462 | Pending |
-| WIZA-03 | Phase 462 | Pending |
-| WIZA-04 | Phase 462 | Pending |
+| WIZA-01 | Phase 462 | Complete |
+| WIZA-02 | Phase 462 | Complete |
+| WIZA-03 | Phase 462 | Complete |
+| WIZA-04 | Phase 462 | Complete |
 | WCON-01 | Phase 459 | Complete |
-| WCON-02 | Phase 462 | Pending |
-| WCON-03 | Phase 462 | Pending |
-| WCON-04 | Phase 462 | Pending |
-| WCON-05 | Phase 462 | Pending |
+| WCON-02 | Phase 462 | Complete |
+| WCON-03 | Phase 462 | Complete |
+| WCON-04 | Phase 462 | Complete |
+| WCON-05 | Phase 462 | Complete |
 | DIST-01 | Phase 463 | Pending |
 | DIST-02 | Phase 463 | Pending |
 | DIST-03 | Phase 463 | Pending |
