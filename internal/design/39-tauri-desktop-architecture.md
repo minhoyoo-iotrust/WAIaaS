@@ -1872,6 +1872,169 @@ echo "PASS: No desktop-only strings in browser main bundle"
 | Desktop 메인 번들 | 기존 Admin Web UI + `isDesktop()` + `desktopComponent()` | 기존과 동일 |
 | Desktop chunk 파일 | Desktop 전용 컴포넌트 + @reown/appkit | ~200KB gzip 추가 |
 
+### 6.7 Vite 빌드 설정 변경 (BLD-04)
+
+> **(v33.0 신규)** Admin Web UI의 Vite 빌드 설정을 Desktop 빌드와 호환되도록 변경하고, Tauri 개발 워크플로우를 설계한다.
+
+#### 브라우저 빌드 설정 (기존 + 최소 변경)
+
+`packages/admin/vite.config.ts`에 추가할 설정:
+
+```typescript
+// packages/admin/vite.config.ts
+import { defineConfig } from 'vite';
+import preact from '@preact/preset-vite';
+
+export default defineConfig({
+  plugins: [preact()],
+
+  define: {
+    // 빌드 타임 상수: 브라우저 빌드에서 Desktop 코드 dead code elimination
+    __DESKTOP__: false,
+  },
+
+  build: {
+    rollupOptions: {
+      // Desktop 전용 optional peer dep이 미설치된 환경에서 빌드 에러 방지
+      // dynamic import 대상이지만, Rollup이 resolve 시도 시 실패하므로 external로 지정
+      external: [
+        '@tauri-apps/api',
+        '@tauri-apps/api/core',
+        '@tauri-apps/plugin-shell',
+        '@tauri-apps/plugin-notification',
+        '@tauri-apps/plugin-updater',
+        '@reown/appkit',
+        '@reown/appkit-adapter-solana',
+      ],
+    },
+  },
+});
+```
+
+**변경점 요약:**
+
+| 설정 | 값 | 목적 |
+|------|-----|------|
+| `define.__DESKTOP__` | `false` | Dead code elimination 보조 (섹션 6.6 계층 3) |
+| `build.rollupOptions.external` | Desktop 전용 모듈 7개 | Optional peer dep 미설치 시 빌드 에러 방지 |
+
+> **주의:** `external` 설정은 dynamic import 대상에만 적용한다. static import된 모듈을 external로 지정하면 런타임 에러가 발생한다. ESLint `no-restricted-imports` 규칙(섹션 6.4)이 static import를 방지하므로 안전하다.
+
+#### Tauri 개발 모드 설정
+
+**개발 모드에서의 Admin Web UI 로드 전략:**
+
+| 옵션 | 설명 | HMR | 장점 | 단점 |
+|------|------|-----|------|------|
+| A. Vite dev server | WebView -> `localhost:5173/admin` | O | 빠른 개발 루프, HMR 즉시 반영 | Daemon과 별도 서버 필요 |
+| B. Daemon 직접 | WebView -> `localhost:3100/admin` | X | 프로덕션과 동일 경로 | 코드 변경 시 Daemon 재시작 필요 |
+
+**결정: 옵션 A (HMR 우선)** -- `tauri.conf.json`의 `build.devUrl`로 Vite dev server URL을 지정하고, 프로덕션에서만 Daemon URL을 사용한다.
+
+#### tauri.conf.json 핵심 설정
+
+```json
+{
+  "build": {
+    "devUrl": "http://localhost:5173/admin",
+    "beforeDevCommand": "pnpm --filter @waiaas/admin dev",
+    "beforeBuildCommand": "pnpm --filter @waiaas/admin build && pnpm --filter @waiaas/daemon build:sea"
+  },
+  "app": {
+    "windows": [{
+      "url": "http://localhost:{port}/admin",
+      "title": "WAIaaS Desktop",
+      "width": 1200,
+      "height": 800,
+      "minWidth": 900,
+      "minHeight": 600
+    }],
+    "security": {
+      "csp": "default-src 'self' http://127.0.0.1:* http://localhost:*; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* http://localhost:* wss://relay.walletconnect.com https://rpc.walletconnect.com https://pulse.walletconnect.org; img-src 'self' data: https:; font-src 'self'; frame-src https://secure.walletconnect.com"
+    }
+  },
+  "bundle": {
+    "identifier": "dev.waiaas.desktop",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.icns", "icons/icon.ico"]
+  }
+}
+```
+
+> **`{port}` 런타임 대체:** `app.windows[0].url`의 `{port}`는 JSON 설정값이 아니라, Rust `main.rs`에서 Sidecar Manager가 할당한 포트로 동적 대체한다. `WebviewUrl::External(format!("http://localhost:{}/admin", port))` 패턴 사용. 포트 동적 할당 프로토콜 상세는 Phase 458에서 설계한다.
+
+#### 개발 워크플로우 시퀀스
+
+**개발 모드 (3개 프로세스 동시 실행):**
+
+```
+Terminal 1: pnpm --filter @waiaas/admin dev          # Vite dev server (port 5173, HMR)
+Terminal 2: pnpm --filter @waiaas/daemon dev          # Daemon dev server (port 3100)
+Terminal 3: cd apps/desktop && cargo tauri dev         # Tauri dev (WebView -> localhost:5173/admin)
+```
+
+**또는 단일 명령으로 통합:**
+
+```
+cd apps/desktop && cargo tauri dev
+# beforeDevCommand가 Vite dev server를 자동 시작
+# Daemon은 Sidecar Manager가 시작 (또는 별도 터미널에서 수동 시작)
+```
+
+**프로덕션 빌드 (순차 실행):**
+
+```bash
+# Step 1: Admin Web UI 정적 파일 빌드
+pnpm --filter @waiaas/admin build
+
+# Step 2: Sidecar SEA 바이너리 빌드 (Admin Web UI 정적 파일 포함)
+pnpm --filter @waiaas/daemon build:sea
+
+# Step 3: Tauri 앱 번들 (.dmg / .msi / .AppImage)
+cd apps/desktop && cargo tauri build
+```
+
+**Tauri 개발 모드에서의 Vite 설정 차이:**
+
+```typescript
+// packages/admin/vite.config.ts -- 개발 모드 추가 설정
+export default defineConfig(({ mode }) => ({
+  plugins: [preact()],
+
+  define: {
+    // 개발 모드에서는 Desktop 환경일 수 있으므로 __DESKTOP__은 런타임에 결정
+    __DESKTOP__: mode === 'desktop' ? true : false,
+  },
+
+  build: {
+    rollupOptions: {
+      // 프로덕션 빌드에서만 external 적용 (개발 모드에서는 설치된 deps 사용)
+      ...(mode !== 'desktop' ? {
+        external: [
+          '@tauri-apps/api', '@tauri-apps/api/core',
+          '@tauri-apps/plugin-shell', '@tauri-apps/plugin-notification',
+          '@tauri-apps/plugin-updater',
+          '@reown/appkit', '@reown/appkit-adapter-solana',
+        ],
+      } : {}),
+    },
+  },
+
+  server: {
+    // Tauri dev 모드에서 WebView가 접근할 수 있도록 호스트 설정
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: true, // 포트 충돌 시 실패 (다른 포트로 변경 방지)
+  },
+}));
+```
+
+**Desktop 개발 모드 시작:**
+
+```bash
+# Vite를 desktop 모드로 시작 (apps/desktop/tauri.conf.json의 beforeDevCommand에서)
+VITE_MODE=desktop pnpm --filter @waiaas/admin dev -- --mode desktop
+```
+
 ---
 
 ## 7. UI 화면별 플로우 (DESK-02)
