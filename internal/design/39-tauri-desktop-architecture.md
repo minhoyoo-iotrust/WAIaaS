@@ -1649,7 +1649,7 @@ packages/admin/src/              # 기존 Admin Web UI (Desktop에서 그대로 
 | `@reown/appkit` | WalletConnect QR 페어링 (Desktop 전용) | dynamic import (isDesktop() 가드 내) |
 | `@reown/appkit-adapter-solana` | Solana 체인 어댑터 (Desktop 전용) | dynamic import |
 
-이들 Desktop 전용 의존성은 브라우저 빌드에서 tree-shake out된다. `isDesktop()` 가드 내의 dynamic import만 사용하므로 Vite 빌드 시 브라우저 번들에 포함되지 않는다.
+이들 Desktop 전용 의존성은 브라우저 빌드에서 tree-shake out된다. `isDesktop()` 가드 내의 dynamic import만 사용하므로 Vite 빌드 시 브라우저 번들에 포함되지 않는다. 의존성 관리 전략 상세는 **섹션 6.5**, tree-shaking 메커니즘 상세는 **섹션 6.6**을 참조한다.
 
 ### 6.3 Cargo.toml (Rust 의존성)
 
@@ -1673,6 +1673,204 @@ reqwest = { version = "0.12", features = ["json"] }
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 ```
+
+### 6.4 번들 경계와 모듈 격리 (BLD-01)
+
+> **(v33.0 신규)** `packages/admin/src/desktop/` 디렉토리의 상세 구조와 import 규칙을 정의한다.
+
+**Desktop 전용 모듈 경계 (`packages/admin/src/desktop/`):**
+
+```
+packages/admin/src/desktop/          # Desktop 전용 모듈 경계
+  index.ts                           # re-export (isDesktop() 가드 내에서만 import)
+  wizard/
+    SetupWizard.tsx                  # 5단계 Wizard 메인 컴포넌트
+    steps/
+      PasswordStep.tsx               # Step 1: 마스터 패스워드
+      ChainStep.tsx                  # Step 2: 체인 선택
+      WalletStep.tsx                 # Step 3: 월렛 생성
+      OwnerStep.tsx                  # Step 4: Owner 연결 (optional)
+      CompleteStep.tsx               # Step 5: 완료 요약
+    wizard-state.ts                  # Wizard 상태 관리 (signals)
+  sidecar-panel/
+    SidecarStatus.tsx                # Sidecar 상태 카드 컴포넌트
+    useSidecarStatus.ts              # IPC 폴링 hook (30s interval)
+  walletconnect/
+    WalletConnectButton.tsx          # QR 연결 버튼 + 모달
+    useWalletConnect.ts              # @reown/appkit 래퍼 hook
+  bridge/
+    tauri-bridge.ts                  # invoke() 래퍼 (Desktop에서만 로드)
+    types.ts                         # DaemonStatus, StartDaemonArgs 등 공유 타입
+```
+
+**모듈 경계 규칙:**
+
+| 규칙 | 설명 | 강제 방법 |
+|------|------|-----------|
+| Desktop -> 외부 import 허용 | `desktop/` 내부 파일은 `pages/`, `components/`, `utils/`를 import 가능 | - |
+| 외부 -> Desktop static import 금지 | 외부 파일은 `desktop/`를 `lazy(() => import('./desktop/...'))` 패턴만으로 접근 | ESLint `no-restricted-imports` |
+| `desktop/bridge/types.ts` 예외 | 타입 정의는 static import 허용 (`import type` only, 런타임 코드 없음) | TypeScript `import type` 강제 |
+| re-export 금지 | `desktop/index.ts`는 타입 re-export만 허용, 런타임 코드 re-export 금지 | Code review |
+
+**ESLint 설정 (`packages/admin/.eslintrc.js`):**
+
+```javascript
+// packages/admin/.eslintrc.js
+module.exports = {
+  rules: {
+    'no-restricted-imports': ['error', {
+      patterns: [
+        {
+          group: ['./desktop/*', '../desktop/*', '../../desktop/*'],
+          message: 'Desktop modules must be loaded via lazy(() => import()) inside isDesktop() guard. Only import type from desktop/bridge/types.ts is allowed.',
+          // types.ts 예외는 import type으로 자동 허용 (TypeScript verbatimModuleSyntax)
+        },
+        {
+          group: ['@tauri-apps/*'],
+          message: '@tauri-apps/* must be loaded via dynamic import inside isDesktop() guard.',
+        },
+        {
+          group: ['@reown/*'],
+          message: '@reown/* must be loaded via dynamic import inside isDesktop() guard.',
+        },
+      ],
+    }],
+  },
+  overrides: [
+    {
+      // desktop/ 내부 파일은 @tauri-apps/*, @reown/* static import 허용
+      files: ['src/desktop/**/*.ts', 'src/desktop/**/*.tsx'],
+      rules: {
+        'no-restricted-imports': ['error', {
+          patterns: [
+            // desktop 내부에서는 @tauri-apps/*, @reown/* import 허용
+            // 단, @tauri-apps/api/core는 여전히 dynamic import 권장
+          ],
+        }],
+      },
+    },
+  ],
+};
+```
+
+### 6.5 Desktop-only 의존성 관리 (BLD-02)
+
+> **(v33.0 신규)** Desktop 전용 의존성 목록과 설치/로딩 전략을 명세한다.
+
+**Desktop 전용 의존성 목록:**
+
+| 의존성 | 버전 | 용도 | 번들 포함 조건 | 크기 (gzip) |
+|--------|------|------|-------------|-------------|
+| `@tauri-apps/api` | ^2.0 | IPC invoke + event | Desktop dynamic import만 | ~15KB |
+| `@tauri-apps/plugin-shell` | ^2.0 | Sidecar 실행 | Desktop dynamic import만 | ~5KB |
+| `@tauri-apps/plugin-notification` | ^2.0 | OS 알림 | Desktop dynamic import만 | ~3KB |
+| `@tauri-apps/plugin-updater` | ^2.0 | 자동 업데이트 UI | Desktop dynamic import만 | ~8KB |
+| `@reown/appkit` | ^1.0 | WalletConnect QR | Desktop dynamic import만 | ~150KB |
+| `@reown/appkit-adapter-solana` | ^1.0 | Solana WC 어댑터 | Desktop dynamic import만 | ~30KB |
+
+**의존성 설치 전략:**
+
+```
+packages/admin/package.json:
+  peerDependencies (optional: true):
+    @tauri-apps/api, @tauri-apps/plugin-shell,
+    @tauri-apps/plugin-notification, @tauri-apps/plugin-updater,
+    @reown/appkit, @reown/appkit-adapter-solana
+
+apps/desktop/package.json:
+  dependencies (실제 설치):
+    @tauri-apps/api, @tauri-apps/plugin-shell,
+    @tauri-apps/plugin-notification, @tauri-apps/plugin-updater,
+    @reown/appkit, @reown/appkit-adapter-solana
+```
+
+| 빌드 시나리오 | Desktop deps 설치 여부 | 번들 포함 |
+|--------------|----------------------|-----------|
+| `pnpm --filter @waiaas/admin build` (브라우저) | 미설치 (optional peer) | 미포함 |
+| `pnpm --filter @waiaas/admin dev` (브라우저 개발) | 미설치 | 미포함 |
+| `cd apps/desktop && cargo tauri build` (Desktop) | 설치됨 (apps/desktop에서) | 포함 (dynamic chunk) |
+| `cd apps/desktop && cargo tauri dev` (Desktop 개발) | 설치됨 | 포함 (HMR) |
+
+**peerDependencies 선언 이유:**
+- `dependencies`로 선언하면 `pnpm install` 시 항상 설치되어 브라우저 빌드에도 resolve 가능 -> tree-shaking에 의존해야 함
+- `peerDependencies` (optional: true)로 선언하면 미설치 환경에서 resolve 자체가 안 됨 -> 브라우저 빌드에서 해당 모듈 참조가 없음을 보장
+- `apps/desktop/package.json`에서 실제 설치하면 Tauri 빌드 시에만 해결됨
+
+### 6.6 Tree-Shaking 전략 (BLD-03)
+
+> **(v33.0 신규)** 브라우저 번들에서 Desktop 전용 코드가 완전히 제거되는 메커니즘을 명세한다. 기존 섹션 6.2의 "이들 Desktop 전용 의존성은 브라우저 빌드에서 tree-shake out된다"를 상세화한다 (상세는 본 섹션 참조).
+
+**Tree-Shaking 4계층 전략:**
+
+| 계층 | 메커니즘 | 제거 대상 | 보장 수준 |
+|------|---------|-----------|-----------|
+| 1. Dynamic import 코드 분할 | `lazy(() => import('./desktop/...'))` | Desktop 컴포넌트 전체 | Vite/Rollup이 별도 chunk로 분리, 브라우저에서 미로드 |
+| 2. Optional peer deps 미설치 | `peerDependencies` optional | @tauri-apps/*, @reown/* | resolve 자체 불가, 빌드 에러 대신 external 처리 |
+| 3. 빌드 타임 상수 | `define: { __DESKTOP__: false }` | `if (__DESKTOP__)` 블록 | terser/esbuild minifier가 dead code 제거 |
+| 4. CI 번들 검증 | 브라우저 번들 문자열 스캔 | Desktop 모듈 문자열 감지 | CI 실패로 실수 방지 |
+
+**계층별 상세:**
+
+**1. Dynamic import 기반 코드 분할:**
+- `lazy(() => import('./desktop/...'))` 패턴은 Vite/Rollup이 별도 chunk 파일로 분리
+- 브라우저에서는 `isDesktop() === false`이므로 해당 chunk를 HTTP 요청하지 않음
+- chunk 파일은 브라우저 빌드 산출물에 포함되지만 로드되지 않음 (dead asset)
+- 주의: optional peer dep 미설치 환경에서는 chunk 생성 자체가 실패하므로 `build.rollupOptions.external` 설정 필요 (섹션 6.7 참조)
+
+**2. Dead code elimination:**
+- `if (isDesktop()) { ... }` 블록은 런타임 체크이므로 minifier가 제거 불가
+- `if (__DESKTOP__) { ... }` 블록은 빌드 타임 상수이므로 minifier가 제거 가능
+- 권장 패턴: dynamic import를 기본으로 사용하고, `__DESKTOP__`은 보조 수단으로만 사용
+
+```typescript
+// 권장: dynamic import (chunk 분리)
+if (isDesktop()) {
+  const { startDaemon } = await import('./desktop/bridge/tauri-bridge');
+  await startDaemon();
+}
+
+// 보조: 빌드 타임 상수 (inline dead code 제거)
+if (__DESKTOP__) {
+  console.log('Desktop mode detected');
+}
+```
+
+**3. Dual build 회피:**
+- 브라우저/Desktop 각각 빌드하지 않는다
+- 단일 빌드 산출물에서 런타임 분기 (isDesktop()) + 코드 분할 (dynamic import)
+- 이유: 빌드 파이프라인 단순화, CI 행렬 최소화, 코드 일관성 유지
+
+**4. CI 번들 크기 검증:**
+
+```bash
+# CI에서 브라우저 빌드 번들 검증 스크립트
+# packages/admin/scripts/verify-browser-bundle.sh
+
+#!/bin/bash
+BUNDLE_DIR="packages/admin/dist"
+
+# Desktop 전용 모듈 문자열이 메인 번들에 포함되어 있으면 실패
+FORBIDDEN_STRINGS="@tauri-apps __TAURI_INTERNALS__ @reown/appkit walletconnect"
+
+for str in $FORBIDDEN_STRINGS; do
+  # chunk 파일은 제외하고 메인 번들만 검사
+  if grep -r "$str" "$BUNDLE_DIR/assets/index-*.js" 2>/dev/null; then
+    echo "FAIL: '$str' found in browser main bundle"
+    exit 1
+  fi
+done
+
+echo "PASS: No desktop-only strings in browser main bundle"
+```
+
+**번들 크기 영향 분석:**
+
+| 번들 | Desktop 코드 영향 | 크기 변화 |
+|------|-------------------|-----------|
+| 브라우저 메인 번들 | `isDesktop()` 함수만 포함 (~50 bytes) | +0KB |
+| 브라우저 chunk 파일 | 없음 (optional peer dep 미설치 -> chunk 미생성) | +0KB |
+| Desktop 메인 번들 | 기존 Admin Web UI + `isDesktop()` + `desktopComponent()` | 기존과 동일 |
+| Desktop chunk 파일 | Desktop 전용 컴포넌트 + @reown/appkit | ~200KB gzip 추가 |
 
 ---
 
