@@ -1,33 +1,24 @@
 /**
  * Setup Wizard Step 4: Connect Owner Wallet (Optional)
  *
- * This step provides a "Connect via WalletConnect" button (placeholder
- * until Plan 03 wires in the WC QR modal) and a "Skip for now" option.
+ * Integrates WalletConnect QR modal for owner registration.
+ * Uses dynamic imports for wc-connector and wc-qr-modal to maintain tree-shaking.
  */
 
 import { signal } from '@preact/signals';
 import type { ComponentType } from 'preact';
 import { wizardData, nextStep, prevStep, skipOwnerStep } from '../wizard-store';
-
-/** Placeholder type for the WC connect handler, injected by Plan 03 */
-type OwnerConnectHandler = () => Promise<void>;
-
-let _ownerConnectHandler: OwnerConnectHandler | null = null;
-
-/** Called by Plan 03 to inject the WC connect handler */
-export function setOwnerConnector(handler: OwnerConnectHandler): void {
-  _ownerConnectHandler = handler;
-}
+import type { WcConnectionResult } from '../../walletconnect/wc-types';
 
 const wcModalOpen = signal(false);
 const wcConnected = signal(false);
 const connectedAddress = signal<string | null>(null);
 
-// Lazy-loaded WC modal component (injected by Plan 03 handleConnect)
+// Lazy-loaded WC modal component -- dynamically imported on first connect click
 const WcModalComponent = signal<ComponentType<{
   open: boolean;
   onClose: () => void;
-  onConnected: (result: { success: boolean; ownerAddress?: string }) => void;
+  onConnected: (result: WcConnectionResult) => void;
 }> | null>(null);
 
 const loading = signal(false);
@@ -121,8 +112,7 @@ const styles = {
 
 /**
  * Handle WalletConnect button click.
- * Plan 03 will update this to dynamically import the WC modules.
- * For now, it uses the injected _ownerConnectHandler if available.
+ * Dynamically imports wc-connector and wc-qr-modal to maintain tree-shaking.
  */
 async function handleConnect() {
   if (!wizardData.value.walletId) return;
@@ -130,19 +120,30 @@ async function handleConnect() {
   loading.value = true;
 
   try {
-    if (_ownerConnectHandler) {
-      await _ownerConnectHandler();
-    } else {
-      error.value = 'WalletConnect not available yet. Skip for now.';
-    }
+    // Dynamic import to maintain tree-shaking -- these modules are Desktop-only
+    const [connectorMod, modalMod] = await Promise.all([
+      import('../../walletconnect/wc-connector'),
+      import('../../walletconnect/wc-qr-modal'),
+    ]);
+
+    WcModalComponent.value = modalMod.WcQrModal;
+    wcModalOpen.value = true;
+
+    // Start WC pairing -- result comes via onConnected callback from modal
+    connectorMod.connectViaWalletConnect(
+      wizardData.value.walletId!,
+      wizardData.value.password,
+    ).catch(() => {
+      // Errors are reflected through pairingState in the modal
+    });
   } catch {
-    error.value = 'Failed to connect via WalletConnect';
+    error.value = 'Failed to load WalletConnect module';
   } finally {
     loading.value = false;
   }
 }
 
-function handleWcConnected(result: { success: boolean; ownerAddress?: string }) {
+function handleWcConnected(result: WcConnectionResult) {
   wcModalOpen.value = false;
   if (result.success && result.ownerAddress) {
     wcConnected.value = true;
@@ -150,11 +151,15 @@ function handleWcConnected(result: { success: boolean; ownerAddress?: string }) 
   }
 }
 
-function handleWcClose() {
+async function handleWcClose() {
   wcModalOpen.value = false;
+  try {
+    const { cancelPairing } = await import('../../walletconnect/wc-connector');
+    cancelPairing();
+  } catch {
+    // Module not loaded -- nothing to cancel
+  }
 }
-
-export { wcModalOpen, wcConnected, connectedAddress, WcModalComponent, loading, error };
 
 export function OwnerStep() {
   const hasWallet = wizardData.value.walletId !== null;
