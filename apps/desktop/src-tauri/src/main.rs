@@ -10,7 +10,7 @@ use serde_json::json;
 use tauri::{Emitter, Manager};
 
 use crate::commands::{
-    get_daemon_logs, get_daemon_status, restart_daemon, send_notification, start_daemon,
+    get_daemon_logs, get_daemon_status, quit_app, restart_daemon, send_notification, start_daemon,
     stop_daemon,
 };
 use crate::sidecar::SidecarManager;
@@ -33,6 +33,7 @@ fn main() {
             get_daemon_status,
             get_daemon_logs,
             send_notification,
+            quit_app,
         ])
         .setup(|app| {
             let app_handle = app.handle().clone();

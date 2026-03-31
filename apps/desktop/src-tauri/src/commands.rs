@@ -1,4 +1,4 @@
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::sidecar::SidecarManager;
 use crate::types::{DaemonStatus, GetLogsArgs, NotificationArgs, StopDaemonArgs};
@@ -67,5 +67,17 @@ pub async fn send_notification(
         .show()
         .map_err(|e| format!("NotificationFailed: {}", e))?;
 
+    Ok(())
+}
+
+/// Quit the WAIaaS Desktop app: gracefully stop daemon, then exit
+#[tauri::command]
+pub async fn quit_app(
+    app: AppHandle,
+    state: State<'_, SidecarManager>,
+) -> Result<(), String> {
+    // Graceful daemon shutdown first
+    let _ = state.stop(false).await;
+    app.exit(0);
     Ok(())
 }
