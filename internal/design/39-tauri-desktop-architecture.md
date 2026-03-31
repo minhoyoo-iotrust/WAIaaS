@@ -954,259 +954,31 @@ tauri-build = { version = "2", features = [] }
 
 ## 7. UI 화면별 플로우 (DESK-02)
 
+> **(v33.0 변경)** 기존 설계(v0.5)는 8개 화면(Dashboard, Approvals, Sessions, Agents, Settings, Setup, OwnerConnect, KillSwitch)을 React 18로 별도 구현했다. 변경된 설계에서는 Admin Web UI의 기존 19페이지를 그대로 재사용하고, Desktop 전용 기능만 3개 확장으로 추가한다.
+
 ### 7.1 화면 구성 개요
 
-```mermaid
-graph TB
-    subgraph Layout["Layout (사이드바 + 헤더 + 콘텐츠)"]
-        Nav["Sidebar Navigation"]
-        Header["Header (상태 표시)"]
-        Content["Content Area"]
-    end
+| 구분 | 페이지 | Desktop | 브라우저 | 비고 |
+|------|--------|:-------:|:--------:|------|
+| **기존 19페이지** | dashboard, wallets, sessions, policies, tokens, transactions, actions, audit-logs, credentials, erc8004, hyperliquid, polymarket, rpc-proxy, security, notifications, telegram-users, human-wallet-apps, walletconnect, system | O | O | 코드 변경 없이 WebView에서 동일하게 동작 |
+| **Desktop 전용** | Setup Wizard | O | X | 최초 실행 시 자동 진입, isDesktop() 가드 |
+| **Desktop 전용** | Sidecar Status | O | X | 대시보드에 상태 카드 추가, isDesktop() 가드 |
+| **Desktop 전용** | WalletConnect QR (확장) | O | 제한적 | Desktop에서 @reown/appkit QR 페어링 활성화 |
 
-    Nav --> D["Dashboard"]
-    Nav --> A["Approvals"]
-    Nav --> S["Sessions"]
-    Nav --> AG["Agents"]
-    Nav --> ST["Settings"]
-    Nav --> OC["Owner Connect"]
-    Nav --> KS["Kill Switch"]
+기존 Admin Web UI와 동일한 19페이지의 상세 레이아웃은 설계 문서 67(Admin Web UI 설계)을 참조한다. Admin Web UI의 사이드바 5섹션(Wallets, Protocols, Security, Channels, System) 구조가 Desktop WebView에서도 동일하게 렌더링된다.
 
-    Setup["Setup Wizard"] -.->|"초기 설정 완료 후"| D
+### 7.2 Desktop 전용 확장: Setup Wizard
 
-    style D fill:#e8f5e9
-    style A fill:#fff3e0
-    style KS fill:#fce4ec
-```
+> **(v33.0 변경)** 기존 7.7(Setup Wizard) 내용을 Desktop 전용 확장으로 재배치. 참조를 Preact/Admin Web UI로 갱신.
 
-| # | 화면 | 경로 | 데이터 소스 | 갱신 주기 |
-|---|------|------|-------------|-----------|
-| 1 | Dashboard | `/` | `GET /v1/owner/dashboard` | 5초 폴링 |
-| 2 | Approvals | `/approvals` | `GET /v1/owner/pending-approvals` | 5초 폴링 |
-| 3 | Sessions | `/sessions` | `GET /v1/owner/sessions` | 화면 포커스 시 |
-| 4 | Agents | `/agents` | `GET /v1/owner/agents` | 화면 포커스 시 |
-| 5 | Settings | `/settings` | `GET /v1/owner/settings` | 진입 시 1회 |
-| 6 | Setup Wizard | `/setup` | 없음 (로컬 상태) | - |
-| 7 | Owner Connect | `/owner-connect` | WalletConnect 이벤트 | 실시간 |
-| 8 | Kill Switch | `/kill-switch` | `GET /v1/admin/status` | 5초 폴링 |
-
-### 7.2 화면 1 -- Dashboard (메인)
-
-**레이아웃:**
-
-```
-┌──────────┬──────────────────────────────────────────────────┐
-│          │ Header: WAIaaS Dashboard     [NORMAL] ● 초록     │
-│          ├──────────┬──────────┬──────────────────────────────┤
-│ Sidebar  │ SOL 잔액  │ 오늘 거래 │ 활성 세션                    │
-│          │ 12.5 SOL │ 8건/2.3  │ 3개                          │
-│ Dashboard│          │ SOL      │                              │
-│ Approvals├──────────┴──────────┴──────────────────────────────┤
-│ Sessions │                                                    │
-│ Agents   │ 최근 거래 (10건)                                    │
-│ Settings │ ┌──────────────────────────────────────────────┐  │
-│          │ │ TxCard: 0.5 SOL -> 7xK...abc  CONFIRMED     │  │
-│ Owner    │ │ TxCard: 1.0 SOL -> 3mN...def  QUEUED        │  │
-│ Connect  │ │ ...                                          │  │
-│          │ └──────────────────────────────────────────────┘  │
-│ Kill     │                                                    │
-│ Switch   │ 시스템 상태                                         │
-│          │ - 데몬 uptime: 2h 34m                              │
-│          │ - Solana: connected (devnet)                       │
-│          │ - Kill Switch: NORMAL                              │
-└──────────┴──────────────────────────────────────────────────┘
-```
-
-**컴포넌트:**
-
-| 컴포넌트 | 데이터 소스 | 렌더링 |
-|----------|-------------|--------|
-| SOL 잔액 카드 | `dashboard.balance` | 실시간 SOL 잔액 (lamports -> SOL 변환) |
-| 거래 통계 카드 | `dashboard.todayTransactions` | 오늘 거래 건수 + 총 금액 |
-| 활성 세션 카드 | `dashboard.activeSessions` | 현재 활성 세션 수 |
-| 최근 거래 목록 | `dashboard.recentTransactions` | TxCard 컴포넌트 x 10, 상태 배지 |
-| 시스템 상태 | `dashboard.system` | 데몬 uptime, 어댑터 상태, Kill Switch |
-
-**데이터 갱신:**
-- `usePolling` 훅으로 5초 주기 `GET /v1/owner/dashboard` 호출
-- 화면 포커스 복귀 시 즉시 갱신 (`document.visibilitychange` 이벤트)
-
-### 7.3 화면 2 -- Pending Approvals (대기 거래 승인/거부)
-
-**레이아웃:**
-
-```
-┌──────────┬──────────────────────────────────────────────────┐
-│          │ Pending Approvals (3건 대기)                      │
-│ Sidebar  ├──────────────────────────────────────────────────┤
-│          │ ┌────────────────────────────────────────────┐   │
-│          │ │ TxCard: 15 SOL -> 7xK...abc                │   │
-│          │ │ Agent: trading-bot | 남은 시간: 45:23      │   │
-│          │ │                                             │   │
-│          │ │ [Approve ✓]           [Reject ✗]           │   │
-│          │ └────────────────────────────────────────────┘   │
-│          │ ┌────────────────────────────────────────────┐   │
-│          │ │ TxCard: 50 SOL -> 3mN...def                │   │
-│          │ │ Agent: arb-agent | 남은 시간: 12:07        │   │
-│          │ │                                             │   │
-│          │ │ [Approve ✓]           [Reject ✗]           │   │
-│          │ └────────────────────────────────────────────┘   │
-│          │                                                   │
-│          │ (빈 상태: "No pending approvals" 메시지)          │
-└──────────┴──────────────────────────────────────────────────┘
-```
-
-**사용자 동작:**
-
-| 동작 | API 호출 | 인증 | 흐름 |
-|------|---------|------|------|
-| Approve 클릭 | `POST /v1/owner/approve/:txId` | ownerAuth | @reown/appkit.signMessage() -> Owner 서명 -> API 호출 |
-| Reject 클릭 | `POST /v1/owner/reject/:txId` | ownerAuth | 사유 입력 모달 (선택) -> Owner 서명 -> API 호출 |
-
-**Approve 시퀀스:**
-
-```mermaid
-sequenceDiagram
-    participant User as Owner (Desktop)
-    participant UI as Approvals.tsx
-    participant AppKit as @reown/appkit
-    participant Wallet as Owner Mobile Wallet
-    participant API as Daemon API
-
-    User->>UI: [Approve] 클릭
-    UI->>API: GET /v1/nonce
-    API-->>UI: { nonce: "abc123" }
-    UI->>UI: ownerSignaturePayload 구성 (action='approve_tx')
-    UI->>AppKit: signMessage(payload.message)
-    AppKit->>Wallet: 서명 요청 (WalletConnect Relay)
-    Wallet-->>AppKit: signature
-    AppKit-->>UI: signature
-    UI->>UI: payload에 signature 추가
-    UI->>API: POST /v1/owner/approve/:txId (Authorization: Bearer <payload>)
-    API-->>UI: 200 { transactionId, status: 'CONFIRMED' }
-    UI->>UI: TxCard 제거 + 성공 토스트
-```
-
-**갱신:** 5초 폴링 `GET /v1/owner/pending-approvals`
-
-### 7.4 화면 3 -- Sessions
-
-**레이아웃:**
-
-```
-┌──────────┬──────────────────────────────────────────────────┐
-│          │ Sessions (3 active)            [Create Session]   │
-│ Sidebar  ├──────────────────────────────────────────────────┤
-│          │ ┌────────────────────────────────────────────┐   │
-│          │ │ SessionCard: trading-bot                    │   │
-│          │ │ Expires: 2026-02-06 10:00 (23h left)      │   │
-│          │ │ Constraints: max 1 SOL, devnet only       │   │
-│          │ │                               [Revoke]     │   │
-│          │ └────────────────────────────────────────────┘   │
-│          │ ┌────────────────────────────────────────────┐   │
-│          │ │ SessionCard: arb-agent                      │   │
-│          │ │ Expires: 2026-02-05 18:00 (5h left)       │   │
-│          │ │ Constraints: max 10 SOL, whitelist 3 addr │   │
-│          │ │                               [Revoke]     │   │
-│          │ └────────────────────────────────────────────┘   │
-└──────────┴──────────────────────────────────────────────────┘
-```
-
-**사용자 동작:**
-
-| 동작 | API 호출 | 설명 |
-|------|---------|------|
-| Create Session | `POST /v1/sessions` (ownerAuth) | 모달: 에이전트 선택, 만료 시간, 제약 조건 설정 |
-| Revoke | `DELETE /v1/owner/sessions/:id` (ownerAuth) | 확인 다이얼로그 후 즉시 폐기 |
-
-**Create Session 모달:**
-- Step 1: 에이전트 드롭다운 선택 (GET /v1/owner/agents에서 목록)
-- Step 2: 만료 시간 설정 (5분 ~ 7일, 기본 24시간)
-- Step 3: 제약 조건 (최대 금액, 허용 체인, 허용 주소 목록)
-- Step 4: Owner 서명 (appkit.signMessage) -> POST /v1/sessions
-
-### 7.5 화면 4 -- Agents
-
-**레이아웃:**
-
-```
-┌──────────┬──────────────────────────────────────────────────┐
-│          │ Agents (2 agents)                                 │
-│ Sidebar  ├──────────────────────────────────────────────────┤
-│          │ ┌────────────────────────────────────────────┐   │
-│          │ │ AgentCard: trading-bot          [ACTIVE ●]  │   │
-│          │ │ Chain: solana (devnet) | Sessions: 1        │   │
-│          │ │ Transactions: 45 total | Balance: 12.5 SOL  │   │
-│          │ │                                              │   │
-│          │ │ 클릭하여 상세 보기 →                           │   │
-│          │ └────────────────────────────────────────────┘   │
-│          │ ┌────────────────────────────────────────────┐   │
-│          │ │ AgentCard: arb-agent            [PAUSED ●]  │   │
-│          │ │ Chain: solana (mainnet) | Sessions: 0       │   │
-│          │ │ Transactions: 12 total | Balance: 3.2 SOL   │   │
-│          │ └────────────────────────────────────────────┘   │
-└──────────┴──────────────────────────────────────────────────┘
-```
-
-**에이전트 상세 화면 (클릭 시):**
-
-| 섹션 | 데이터 소스 | 내용 |
-|------|-------------|------|
-| 에이전트 정보 | `GET /v1/owner/agents/:id` | 이름, 상태, 체인, 지갑 주소, 생성일 |
-| 최근 거래 | 에이전트 상세 응답 내 | 최근 10건 거래 목록 (TxCard) |
-| 활성 세션 | 에이전트 상세 응답 내 | 현재 활성 세션 목록 (SessionCard) |
-| 적용 정책 | 에이전트 상세 응답 내 | SPENDING_LIMIT, WHITELIST 등 정책 요약 |
-
-### 7.6 화면 5 -- Settings
-
-**레이아웃:**
-
-```
-┌──────────┬──────────────────────────────────────────────────┐
-│          │ Settings                                 [Save]   │
-│ Sidebar  ├──────────────────────────────────────────────────┤
-│          │                                                   │
-│          │ ── Notification Channels ──                       │
-│          │ Telegram: @my_bot (active)         [Test] [Edit] │
-│          │ Discord: #alerts (active)          [Test] [Edit] │
-│          │ ntfy.sh: (not configured)          [Add]          │
-│          │                                                   │
-│          │ ── Auto-Stop Rules ──                             │
-│          │ CONSECUTIVE_FAILURES: 3             [Edit]        │
-│          │ DAILY_LIMIT: 80%/100%              [Edit]        │
-│          │ HOURLY_RATE: 50/h                  [Edit]        │
-│          │                                                   │
-│          │ ── Policy Management ──                           │
-│          │ SPENDING_LIMIT (global): 10 SOL/day [Edit]       │
-│          │ WHITELIST (global): 5 addresses     [Edit]       │
-│          │                                                   │
-│          │ ── System Info ──                                 │
-│          │ Version: v0.2.0                                   │
-│          │ Daemon: running (uptime 2h 34m)                   │
-│          │ Data directory: ~/.waiaas/                         │
-│          │ Database size: 4.2 MB                             │
-└──────────┴──────────────────────────────────────────────────┘
-```
-
-**사용자 동작:**
-
-| 섹션 | 동작 | API 호출 |
-|------|------|---------|
-| Notification | Add/Edit/Delete 채널 | `PUT /v1/owner/settings` (ownerAuth) |
-| Notification | Test 전송 | `PUT /v1/owner/settings` (test_channel action) |
-| Auto-Stop | 규칙 편집 | `PUT /v1/owner/settings` (ownerAuth) |
-| Policy | 정책 편집 | `PUT /v1/owner/policies/:id` / `POST /v1/owner/policies` (ownerAuth) |
-
-### 7.7 화면 6 -- Setup Wizard (초기 설정)
-
-첫 실행 시 (`~/.waiaas/` 미존재) 자동으로 이 화면으로 이동한다.
+첫 실행 시 (`~/.waiaas/` 미존재) 자동으로 이 화면으로 이동한다. `isDesktop()` 가드가 활성화된 경우에만 렌더링되며, 브라우저 Admin Web UI에서는 접근할 수 없다.
 
 ```mermaid
 graph LR
-    S1["Step 1<br/>마스터 패스워드<br/>설정"] --> S2["Step 2<br/>체인 선택 +<br/>에이전트 생성"]
-    S2 --> S3["Step 3<br/>Owner 지갑<br/>연결 (QR)"]
-    S3 --> S4["Step 4<br/>알림 채널<br/>설정 (2개+)"]
-    S4 --> S5["Step 5<br/>완료 확인"]
+    S1["Step 1<br/>마스터 패스워드<br/>설정"] --> S2["Step 2<br/>체인 선택"]
+    S2 --> S3["Step 3<br/>첫 월렛 생성"]
+    S3 --> S4["Step 4<br/>Owner 연결<br/>(WalletConnect,<br/>스킵 가능)"]
+    S4 --> S5["Step 5<br/>완료 요약"]
     S5 --> Dashboard["Dashboard<br/>로 이동"]
 
     style S1 fill:#e1f5fe
@@ -1216,28 +988,17 @@ graph LR
     style S5 fill:#e8f5e9
 ```
 
-**Step별 상세:**
+**Step별 상세 (m33-02 정의와 일치):**
 
 | Step | 화면 | 입력 | 검증 |
 |------|------|------|------|
-| 1 | 마스터 패스워드 | 패스워드 2회 입력 (확인) | 8자 이상, 숫자+영문 포함 |
-| 2 | 체인 + 에이전트 | 체인 드롭다운 (Solana), 에이전트 이름 | 이름 비어있지 않음 |
-| 3 | Owner 지갑 연결 | WalletConnect QR 표시 | 연결 성공 확인 (address 표시) |
-| 4 | 알림 채널 | Telegram bot token, Discord webhook URL 등 | 최소 2개 채널 구성 + 테스트 전송 성공 |
-| 5 | 완료 확인 | 설정 요약 표시 | [Start WAIaaS] 버튼 |
+| 1 | 마스터 패스워드 설정 | 패스워드 2회 입력 (확인) | 12자 이상, 영문+숫자 포함 |
+| 2 | 체인 선택 | 체인 드롭다운 (Solana/EVM) | 최소 1개 체인 선택 |
+| 3 | 첫 월렛 생성 | 월렛 이름, 선택한 체인 | 이름 비어있지 않음 |
+| 4 | Owner 연결 (WalletConnect, 스킵 가능) | WalletConnect QR 표시 | 연결 성공 또는 스킵 확인 |
+| 5 | 완료 요약 | 설정 요약 표시 | [Start WAIaaS] 버튼 |
 
-> **(v0.5 변경) Setup Wizard init 플로우 재구성:** `waiaas init`이 순수 인프라 초기화(마스터 패스워드 설정 + 디렉토리/config/DB/JWT 생성)로 간소화되었다. 에이전트 생성과 Owner 주소 등록은 별도 단계(`agent create --owner`)로 분리. Setup Wizard 5-step도 이에 맞게 재구성된다:
->
-> | Step | v0.2 | v0.5 |
-> |------|------|------|
-> | 1 | 마스터 패스워드 설정 | 마스터 패스워드 설정 |
-> | 2 | 체인 선택 + 에이전트 생성 | 인프라 초기화 (자동: waiaas init 실행) |
-> | 3 | Owner 지갑 연결 (QR) | 에이전트 생성 + Owner 주소 입력 (agent create --owner) |
-> | 4 | 알림 채널 설정 | 세션 토큰 발급 (session create) |
-> | 5 | 완료 확인 | 완료 (대시보드로 이동) |
->
-> 알림 채널 설정은 대시보드의 Settings 화면으로 이동하여 별도 수행 가능.
-> 상세: 54-cli-flow-redesign.md 참조.
+> **(v0.5 변경) Setup Wizard init 플로우 재구성:** `waiaas init`이 순수 인프라 초기화(마스터 패스워드 설정 + 디렉토리/config/DB/JWT 생성)로 간소화되었다. 월렛 생성과 Owner 주소 등록은 별도 단계로 분리. 상세: 54-cli-flow-redesign.md 참조.
 
 **백엔드 연동 [v0.7 보완: CLI 위임 + idempotent 확정]:**
 
@@ -1245,9 +1006,9 @@ Setup Wizard는 직접 초기화 로직을 구현하지 않고, CLI 커맨드(`w
 
 - Step 1: UI에서 마스터 패스워드 입력
 - Step 2: `waiaas init --json --non-interactive --master-password <pw>` sidecar 실행 (idempotent: 이미 초기화된 경우에도 에러 없이 성공 반환)
-- Step 3: `waiaas start` sidecar 실행 -> POST /v1/agents (에이전트 생성, Owner 주소 포함)
-- Step 4: `waiaas session create --agent <name> --json` sidecar 실행 -> 세션 토큰 발급
-- Step 5: 대시보드로 react-router navigate
+- Step 3: `waiaas start` sidecar 실행 -> POST /v1/wallets (월렛 생성)
+- Step 4: WalletConnect QR로 Owner 연결 (스킵 가능)
+- Step 5: 대시보드로 Admin Web UI 라우팅
 
 **[v0.7 보완] `waiaas init --json` 응답 스키마:**
 
@@ -1277,39 +1038,47 @@ interface InitJsonResponse {
 
 **`--force`와의 차이:** `--force`는 기존 데이터를 삭제하고 처음부터 재초기화한다. idempotent 동작과 `--force`는 상호 배타적이다. 28-daemon-lifecycle-cli.md 및 54-cli-flow-redesign.md 참조.
 
-### 7.8 화면 7 -- Owner Connect
+### 7.3 Desktop 전용 확장: Sidecar Status Panel
 
-**레이아웃:**
+> **(v33.0 신규)** 대시보드에 추가되는 Desktop 전용 Sidecar 상태 카드.
 
+대시보드 페이지에 `isDesktop()` 가드로 조건부 렌더링되는 Sidecar 상태 카드를 추가한다. 브라우저 Admin Web UI에서는 이 카드가 표시되지 않는다.
+
+**표시 정보:**
+
+| 항목 | IPC 커맨드 | 표시 |
+|------|-----------|------|
+| 데몬 상태 | `invoke('get_daemon_status')` | Running / Stopped / Error |
+| PID | DaemonStatus.pid | 프로세스 ID |
+| Uptime | DaemonStatus.uptime | 경과 시간 (hh:mm:ss) |
+| Restart Count | DaemonStatus.restartCount | 재시작 횟수 |
+| 빠른 제어 | invoke('restart_daemon') | [Restart] 버튼 |
+
+**컴포넌트 위치:** `packages/admin/src/components/desktop-status.tsx`
+
+**로딩 방식:**
+```typescript
+// packages/admin/src/pages/dashboard.tsx
+import { isDesktop } from '../utils/platform'
+
+// Desktop 전용 컴포넌트 lazy load
+const DesktopStatus = isDesktop()
+  ? lazy(() => import('../components/desktop-status'))
+  : null
 ```
-┌──────────┬──────────────────────────────────────────────────┐
-│          │ Owner Wallet Connection                           │
-│ Sidebar  ├──────────────────────────────────────────────────┤
-│          │                                                   │
-│          │ ┌──────────────────┐                              │
-│          │ │                  │  Scan this QR code with      │
-│          │ │   ████████████   │  your mobile wallet          │
-│          │ │   █ QR CODE  █   │                              │
-│          │ │   ████████████   │  Supported:                  │
-│          │ │                  │  - Phantom (Solana)           │
-│          │ └──────────────────┘  - MetaMask (EVM, v0.3)     │
-│          │                                                   │
-│          │ Status: Waiting for connection...                 │
-│          │                                                   │
-│          │ ── 또는 ──                                         │
-│          │                                                   │
-│          │ Connected: 7xK...abc (Solana devnet)              │
-│          │ Since: 2026-02-05 10:30                           │
-│          │                           [Disconnect]            │
-└──────────┴──────────────────────────────────────────────────┘
-```
+
+### 7.4 Desktop 전용 확장: WalletConnect QR 통합
+
+> **(v33.0 변경)** 기존 7.8(Owner Connect)을 Desktop 전용 확장으로 축소. "별도 페이지"가 아닌 "wallets 상세 페이지의 조건부 컴포넌트"로 변경.
+
+Desktop에서는 `@reown/appkit`을 통해 WalletConnect QR 페어링을 활성화한다. 브라우저 Admin Web UI에서는 기존 `walletconnect.tsx` 페이지(v1.6.1 구현)의 제한적 기능만 제공한다.
 
 **WalletConnect QR 연결 시퀀스:**
 
 ```mermaid
 sequenceDiagram
-    participant UI as OwnerConnect.tsx
-    participant AppKit as @reown/appkit
+    participant UI as WalletConnect (Admin Web UI)
+    participant AppKit as @reown/appkit (Desktop only)
     participant Relay as WalletConnect Relay
     participant Wallet as Owner Mobile Wallet
     participant API as Daemon API
@@ -1322,7 +1091,7 @@ sequenceDiagram
     Wallet->>Relay: QR 스캔 -> 페어링 요청
     Relay->>AppKit: 페어링 수립
 
-    AppKit->>Relay: 세션 제안 (solana namespace)
+    AppKit->>Relay: 세션 제안 (solana/evm namespace)
     Relay->>Wallet: 세션 승인 요청
     Wallet-->>Relay: 세션 수락 (address, chain)
     Relay-->>AppKit: 세션 수립 완료
@@ -1333,83 +1102,7 @@ sequenceDiagram
     UI->>UI: "Connected to 7xK...abc" 표시
 ```
 
-### 7.9 화면 8 -- Kill Switch
-
-**레이아웃 (NORMAL 상태):**
-
-```
-┌──────────┬──────────────────────────────────────────────────┐
-│          │ Kill Switch                                       │
-│ Sidebar  ├──────────────────────────────────────────────────┤
-│          │                                                   │
-│          │ Current Status: [NORMAL ● 초록]                   │
-│          │                                                   │
-│          │ Kill Switch는 모든 에이전트 활동을 즉시 중단하고   │
-│          │ 키스토어를 잠그는 비상 정지 장치입니다.            │
-│          │                                                   │
-│          │ ┌──────────────────────────────────────────────┐  │
-│          │ │         [Activate Kill Switch]               │  │
-│          │ │         빨간 버튼 (확인 다이얼로그)           │  │
-│          │ └──────────────────────────────────────────────┘  │
-└──────────┴──────────────────────────────────────────────────┘
-```
-
-**레이아웃 (ACTIVATED 상태):**
-
-```
-┌──────────┬──────────────────────────────────────────────────┐
-│          │ Kill Switch                                       │
-│ Sidebar  ├──────────────────────────────────────────────────┤
-│          │                                                   │
-│          │ Current Status: [ACTIVATED ● 빨강]                │
-│          │ Activated at: 2026-02-05 14:30:22                │
-│          │ Reason: "Suspicious transactions detected"        │
-│          │                                                   │
-│          │ ── Impact Summary ──                              │
-│          │ Sessions revoked: 5                               │
-│          │ Transactions cancelled: 2                         │
-│          │ Agents suspended: 3                               │
-│          │ Keystore: LOCKED                                  │
-│          │                                                   │
-│          │ ── Recovery ──                                     │
-│          │ 복구하려면 이중 인증이 필요합니다:                  │
-│          │ 1. 마스터 패스워드 입력                             │
-│          │ 2. Owner 지갑 서명                                 │
-│          │                                                   │
-│          │ Master Password: [________]                       │
-│          │                                                   │
-│          │         [Recover System]                           │
-└──────────┴──────────────────────────────────────────────────┘
-```
-
-**Kill Switch 동작:**
-
-| 상태 | 동작 | API 호출 | 인증 |
-|------|------|---------|------|
-| NORMAL -> ACTIVATED | [Activate] 클릭 -> 확인 다이얼로그 -> 사유 입력 | `POST /v1/admin/kill-switch` | masterAuth (마스터 패스워드) |
-| ACTIVATED -> RECOVERING -> NORMAL | [Recover] 클릭 -> 패스워드 + Owner 서명 | `POST /v1/owner/recover` | ownerAuth + masterAuth (이중 인증) |
-
-**Kill Switch 발동 확인 다이얼로그:**
-
-```
-┌─────────────────────────────────────────────────┐
-│ ⚠ Emergency Kill Switch                         │
-│                                                  │
-│ 이 작업은 다음을 수행합니다:                      │
-│ - 모든 활성 세션 즉시 폐기                        │
-│ - 모든 대기/진행 중 거래 취소                     │
-│ - 모든 에이전트 일시 정지                          │
-│ - 키스토어 잠금                                    │
-│                                                  │
-│ 복구하려면 Owner 지갑 서명 + 마스터 패스워드가     │
-│ 필요합니다.                                       │
-│                                                  │
-│ Reason: [________________]                        │
-│ Master Password: [________________]               │
-│                                                  │
-│         [Cancel]         [ACTIVATE]               │
-└─────────────────────────────────────────────────┘
-```
+**@reown/appkit 로딩:** Desktop 전용 dynamic import로 로드하여 브라우저 번들에 포함되지 않음.
 
 ---
 
@@ -2140,7 +1833,7 @@ async function killSwitch(password: string, reason: string): Promise<void> {
 
 ## 13. 구현 노트
 
-> Phase 13 (v0.3 MEDIUM 구현 노트)에서 추가. 기존 설계를 변경하지 않으며, 구현 시 참고할 주의사항을 정리한다.
+> Phase 13 (v0.3 MEDIUM 구현 노트)에서 추가. **(v33.0 갱신)** React 18 참조를 Admin Web UI + isDesktop() 패턴으로 변경.
 
 ### 13.1 IPC + HTTP 이중 채널 에러 처리 전략
 
@@ -2151,23 +1844,25 @@ async function killSwitch(password: string, reason: string): Promise<void> {
 | 에러 유형 | 원천 | 에러 클래스 | 사용자 표시 |
 |----------|------|-----------|-----------|
 | 데몬 프로세스 관리 실패 | Tauri IPC (`invoke`) | Rust `tauri::Error` -> JS catch | "데몬 시작/중지 실패" |
-| API 호출 실패 | HTTP fetch (`@waiaas/sdk`) | `WAIaaSError` | SDK 에러 코드별 메시지 |
-| 데몬 미실행 | HTTP fetch | `ECONNREFUSED` | "데몬이 실행 중이 아닙니다" -> 자동 시작 시도 |
+| API 호출 실패 | HTTP fetch (`apiCall()`) | `ApiError` | 에러 코드별 메시지 |
+| 데몬 미실행 | HTTP fetch | `ECONNREFUSED` / `NETWORK_ERROR` | "데몬이 실행 중이 아닙니다" -> 자동 시작 시도 |
 | IPC 성공 + HTTP 실패 | 혼합 시퀀스 | 복합 | 상태 동기화 후 재시도 안내 |
 
 **ECONNREFUSED 처리 전략:**
 
 ```
-HTTP 요청 시 ECONNREFUSED 감지
-  -> invoke('get_daemon_status') (IPC) 호출
+HTTP 요청 시 ECONNREFUSED 감지 (apiCall() -> ApiError NETWORK_ERROR)
+  -> isDesktop() 확인
+  -> Desktop이면: invoke('get_daemon_status') (IPC) 호출
   -> 미실행이면 invoke('start_daemon') (IPC) 시도
   -> 시작 성공 후 HTTP 재시도 (최대 1회)
   -> 재시도 실패 시 "데몬 시작에 실패했습니다" 에러 표시
+  -> 브라우저이면: "데몬에 연결할 수 없습니다" 에러 표시 (IPC 불가)
 ```
 
 **상태 동기화 패턴:**
 
-IPC `DaemonStatus`와 HTTP `GET /health` 응답을 조합하여 최종 상태를 결정한다.
+IPC `DaemonStatus`와 HTTP `GET /health` 응답을 조합하여 최종 상태를 결정한다. 이 패턴은 `isDesktop()` 가드 내에서만 동작한다 (브라우저에서는 IPC 불가).
 
 | IPC DaemonStatus | HTTP /health | 최종 상태 | 사용자 표시 |
 |------------------|-------------|----------|-----------|
@@ -2177,36 +1872,36 @@ IPC `DaemonStatus`와 HTTP `GET /health` 응답을 조합하여 최종 상태를
 | stopped | N/A (호출 불가) | **중지됨** | 회색 아이콘 |
 | error | N/A | **오류** | 빨간색 아이콘 + 에러 메시지 |
 
-**React 에러 통합 패턴:**
+**Admin Web UI 에러 통합 패턴:**
 
-`useDaemonHealth()` hook에서 IPC 상태와 HTTP `/health`를 폴링하여 통합 상태를 제공한다. 에러 발생 시 Toast(일시적 에러) 또는 Banner(지속적 에러)로 통합 표시한다.
+Desktop 전용 에러 통합은 `isDesktop()` 가드 내에서 IPC 상태와 HTTP `/health`를 폴링하여 통합 상태를 제공한다. @preact/signals 기반 상태 관리로 에러 발생 시 Toast(일시적 에러) 또는 Banner(지속적 에러)로 통합 표시한다.
 
-- IPC 에러 -> Banner ("데몬 프로세스 관리 실패")
-- HTTP 4xx -> Toast (SDK 에러 코드별 메시지, 사용자 동작 오류)
+- IPC 에러 -> Banner ("데몬 프로세스 관리 실패") -- Desktop 전용
+- HTTP 4xx -> Toast (ApiError 코드별 메시지, 사용자 동작 오류)
 - HTTP 5xx -> Banner ("서버 내부 오류")
-- ECONNREFUSED -> 자동 복구 시도 후 실패 시 Banner
+- ECONNREFUSED -> Desktop: 자동 복구 시도 후 실패 시 Banner / 브라우저: 즉시 Banner
 
-**참조:** 섹션 3.1~3.3 (통신 아키텍처), SDK-MCP (38-sdk-mcp-interface.md) WAIaaSError 정의
+**참조:** 섹션 3.1~3.3 (통신 아키텍처), packages/admin/src/api/client.ts (ApiError 정의)
 
 ### 13.2 Setup Wizard와 CLI init 초기화 순서 관계
 
-**배경:** Setup Wizard(섹션 7.8)는 5단계, CLI init(CORE-05, 28-daemon-lifecycle-cli.md 섹션 6.1)은 4단계로 초기화 범위와 순서에 차이가 있다. 구현 시 양쪽의 역할 분담과 차이를 이해해야 한다.
+> **(v33.0 갱신)** Setup Wizard(Admin Web UI Desktop 확장)는 섹션 7.2에서 기술한다.
+
+**배경:** Setup Wizard(섹션 7.2)는 5단계, CLI init(CORE-05, 28-daemon-lifecycle-cli.md 섹션 6.1)은 4단계로 초기화 범위와 순서에 차이가 있다. 구현 시 양쪽의 역할 분담과 차이를 이해해야 한다.
 
 **차이점 비교표:**
 
 | 항목 | CLI init (4단계) | Setup Wizard (5단계) | 설계 근거 |
 |------|-----------------|---------------------|----------|
-| 패스워드 최소 길이 | 12자 | 8자 (구현 시 12자로 통일 권장) | 보안 우선. 12자 통일 권장 |
-| 에이전트 생성 | 선택적 | 필수 (Step 2) | Wizard는 즉시 사용 가능 상태 목표 |
-| Owner 지갑 연결 | 선택적 | 필수 (Step 3, WalletConnect) | Wizard는 보안 완전 설정 목표 |
-| 알림 채널 | 선택적 | 필수 (Step 4, 최소 2개) | Wizard는 4-tier 정책 즉시 활성화 |
-| Owner/알림 순서 | 알림 -> Owner | Owner -> 알림 | Wizard: Owner QR 후 알림 설정이 자연스러운 흐름 |
+| 패스워드 최소 길이 | 12자 | 12자 (양쪽 통일) | 보안 우선 |
+| 월렛 생성 | 선택적 | 필수 (Step 3) | Wizard는 즉시 사용 가능 상태 목표 |
+| Owner 지갑 연결 | 선택적 | 선택적 (Step 4, 스킵 가능) | WalletConnect QR, Desktop 전용 |
+| Owner/알림 순서 | N/A | Owner -> (이후 Admin UI에서 설정) | Wizard는 최소 시작 상태 목표 |
 
 **통합 근거:**
 
 - **CLI = 최소 초기화:** 데몬 실행 가능한 최소 상태(패스워드 + 데이터 디렉토리 + DB + 키스토어 초기화)만 설정. 나머지는 데몬 시작 후 API로 설정 가능.
-- **Wizard = CLI init + 데몬 시작 + API 호출의 조합:** Step 1-2는 내부적으로 `waiaas init` 호출, Step 3-4는 데몬 시작 후 REST API 호출(`POST /v1/owner/connect`, `PUT /v1/owner/settings`).
-- **패스워드 최소 길이:** 설계 문서상 CLI 12자 / Wizard 8자이나, 구현 시 양쪽 모두 12자로 통일 권장 (보안 우선). Wizard 설계 변경은 v0.4에서 반영.
+- **Wizard = CLI init + 데몬 시작 + API 호출의 조합:** Step 1-2는 내부적으로 `waiaas init` 호출, Step 3은 데몬 시작 후 REST API 호출(`POST /v1/wallets`).
 
 **[v0.7 보완] Setup Wizard 내부 호출 시퀀스 (5단계):**
 
@@ -2214,7 +1909,7 @@ Wizard는 Sidecar Manager를 통해 CLI 커맨드를 sidecar 바이너리로 실
 
 ```mermaid
 sequenceDiagram
-    participant UI as Setup Wizard (React)
+    participant UI as Setup Wizard (Admin Web UI)
     participant SM as Sidecar Manager (Rust)
     participant CLI as waiaas CLI (Sidecar)
     participant API as Daemon API
@@ -2229,22 +1924,45 @@ sequenceDiagram
 
     UI->>SM: invoke('start_daemon')
     SM->>CLI: waiaas start --daemon --json
-    CLI-->>SM: { status: 'running', port: 3100 }
+    CLI-->>SM: { status: 'running', port: {port} }
     SM-->>UI: DaemonStatus
     Note over UI: Step 3: 데몬 시작
 
-    UI->>API: POST /v1/agents { name, chain, network, ownerAddress }
-    API-->>UI: 201 { agentId, name, address }
-    Note over UI: Step 4: 에이전트 생성
+    UI->>API: POST /v1/wallets { name, chain, network }
+    API-->>UI: 201 { walletId, name, address }
+    Note over UI: Step 4: 월렛 생성
 
-    UI->>API: POST /v1/sessions { agentId, expiresIn }
-    API-->>UI: 201 { sessionToken, expiresAt }
-    Note over UI: Step 5: 세션 발급 -> Dashboard 이동
+    Note over UI: Step 5: (Optional) WalletConnect Owner 연결 -> Dashboard 이동
 ```
 
 **idempotent 보장:** Step 2에서 `waiaas init --json`은 이미 초기화된 경우에도 에러 없이 `{ success: true, alreadyInitialized: true }` 를 반환한다. 이를 통해 Wizard 재시도, 앱 재시작, 부분 완료 후 재진입이 안전하다.
 
 **참조:** CORE-05 (28-daemon-lifecycle-cli.md) 구현 노트 "CLI init과 Setup Wizard의 역할 분담", 54-cli-flow-redesign.md 섹션 2 (waiaas init 재설계)
+
+### 13.3 Admin Web UI 재사용 시 고려사항
+
+> **(v33.0 신규)**
+
+Admin Web UI는 브라우저에서 `http://localhost:{port}/admin`으로 접근하도록 설계되었다. Desktop WebView에서도 동일 URL을 로드하므로, Admin Web UI의 기존 동작(masterAuth, apiCall, 라우팅, CSP)이 그대로 적용된다.
+
+**환경 감지:**
+- Desktop 전용 코드는 `isDesktop()` 가드 내에서만 실행되어야 한다.
+- `window.__TAURI_INTERNALS__` 전역 객체의 존재 여부로 환경을 판별한다.
+- `packages/admin/src/utils/platform.ts`에 `isDesktop()` 함수를 정의한다.
+
+**Dynamic Import 규칙:**
+- Desktop 전용 모듈(`@tauri-apps/api`, `@reown/appkit`)은 반드시 dynamic import로 로드하여 브라우저 번들에 포함되지 않도록 한다.
+- `packages/admin/src/desktop/` 디렉토리 하위의 모든 모듈은 `isDesktop()` 가드 내에서만 import된다.
+
+**CSP 조정:**
+- Admin Web UI의 기존 CSP(`default-src 'none'`)는 Desktop에서 추가 조정이 필요할 수 있다.
+- Tauri WebView의 CSP 정책은 `tauri.conf.json`에서 별도 설정한다.
+- Desktop에서는 `connect-src`에 `tauri://localhost`(macOS/Linux) 및 `http://tauri.localhost`(Windows)를 추가해야 할 수 있다.
+
+**인증 패턴:**
+- Admin Web UI는 `apiCall()`에서 `X-Master-Password` 헤더를 자동 첨부한다.
+- Desktop에서도 동일한 인증 흐름을 사용한다 -- 별도 인증 로직이 필요 없다.
+- Setup Wizard(섹션 7.2)에서 마스터 패스워드를 설정한 후, Admin Web UI의 기존 로그인 화면에서 인증한다.
 
 ---
 
