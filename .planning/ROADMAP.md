@@ -168,5 +168,5 @@ Phases execute in numeric order: 456 → 457 → 458
 | 454. OpenClaw Plugin Package | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 455. CI/CD, Documentation, SEO | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 456. 설계 문서 39 기존 섹션 재작성 | v33.0 | 2/2 | Complete    | 2026-03-31 |
-| 457. Desktop 환경 감지 + IPC + 번들 설계 | v33.0 | 2/2 | Complete   | 2026-03-31 |
+| 457. Desktop 환경 감지 + IPC + 번들 설계 | v33.0 | 2/2 | Complete    | 2026-03-31 |
 | 458. 구조 검증 + Objectives 정합 | v33.0 | 0/TBD | Not started | - |
