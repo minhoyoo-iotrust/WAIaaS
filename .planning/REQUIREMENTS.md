@@ -98,13 +98,49 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| SIDE-01 | Phase 460 | Pending |
+| SIDE-02 | Phase 460 | Pending |
+| SIDE-03 | Phase 460 | Pending |
+| SIDE-04 | Phase 460 | Pending |
+| SIDE-05 | Phase 460 | Pending |
+| SIDE-06 | Phase 460 | Pending |
+| SIDE-07 | Phase 460 | Pending |
+| SIDE-08 | Phase 460 | Pending |
+| VIEW-01 | Phase 460 | Pending |
+| VIEW-02 | Phase 461 | Pending |
+| VIEW-03 | Phase 460 | Pending |
+| VIEW-04 | Phase 461 | Pending |
+| IPC-01 | Phase 461 | Pending |
+| IPC-02 | Phase 461 | Pending |
+| IPC-03 | Phase 461 | Pending |
+| IPC-04 | Phase 461 | Pending |
+| IPC-05 | Phase 461 | Pending |
+| IPC-06 | Phase 461 | Pending |
+| IPC-07 | Phase 461 | Pending |
+| TRAY-01 | Phase 461 | Pending |
+| TRAY-02 | Phase 461 | Pending |
+| TRAY-03 | Phase 461 | Pending |
+| WIZA-01 | Phase 462 | Pending |
+| WIZA-02 | Phase 462 | Pending |
+| WIZA-03 | Phase 462 | Pending |
+| WIZA-04 | Phase 462 | Pending |
+| WCON-01 | Phase 459 | Pending |
+| WCON-02 | Phase 462 | Pending |
+| WCON-03 | Phase 462 | Pending |
+| WCON-04 | Phase 462 | Pending |
+| WCON-05 | Phase 462 | Pending |
+| DIST-01 | Phase 463 | Pending |
+| DIST-02 | Phase 463 | Pending |
+| DIST-03 | Phase 463 | Pending |
+| UPDT-01 | Phase 463 | Pending |
+| UPDT-02 | Phase 463 | Pending |
+| UPDT-03 | Phase 463 | Pending |
 
 **Coverage:**
 - v33.2 requirements: 37 total
-- Mapped to phases: 0
-- Unmapped: 37
+- Mapped to phases: 37
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after initial definition*
+*Last updated: 2026-03-31 after roadmap creation*

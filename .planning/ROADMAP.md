@@ -36,11 +36,7 @@ See `.planning/milestones/v32.6-ROADMAP.md` for full details.
 <details>
 <summary>✅ v32.7 SEO/AEO 최적화 (Phases 439-443) — SHIPPED 2026-03-17</summary>
 
-- [x] Phase 439: Build Infrastructure (1/1 plan) — completed 2026-03-17
-- [x] Phase 440: Content Publishing + Navigation (1/1 plan) — completed 2026-03-17
-- [x] Phase 441: Technical SEO & AEO (2/2 plans) — completed 2026-03-17
-- [x] Phase 442: CI Integration (1/1 plan) — completed 2026-03-17
-- [x] Phase 443: SEO Landing Pages + External Distribution (2/2 plans) — completed 2026-03-17
+- [x] Phase 439-443: 5 phases completed — 2026-03-17
 
 </details>
 
@@ -49,23 +45,16 @@ See `.planning/milestones/v32.7-ROADMAP.md` for full details.
 <details>
 <summary>✅ v32.8 테스트 커버리지 강화 (Phases 444-448.1) — SHIPPED 2026-03-18</summary>
 
-- [x] Phase 444: daemon DeFi Provider + Pipeline 테스트 강화 (3/3 plans) — completed 2026-03-17
-- [x] Phase 445: daemon Infra + Admin API + Notification 테스트 (3/3 plans) — completed 2026-03-17
-- [x] Phase 446: evm Branches + wallet-sdk Branches 강화 (2/2 plans) — completed 2026-03-17
-- [x] Phase 447: admin Functions + cli Lines/Branches 강화 (3/3 plans) — completed 2026-03-17
-- [x] Phase 448: sdk + shared + 나머지 패키지 + 임계값 최종 인상 (3/3 plans) — completed 2026-03-17
-- [x] Phase 448.1: 커버리지 갭 클로저 (3/3 plans) — completed 2026-03-18
+- [x] Phase 444-448.1: 6 phases completed — 2026-03-18
 
 </details>
 
 See `.planning/milestones/v32.8-ROADMAP.md` for full details.
 
 <details>
-<summary>✅ v32.9 Push Relay 직접 연동 (ntfy.sh 제거) (Phases 449-451) — SHIPPED 2026-03-18</summary>
+<summary>✅ v32.9 Push Relay 직접 연동 (Phases 449-451) — SHIPPED 2026-03-18</summary>
 
-- [x] Phase 449: Foundation -- Core 타입 + DB 마이그레이션 + Push Relay 서버 (3/3 plans) — completed 2026-03-18
-- [x] Phase 450: Daemon 서명 채널 재작성 (2/2 plans) — completed 2026-03-18
-- [x] Phase 451: 클라이언트 업데이트 -- SDK deprecated + Admin UI (2/2 plans) — completed 2026-03-18
+- [x] Phase 449-451: 3 phases completed — 2026-03-18
 
 </details>
 
@@ -74,10 +63,7 @@ See `.planning/milestones/v32.9-ROADMAP.md` for full details.
 <details>
 <summary>✅ v32.10 에이전트 스킬 정리 + OpenClaw 플러그인 (Phases 452-455) — SHIPPED 2026-03-18</summary>
 
-- [x] Phase 452: Document Structure Rename (1/1 plan) — completed 2026-03-18
-- [x] Phase 453: Skills Cleanup + Admin Manual (2/2 plans) — completed 2026-03-18
-- [x] Phase 454: OpenClaw Plugin Package (2/2 plans) — completed 2026-03-18
-- [x] Phase 455: CI/CD, Documentation, SEO (2/2 plans) — completed 2026-03-18
+- [x] Phase 452-455: 4 phases completed — 2026-03-18
 
 </details>
 
@@ -86,43 +72,99 @@ See `.planning/milestones/v32.10-ROADMAP.md` for full details.
 <details>
 <summary>✅ v33.0 Desktop App 아키텍처 재설계 (Phases 456-458) — SHIPPED 2026-03-31</summary>
 
-- [x] Phase 456: 설계 문서 39 기존 섹션 재작성 (2/2 plans) — completed 2026-03-31
-- [x] Phase 457: Desktop 환경 감지 + IPC + 번들 설계 (2/2 plans) — completed 2026-03-31
-- [x] Phase 458: 구조 검증 + Objectives 정합 (2/2 plans) — completed 2026-03-31
+- [x] Phase 456-458: 3 phases completed — 2026-03-31
 
 </details>
 
 See `.planning/milestones/v33.0-ROADMAP.md` for full details.
 
+---
+
+## v33.2 Tauri Desktop App (In Progress)
+
+**Milestone Goal:** Tauri 2 기반 데스크탑 앱으로 WAIaaS 데몬을 GUI에서 관리 — 기존 Admin Web UI를 WebView에 로드하여 코드 중복 없이 전체 기능 제공
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (459, 460, ...): Planned milestone work
+- Decimal phases (460.1, etc.): Urgent insertions (marked with INSERTED)
+- Phase 459 and Phase 460 are parallelizable (no dependency between them)
+
+- [ ] **Phase 459: WalletConnect Spike** - @reown/appkit Tauri WebView 호환성 Go/No-Go 검증
+- [ ] **Phase 460: Tauri Shell + Sidecar Manager** - Tauri 프로젝트 구조 + SEA 바이너리 빌드 + 사이드카 라이프사이클 + WebView 로드
+- [ ] **Phase 461: IPC Bridge + System Tray** - 7개 IPC 명령 + 시스템 트레이 3색 상태 + isDesktop() + 4-layer tree-shaking
+- [ ] **Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장** - 5단계 Setup Wizard + WalletConnect QR 페어링 + Desktop 전용 컴포넌트
+- [ ] **Phase 463: GitHub Releases CI + Auto-Update** - 3 플랫폼 빌드 매트릭스 + 코드 사이닝 + 자동 업데이트
+
+## Phase Details
+
+### Phase 459: WalletConnect Spike
+**Goal**: @reown/appkit이 Tauri WebView(WebKit/WebView2) 내에서 QR 페어링 + SIWS/SIWE 서명을 완료할 수 있는지 검증하여 Go/No-Go를 결정한다
+**Depends on**: Nothing (parallelizable with Phase 460)
+**Requirements**: WCON-01
+**Success Criteria** (what must be TRUE):
+  1. Tauri WebView 내에서 `<w3m-modal>` Web Component가 렌더링되고 QR 코드가 표시된다
+  2. WebSocket이 `wss://relay.walletconnect.com`에 CSP 충돌 없이 연결된다
+  3. 외부 지갑(Phantom 또는 MetaMask)으로 QR 스캔 후 SIWS/SIWE 서명 플로우가 완료된다 (또는 실패 시 Plan B 전환 결정이 문서화된다)
+**Plans**: TBD
+
+### Phase 460: Tauri Shell + Sidecar Manager
+**Goal**: Tauri 앱이 WAIaaS 데몬 SEA 바이너리를 사이드카로 시작하고, 동적 포트를 발견하여 WebView에 Admin Web UI를 로드한다
+**Depends on**: Nothing (parallelizable with Phase 459)
+**Requirements**: SIDE-01, SIDE-02, SIDE-03, SIDE-04, SIDE-05, SIDE-06, SIDE-07, SIDE-08, VIEW-01, VIEW-03
+**Success Criteria** (what must be TRUE):
+  1. Tauri 앱 실행 시 스플래시 화면이 표시되고, SEA 바이너리 데몬이 자동으로 시작된다
+  2. 데몬이 할당한 동적 포트가 stdout 파싱으로 발견되고, WebView가 `http://localhost:{port}/admin`으로 이동하여 Admin Web UI가 표시된다
+  3. 데몬 crash 시 자동 재시작되고, graceful shutdown(SIGTERM -> 5s -> SIGKILL)이 동작한다
+  4. PID lockfile로 다중 인스턴스가 방지되고, Windows에서 Job Object로 zombie 프로세스가 방지된다
+  5. esbuild + SEA config로 3 플랫폼 바이너리가 생성되고, sodium-native/better-sqlite3 native addon이 올바르게 로드된다
+**Plans**: TBD
+
+### Phase 461: IPC Bridge + System Tray
+**Goal**: Desktop 전용 코드 아키텍처(isDesktop, tree-shaking)가 확립되고, 7개 IPC 명령으로 네이티브 기능을 사용할 수 있으며, 시스템 트레이에 데몬 상태가 표시된다
+**Depends on**: Phase 460
+**Requirements**: IPC-01, IPC-02, IPC-03, IPC-04, IPC-05, IPC-06, IPC-07, TRAY-01, TRAY-02, TRAY-03, VIEW-02, VIEW-04
+**Success Criteria** (what must be TRUE):
+  1. Admin Web UI에서 `invoke('start_daemon')`, `invoke('stop_daemon')`, `invoke('restart_daemon')` 등 7개 IPC 명령이 타입 안전하게 동작한다
+  2. 시스템 트레이에 3색 상태 아이콘(녹/주황/빨강)이 표시되고, 30초 폴링으로 자동 업데이트된다
+  3. 트레이 컨텍스트 메뉴(Open Dashboard / Pause / Resume / Quit)가 동작한다
+  4. `isDesktop()` 함수가 `window.__TAURI_INTERNALS__` 기반으로 환경을 감지하고, Desktop 전용 코드가 4-layer tree-shaking으로 브라우저 번들에 포함되지 않는다
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장
+**Goal**: Desktop 최초 실행 사용자가 Setup Wizard로 안내받고, WalletConnect QR로 외부 지갑을 연결하며, Desktop 전용 UI 확장이 완성된다
+**Depends on**: Phase 461, Phase 459 (spike 결과)
+**Requirements**: WIZA-01, WIZA-02, WIZA-03, WIZA-04, WCON-02, WCON-03, WCON-04, WCON-05
+**Success Criteria** (what must be TRUE):
+  1. Desktop 최초 실행 시 5단계 Setup Wizard(패스워드 -> 체인 선택 -> 월렛 생성 -> Owner 연결 -> 완료)가 자동 진입한다
+  2. Owner 연결 단계에서 "나중에" 스킵이 가능하고, 설정 완료 후 재실행 시 대시보드로 직행한다
+  3. WalletConnect QR 코드로 외부 지갑(Phantom/MetaMask)과 페어링하여 SIWS/SIWE Owner 등록이 가능하다 (Plan A 실패 시 Plan B 대체)
+  4. Setup Wizard와 WalletConnect 컴포넌트가 Desktop 환경에서만 렌더링되고 브라우저에서는 숨겨진다
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 463: GitHub Releases CI + Auto-Update
+**Goal**: 3 플랫폼 빌드 매트릭스로 데스크탑 앱이 GitHub Releases에 배포되고, 사용자 앱이 자동으로 업데이트를 확인/적용한다
+**Depends on**: Phase 460, Phase 461, Phase 462
+**Requirements**: DIST-01, DIST-02, DIST-03, UPDT-01, UPDT-02, UPDT-03
+**Success Criteria** (what must be TRUE):
+  1. `desktop-v*` 태그 푸시 시 tauri-action으로 macOS(arm64/x64), Windows(x64), Linux(x64) 빌드가 완료되고 GitHub Releases에 `.dmg`, `.msi`, `.AppImage`, `.deb` 아티팩트가 업로드된다
+  2. macOS 빌드에 Developer ID 코드 사이닝 + notarization이 적용되어 Gatekeeper를 통과한다
+  3. 앱 시작 시 `latest.json`에서 최신 버전을 확인하고, 사용자 확인 후 업데이트 다운로드 + 패치가 완료된다
+  4. 변조된 바이너리의 업데이트가 Ed25519 서명 검증 실패로 거부된다
+**Plans**: TBD
+
 ## Progress
 
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 432. Interface Extension | v32.5 | 2/2 | Complete | 2026-03-16 |
-| 433. Multichain Positions | v32.5 | 4/4 | Complete | 2026-03-16 |
-| 434. Testnet Toggle | v32.5 | 2/2 | Complete | 2026-03-16 |
-| 435. N+1 쿼리 해소 | v32.6 | 2/2 | Complete | 2026-03-17 |
-| 436. 페이지네이션 추가 | v32.6 | 2/2 | Complete | 2026-03-17 |
-| 437. 대형 파일 분할 | v32.6 | 3/3 | Complete | 2026-03-17 |
-| 438. 파이프라인 분할 + 추가 정리 | v32.6 | 2/2 | Complete | 2026-03-17 |
-| 439. Build Infrastructure | v32.7 | 1/1 | Complete | 2026-03-17 |
-| 440. Content Publishing | v32.7 | 1/1 | Complete | 2026-03-17 |
-| 441. Technical SEO & AEO | v32.7 | 2/2 | Complete | 2026-03-17 |
-| 442. CI Integration | v32.7 | 1/1 | Complete | 2026-03-17 |
-| 443. SEO Landing Pages | v32.7 | 2/2 | Complete | 2026-03-17 |
-| 444. DeFi Provider Tests | v32.8 | 3/3 | Complete | 2026-03-17 |
-| 445. Infra Tests | v32.8 | 3/3 | Complete | 2026-03-17 |
-| 446. EVM/SDK Branches | v32.8 | 2/2 | Complete | 2026-03-17 |
-| 447. Admin/CLI Tests | v32.8 | 3/3 | Complete | 2026-03-17 |
-| 448. SDK/Shared Tests | v32.8 | 3/3 | Complete | 2026-03-17 |
-| 448.1. 커버리지 갭 클로저 | v32.8 | 3/3 | Complete | 2026-03-18 |
-| 449. Foundation | v32.9 | 3/3 | Complete | 2026-03-18 |
-| 450. Daemon 서명 채널 재작성 | v32.9 | 2/2 | Complete | 2026-03-18 |
-| 451. 클라이언트 업데이트 | v32.9 | 2/2 | Complete | 2026-03-18 |
-| 452. Document Structure Rename | v32.10 | 1/1 | Complete | 2026-03-18 |
-| 453. Skills Cleanup + Admin Manual | v32.10 | 2/2 | Complete | 2026-03-18 |
-| 454. OpenClaw Plugin Package | v32.10 | 2/2 | Complete | 2026-03-18 |
-| 455. CI/CD, Documentation, SEO | v32.10 | 2/2 | Complete | 2026-03-18 |
-| 456. 설계 문서 39 기존 섹션 재작성 | v33.0 | 2/2 | Complete | 2026-03-31 |
-| 457. Desktop 환경 감지 + IPC + 번들 설계 | v33.0 | 2/2 | Complete | 2026-03-31 |
-| 458. 구조 검증 + Objectives 정합 | v33.0 | 2/2 | Complete | 2026-03-31 |
+**Execution Order:**
+Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 463
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 459. WalletConnect Spike | 0/TBD | Not started | - |
+| 460. Tauri Shell + Sidecar Manager | 0/TBD | Not started | - |
+| 461. IPC Bridge + System Tray | 0/TBD | Not started | - |
+| 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 0/TBD | Not started | - |
+| 463. GitHub Releases CI + Auto-Update | 0/TBD | Not started | - |
