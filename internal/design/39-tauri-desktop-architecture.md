@@ -152,6 +152,8 @@ Tauri IPC는 **데몬 프로세스 관리에만** 사용한다. WebView에서 `i
 
 **IPC 사용 이유:** HTTP localhost로는 데몬이 죽어있을 때 상태를 알 수 없다. Sidecar 프로세스의 생존 여부는 Rust에서 직접 확인해야 한다.
 
+> **상세 명세:** 각 IPC 명령의 Rust/TypeScript 시그니처, 에러 케이스, 타임아웃 정책은 섹션 3.6을 참조한다. Capability 설정은 섹션 3.7을 참조한다.
+
 ### 3.3 HTTP localhost -- API 호출 전용
 
 > **(v33.0 변경)** API 호출은 WebView에 로드된 **Admin Web UI가 기존 `apiCall()` 함수로 상대 경로 호출**한다. Desktop WebView에서도 브라우저와 동일한 코드 경로를 사용한다.
@@ -219,6 +221,457 @@ if (config.daemon.log_level === 'debug') {
 ```
 
 > **주의:** CORS 허용 목록은 29-api-framework-design.md의 미들웨어 6(cors)과 동일한 5개 Origin을 유지해야 한다.
+
+### 3.5 Desktop 환경 감지 (IPC-01)
+
+> **(v33.0 신규)**
+
+Desktop 전용 코드의 진입점에서 실행 환경을 판별하는 `isDesktop()` 유틸리티 함수를 정의한다.
+
+**파일 위치:** `packages/admin/src/utils/platform.ts`
+
+```typescript
+// packages/admin/src/utils/platform.ts
+
+/**
+ * Tauri 2.x WebView 내에서 실행 중인지 판별한다.
+ * Tauri 2.x는 window.__TAURI_INTERNALS__ 전역 객체를 주입한다.
+ * (Tauri 1.x의 window.__TAURI__와 구별: 2.x에서는 __TAURI_INTERNALS__가 내부 IPC 브릿지 객체)
+ *
+ * @returns true if running inside Tauri WebView
+ */
+
+let _isDesktop: boolean | null = null;
+
+export function isDesktop(): boolean {
+  if (_isDesktop === null) {
+    _isDesktop =
+      typeof window !== 'undefined' &&
+      '__TAURI_INTERNALS__' in window;
+  }
+  return _isDesktop;
+}
+```
+
+**설계 결정:**
+
+| 항목 | 결정 | 근거 |
+|------|------|------|
+| 감지 대상 | `window.__TAURI_INTERNALS__` | Tauri 2.x 내부 IPC 객체. `__TAURI__`는 1.x 호환용이므로 사용하지 않음 |
+| 캐싱 | 모듈 레벨 변수로 1회만 체크 | 실행 환경은 런타임 중 변하지 않으므로 매 호출마다 window 접근 불필요 |
+| SSR/prerender 안전 | `typeof window !== 'undefined'` 가드 | Preact에서 prerender 시 window 미존재 시나리오 방어 |
+| 테스트 지원 | 모듈 레벨 캐시 초기화 불필요 | 테스트에서 `window.__TAURI_INTERNALS__` mock 설정 후 모듈 재로드로 대응 |
+
+**사용 규칙:**
+1. Desktop 전용 코드의 모든 진입점에서 `isDesktop()` 가드를 사용한다
+2. `isDesktop()` 가드 내에서만 Desktop 전용 모듈을 dynamic import한다
+3. Desktop 전용 모듈의 static import는 절대 금지 -- 브라우저 번들에 포함됨
+4. `isDesktop()`은 조건부 렌더링과 조건부 import 두 가지 용도로만 사용한다
+
+```typescript
+// 올바른 사용 패턴
+if (isDesktop()) {
+  const { invoke } = await import('@tauri-apps/api/core');
+  const status = await invoke<DaemonStatus>('get_daemon_status');
+}
+
+// 금지 패턴 -- static import
+import { invoke } from '@tauri-apps/api/core';  // NEVER: 브라우저 번들에 포함됨
+```
+
+### 3.6 IPC 브릿지 상세 명세 (IPC-02)
+
+> **(v33.0 신규)** 기존 섹션 3.2의 간략한 테이블을 확장하여, 각 IPC 명령의 Rust/TypeScript 시그니처, 에러 케이스, 타임아웃 정책을 상세화한다. 기존 3.2 테이블은 요약으로 유지하며, 상세는 본 섹션을 참조한다.
+
+**파일 위치:** `packages/admin/src/desktop/bridge/tauri-bridge.ts` (TypeScript invoke 래퍼)
+
+#### 공유 타입 정의
+
+**Rust (`src-tauri/src/types.rs`):**
+
+```rust
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DaemonStatus {
+    pub running: bool,
+    pub pid: Option<u32>,
+    pub port: u16,
+    pub uptime_secs: u64,
+    pub health: HealthStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HealthStatus {
+    Healthy,
+    Unhealthy { reason: String },
+    Unknown,  // 프로세스는 alive이나 /health 미응답
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct StartDaemonArgs {
+    pub port: Option<u16>,         // None이면 랜덤 포트 (bind(0))
+    pub config_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct StopDaemonArgs {
+    pub force: Option<bool>,        // true: 즉시 SIGKILL, false/None: graceful 5s -> SIGKILL
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GetLogsArgs {
+    pub lines: Option<u32>,         // 기본값: 100
+    pub since: Option<String>,      // ISO 8601 타임스탬프 (optional)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NotificationArgs {
+    pub title: String,
+    pub body: String,
+    pub icon: Option<String>,       // 앱 아이콘 경로 (None이면 기본 아이콘)
+}
+```
+
+**TypeScript (`packages/admin/src/desktop/bridge/types.ts`):**
+
+```typescript
+// packages/admin/src/desktop/bridge/types.ts
+// 이 파일만 static import 허용 (런타임 코드 없음, 타입 정의만)
+
+export interface DaemonStatus {
+  running: boolean;
+  pid: number | null;
+  port: number;
+  uptime_secs: number;
+  health: HealthStatus;
+}
+
+export type HealthStatus =
+  | { type: 'Healthy' }
+  | { type: 'Unhealthy'; reason: string }
+  | { type: 'Unknown' };
+
+export interface StartDaemonArgs {
+  port?: number;
+  config_path?: string;
+}
+
+export interface StopDaemonArgs {
+  force?: boolean;
+}
+
+export interface GetLogsArgs {
+  lines?: number;
+  since?: string;  // ISO 8601
+}
+
+export interface NotificationArgs {
+  title: string;
+  body: string;
+  icon?: string;
+}
+```
+
+#### IPC 명령 상세 (6개)
+
+**1. `start_daemon` -- Sidecar 프로세스 시작**
+
+```rust
+#[tauri::command]
+async fn start_daemon(
+    args: StartDaemonArgs,
+    state: State<'_, SidecarManagerState>,
+) -> Result<DaemonStatus, String> {
+    // 1. 이미 실행 중이면 현재 상태 반환 (중복 시작 방지)
+    // 2. port가 None이면 TCP bind(0)로 랜덤 포트 할당
+    // 3. sidecar 바이너리 spawn (tauri-plugin-shell)
+    // 4. /health 폴링으로 ready 대기 (최대 30초, 1초 간격)
+    // 5. DaemonStatus 반환
+}
+```
+
+| 항목 | 값 |
+|------|-----|
+| 인자 | `StartDaemonArgs { port?: u16, config_path?: String }` |
+| 반환 | `Result<DaemonStatus, String>` |
+| 타임아웃 | 30초 (데몬 시작 + /health ready 대기) |
+| 에러 케이스 | `"AlreadyRunning"`, `"SpawnFailed: {reason}"`, `"HealthTimeout"`, `"PortInUse: {port}"` |
+| 재시도 정책 | 자동 재시도 없음. 호출자가 에러 타입에 따라 판단 |
+
+**2. `stop_daemon` -- Sidecar 프로세스 중지**
+
+```rust
+#[tauri::command]
+async fn stop_daemon(
+    args: StopDaemonArgs,
+    state: State<'_, SidecarManagerState>,
+) -> Result<(), String> {
+    // 1. force=true: 즉시 SIGKILL
+    // 2. force=false/None: SIGTERM -> 5초 대기 -> 아직 alive면 SIGKILL
+    // 3. PID 정리, 상태 초기화
+}
+```
+
+| 항목 | 값 |
+|------|-----|
+| 인자 | `StopDaemonArgs { force?: bool }` |
+| 반환 | `Result<(), String>` |
+| 타임아웃 | 10초 (graceful 5s + kill 확인 5s) |
+| 에러 케이스 | `"NotRunning"`, `"KillFailed: {reason}"` |
+| 재시도 정책 | `KillFailed` 시 force=true로 1회 자동 재시도 |
+
+**3. `restart_daemon` -- 중지 후 재시작**
+
+```rust
+#[tauri::command]
+async fn restart_daemon(
+    state: State<'_, SidecarManagerState>,
+) -> Result<DaemonStatus, String> {
+    // 1. stop_daemon(force=false) 호출
+    // 2. 1초 대기 (포트 해제 보장)
+    // 3. start_daemon(기존 포트 + 설정) 호출
+}
+```
+
+| 항목 | 값 |
+|------|-----|
+| 인자 | 없음 (기존 설정 재사용) |
+| 반환 | `Result<DaemonStatus, String>` |
+| 타임아웃 | 45초 (stop 10s + wait 1s + start 30s + buffer 4s) |
+| 에러 케이스 | stop_daemon 에러 + start_daemon 에러 전파 |
+| 재시도 정책 | 자동 재시도 없음 |
+
+**4. `get_daemon_status` -- 프로세스 상태 확인**
+
+```rust
+#[tauri::command]
+async fn get_daemon_status(
+    state: State<'_, SidecarManagerState>,
+) -> Result<DaemonStatus, String> {
+    // 1. PID로 프로세스 alive 체크 (kill(pid, 0))
+    // 2. alive이면 GET /health 호출 (2초 타임아웃)
+    // 3. /health 응답으로 HealthStatus 결정
+    // 4. 프로세스 dead이면 running=false + cleanup
+}
+```
+
+| 항목 | 값 |
+|------|-----|
+| 인자 | 없음 |
+| 반환 | `Result<DaemonStatus, String>` |
+| 타임아웃 | 3초 (/health 호출 2s + 오버헤드 1s) |
+| 에러 케이스 | `"StatusCheckFailed: {reason}"` (드문 경우) |
+| 재시도 정책 | 없음. 폴링 주기(30초)가 재시도 역할 |
+
+**5. `get_daemon_logs` -- 최근 로그 조회**
+
+```rust
+#[tauri::command]
+async fn get_daemon_logs(
+    args: GetLogsArgs,
+    state: State<'_, SidecarManagerState>,
+) -> Result<Vec<String>, String> {
+    // 1. Sidecar stdout/stderr 캡처 버퍼에서 최근 N라인 반환
+    // 2. since가 지정되면 해당 시각 이후 로그만 필터
+    // 3. 최대 1000라인 제한 (메모리 보호)
+}
+```
+
+| 항목 | 값 |
+|------|-----|
+| 인자 | `GetLogsArgs { lines?: u32, since?: String }` |
+| 반환 | `Result<Vec<String>, String>` |
+| 타임아웃 | 1초 (로컬 버퍼 읽기, I/O 없음) |
+| 에러 케이스 | `"NotRunning"` (로그 없음), `"InvalidTimestamp: {since}"` |
+| 재시도 정책 | 없음 |
+
+**6. `send_notification` -- OS 네이티브 알림**
+
+```rust
+#[tauri::command]
+async fn send_notification(
+    args: NotificationArgs,
+    app: AppHandle,
+) -> Result<(), String> {
+    // 1. tauri-plugin-notification으로 OS 알림 전송
+    // 2. 권한 미부여 시 자동으로 권한 요청
+    // 3. 알림 클릭 시 앱 창 포커스 (이벤트 리스너)
+}
+```
+
+| 항목 | 값 |
+|------|-----|
+| 인자 | `NotificationArgs { title: String, body: String, icon?: String }` |
+| 반환 | `Result<(), String>` |
+| 타임아웃 | 2초 |
+| 에러 케이스 | `"PermissionDenied"`, `"NotificationFailed: {reason}"` |
+| 재시도 정책 | 없음. 알림 실패는 무시 (best-effort) |
+
+#### TypeScript invoke 래퍼
+
+```typescript
+// packages/admin/src/desktop/bridge/tauri-bridge.ts
+// 이 파일은 isDesktop() 가드 내에서 dynamic import로만 로드
+
+import type {
+  DaemonStatus, StartDaemonArgs, StopDaemonArgs,
+  GetLogsArgs, NotificationArgs,
+} from './types';
+
+async function getInvoke() {
+  const { invoke } = await import('@tauri-apps/api/core');
+  return invoke;
+}
+
+export async function startDaemon(args: StartDaemonArgs = {}): Promise<DaemonStatus> {
+  const invoke = await getInvoke();
+  return invoke<DaemonStatus>('start_daemon', { args });
+}
+
+export async function stopDaemon(args: StopDaemonArgs = {}): Promise<void> {
+  const invoke = await getInvoke();
+  return invoke<void>('stop_daemon', { args });
+}
+
+export async function restartDaemon(): Promise<DaemonStatus> {
+  const invoke = await getInvoke();
+  return invoke<DaemonStatus>('restart_daemon');
+}
+
+export async function getDaemonStatus(): Promise<DaemonStatus> {
+  const invoke = await getInvoke();
+  return invoke<DaemonStatus>('get_daemon_status');
+}
+
+export async function getDaemonLogs(args: GetLogsArgs = {}): Promise<string[]> {
+  const invoke = await getInvoke();
+  return invoke<string[]>('get_daemon_logs', { args });
+}
+
+export async function sendNotification(args: NotificationArgs): Promise<void> {
+  const invoke = await getInvoke();
+  return invoke<void>('send_notification', { args });
+}
+```
+
+**에러 처리 패턴:**
+
+```typescript
+// invoke() 에러는 string으로 전달됨 (Rust Result::Err(String))
+try {
+  const status = await startDaemon({ port: 3100 });
+} catch (error: unknown) {
+  // error는 string 타입 ("AlreadyRunning", "SpawnFailed: ...", etc.)
+  const message = typeof error === 'string' ? error : String(error);
+  if (message === 'AlreadyRunning') {
+    // 이미 실행 중 -- 정상 상태로 취급
+  } else if (message.startsWith('PortInUse:')) {
+    // 포트 충돌 -- 랜덤 포트로 재시도 또는 사용자에게 알림
+  } else {
+    // 예기치 않은 에러 -- UI에 에러 표시
+  }
+}
+```
+
+### 3.7 Tauri Capability 설정 (IPC-03)
+
+> **(v33.0 신규)** Tauri 2.x의 Capability 시스템을 활용하여 IPC 커맨드 접근을 최소 권한 원칙으로 제한한다. 기존 섹션 12.2의 capabilities 설정을 확장하여, Remote WebView(localhost에서 로드되는 Admin Web UI)에 대한 IPC 권한 부여를 명세한다.
+
+**Remote WebView IPC 권한 문제:**
+
+Tauri 2.x에서 WebView가 외부 URL(localhost)을 로드하는 경우, 기본적으로 IPC 커맨드 접근이 차단된다. `CapabilityBuilder::new("remote-access").remote("http://127.0.0.1:*/*")`로 Remote WebView에 명시적 IPC 권한을 부여해야 한다.
+
+**Rust 설정 (`src-tauri/src/main.rs`):**
+
+```rust
+use tauri::Manager;
+
+fn main() {
+    tauri::Builder::default()
+        .setup(|app| {
+            // Remote WebView (localhost Admin Web UI)에 IPC 권한 부여
+            #[cfg(not(dev))]
+            {
+                use tauri::ipc::CapabilityBuilder;
+                CapabilityBuilder::new("remote-access")
+                    .remote("http://127.0.0.1:*/*")      // 모든 포트의 localhost
+                    .remote("http://localhost:*/*")        // localhost alias
+                    .permission("waiaas:allow-start-daemon")
+                    .permission("waiaas:allow-stop-daemon")
+                    .permission("waiaas:allow-restart-daemon")
+                    .permission("waiaas:allow-get-daemon-status")
+                    .permission("waiaas:allow-get-daemon-logs")
+                    .permission("waiaas:allow-send-notification")
+                    .build(app)?;
+            }
+
+            Ok(())
+        })
+        // ... plugin registration, invoke handlers
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
+**`src-tauri/capabilities/default.json` 예시:**
+
+```json
+{
+  "identifier": "default",
+  "description": "WAIaaS Desktop default capabilities",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "waiaas:allow-start-daemon",
+    "waiaas:allow-stop-daemon",
+    "waiaas:allow-restart-daemon",
+    "waiaas:allow-get-daemon-status",
+    "waiaas:allow-get-daemon-logs",
+    "waiaas:allow-send-notification",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "waiaas-daemon",
+          "cmd": "waiaas-daemon",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
+    "notification:default",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "notification:allow-notify",
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
+    "process:allow-restart",
+    "process:allow-exit"
+  ],
+  "remote": {
+    "urls": [
+      "http://127.0.0.1:*/*",
+      "http://localhost:*/*"
+    ]
+  }
+}
+```
+
+**최소 권한 원칙:**
+
+| 권한 그룹 | 허용 커맨드 | 용도 |
+|-----------|-------------|------|
+| `waiaas:*` | 6개 커스텀 IPC 명령 | 데몬 라이프사이클 관리 |
+| `shell:allow-execute` | sidecar 바이너리만 | 임의 명령어 실행 차단 |
+| `notification:*` | OS 알림 전송 | 거래 승인 요청 알림 |
+| `updater:*` | 업데이트 확인 + 설치 | 자동 업데이트 |
+| `process:*` | 앱 재시작/종료 | 업데이트 후 재시작 |
+
+**개발 모드 vs 프로덕션:**
+- 개발 모드(`cargo tauri dev`): Tauri가 devUrl의 localhost를 자동 허용하므로 `CapabilityBuilder::remote()` 불필요. `#[cfg(not(dev))]` 가드로 프로덕션에서만 적용.
+- 프로덕션: WebView가 Sidecar가 서빙하는 localhost URL을 로드하므로 remote capability 필수.
 
 ---
 
