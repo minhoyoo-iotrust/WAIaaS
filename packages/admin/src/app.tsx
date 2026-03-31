@@ -16,6 +16,9 @@ const wizardCompleteValue = signal(false);
 /** Lazily loaded SetupWizard component */
 const WizardComponent = signal<ComponentType | null>(null);
 
+/** Lazily loaded UpdateBanner component (Desktop auto-update) */
+const UpdateBannerComponent = signal<ComponentType | null>(null);
+
 const shutdownStyles = {
   overlay: {
     position: 'fixed' as const,
@@ -55,7 +58,7 @@ function ShutdownOverlay() {
 }
 
 export function App() {
-  // Dynamic import of wizard modules -- only fires in Desktop environment
+  // Dynamic import of wizard + update banner -- only fires in Desktop environment
   useEffect(() => {
     if (!isDesktop()) return;
 
@@ -74,6 +77,10 @@ export function App() {
           if (complete) dispose();
         });
       }
+
+      // Load UpdateBanner for auto-update notifications (independent of wizard)
+      const { UpdateBanner } = await import('./desktop/UpdateBanner');
+      UpdateBannerComponent.value = UpdateBanner;
     })();
   }, []);
 
@@ -94,8 +101,11 @@ export function App() {
   if (!isAuthenticated.value) {
     return <Login />;
   }
+
+  const Banner = UpdateBannerComponent.value;
   return (
     <>
+      {Banner && <Banner />}
       <Layout />
       <ToastContainer />
     </>
