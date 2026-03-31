@@ -93,7 +93,7 @@ See `.planning/milestones/v33.0-ROADMAP.md` for full details.
 
 - [x] **Phase 459: WalletConnect Spike** - @reown/appkit Tauri WebView 호환성 Go/No-Go 검증 (completed 2026-03-31)
 - [x] **Phase 460: Tauri Shell + Sidecar Manager** - Tauri 프로젝트 구조 + SEA 바이너리 빌드 + 사이드카 라이프사이클 + WebView 로드 (completed 2026-03-31)
-- [ ] **Phase 461: IPC Bridge + System Tray** - 7개 IPC 명령 + 시스템 트레이 3색 상태 + isDesktop() + 4-layer tree-shaking
+- [x] **Phase 461: IPC Bridge + System Tray** - 7개 IPC 명령 + 시스템 트레이 3색 상태 + isDesktop() + 4-layer tree-shaking (completed 2026-03-31)
 - [ ] **Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장** - 5단계 Setup Wizard + WalletConnect QR 페어링 + Desktop 전용 컴포넌트
 - [ ] **Phase 463: GitHub Releases CI + Auto-Update** - 3 플랫폼 빌드 매트릭스 + 코드 사이닝 + 자동 업데이트
 
@@ -136,10 +136,10 @@ Plans:
   2. 시스템 트레이에 3색 상태 아이콘(녹/주황/빨강)이 표시되고, 30초 폴링으로 자동 업데이트된다
   3. 트레이 컨텍스트 메뉴(Open Dashboard / Pause / Resume / Quit)가 동작한다
   4. `isDesktop()` 함수가 `window.__TAURI_INTERNALS__` 기반으로 환경을 감지하고, Desktop 전용 코드가 4-layer tree-shaking으로 브라우저 번들에 포함되지 않는다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 461-01-PLAN.md — IPC Bridge TS 래퍼 + isDesktop() + quit_app + 4-layer tree-shaking
-- [ ] 461-02-PLAN.md — System Tray 3색 아이콘 + 컨텍스트 메뉴 + 30초 폴링
+- [x] 461-01-PLAN.md — IPC Bridge TS 래퍼 + isDesktop() + quit_app + 4-layer tree-shaking
+- [x] 461-02-PLAN.md — System Tray 3색 아이콘 + 컨텍스트 메뉴 + 30초 폴링
 **UI hint**: yes
 
 ### Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장
@@ -174,6 +174,6 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 |-------|----------------|--------|-----------|
 | 459. WalletConnect Spike | 1/1 | Complete   | 2026-03-31 |
 | 460. Tauri Shell + Sidecar Manager | 3/3 | Complete   | 2026-03-31 |
-| 461. IPC Bridge + System Tray | 0/2 | Not started | - |
+| 461. IPC Bridge + System Tray | 2/2 | Complete   | 2026-03-31 |
 | 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 0/TBD | Not started | - |
 | 463. GitHub Releases CI + Auto-Update | 0/TBD | Not started | - |

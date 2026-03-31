@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v33.2
 milestone_name: Tauri Desktop App
-status: executing
-stopped_at: Completed Phase 460 (3/3 plans, Tauri Shell + Sidecar Manager)
-last_updated: "2026-03-31T16:00:04.275Z"
+status: verifying
+stopped_at: Completed Phase 461 (2/2 plans, IPC Bridge + System Tray)
+last_updated: "2026-03-31T16:16:48.682Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
   percent: 25
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 Phase: 460 of 463 (Tauri Shell + Sidecar Manager)
 Plan: 3 of 3 in current phase
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-31
 
 Progress: [███░░░░░░░] 25%
@@ -44,6 +44,7 @@ Progress: [███░░░░░░░] 25%
 |-------|------|----------|-------|-------|
 | 459 | 01 | 4min | 3 | 11 |
 | Phase 460 P01-03 | 35min | 4 tasks | 17 files |
+| Phase 461 P01-02 | 8min | 4 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -58,6 +59,9 @@ Progress: [███░░░░░░░] 25%
 - [Phase 460]: Tauri 2 app-level IPC commands via generate_handler (not plugin system) -- capabilities via default.json remote block
 - [Phase 460]: SEA build pipeline: CLI entry -> esbuild CJS -> SEA blob -> postject -> Tauri externalBin
 - [Phase 460]: WAIAAS_PORT stdout + daemon.port file dual port discovery protocol
+- [Phase 461]: Dynamic import @tauri-apps/api/core inside getInvoke() for tree-shaking safety
+- [Phase 461]: 4-layer tree-shaking: dynamic import, rollup externals, __DESKTOP__ define, CI verification
+- [Phase 461]: Tray icon include_bytes! with image-png feature, show_menu_on_left_click(false) for UX separation
 
 ### Pending Todos
 
@@ -71,6 +75,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T16:00:04.271Z
-Stopped at: Completed Phase 460 (3/3 plans, Tauri Shell + Sidecar Manager)
+Last session: 2026-03-31T16:16:48.677Z
+Stopped at: Completed Phase 461 (2/2 plans, IPC Bridge + System Tray)
 Resume file: None

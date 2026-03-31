@@ -21,25 +21,25 @@ Requirements for Tauri Desktop App milestone. Each maps to roadmap phases.
 ### WebView + Desktop 감지
 
 - [x] **VIEW-01**: Tauri WebView가 스플래시 페이지를 표시한 후, Sidecar 준비 완료 시 `http://localhost:{port}/admin`으로 navigate한다
-- [ ] **VIEW-02**: `isDesktop()` 함수가 `window.__TAURI_INTERNALS__` 기반으로 Desktop 환경을 감지하고 모듈 레벨 캐싱한다
+- [x] **VIEW-02**: `isDesktop()` 함수가 `window.__TAURI_INTERNALS__` 기반으로 Desktop 환경을 감지하고 모듈 레벨 캐싱한다
 - [x] **VIEW-03**: `tauri.conf.json`의 `remote.urls` 설정으로 localhost URL에서 IPC 명령이 동작한다
-- [ ] **VIEW-04**: Desktop 전용 코드가 4-layer tree-shaking(dynamic import + optional peer deps + build constant + CI verification)으로 브라우저 번들에 포함되지 않는다
+- [x] **VIEW-04**: Desktop 전용 코드가 4-layer tree-shaking(dynamic import + optional peer deps + build constant + CI verification)으로 브라우저 번들에 포함되지 않는다
 
 ### IPC 브릿지
 
-- [ ] **IPC-01**: `invoke('start_daemon')` IPC 명령으로 데몬을 시작할 수 있다
-- [ ] **IPC-02**: `invoke('stop_daemon')` IPC 명령으로 데몬만 종료한다 (앱 유지)
-- [ ] **IPC-03**: `invoke('restart_daemon')` IPC 명령으로 데몬을 재시작한다
-- [ ] **IPC-04**: `invoke('get_sidecar_status')` IPC 명령으로 `{ running, pid, uptime }` 상태를 반환한다
-- [ ] **IPC-05**: `invoke('get_daemon_logs')` IPC 명령으로 최근 데몬 로그를 반환한다
-- [ ] **IPC-06**: `invoke('send_notification')` IPC 명령으로 OS 네이티브 알림을 전송한다
-- [ ] **IPC-07**: `invoke('quit_app')` IPC 명령으로 데몬 graceful shutdown 후 Tauri 앱을 종료한다
+- [x] **IPC-01**: `invoke('start_daemon')` IPC 명령으로 데몬을 시작할 수 있다
+- [x] **IPC-02**: `invoke('stop_daemon')` IPC 명령으로 데몬만 종료한다 (앱 유지)
+- [x] **IPC-03**: `invoke('restart_daemon')` IPC 명령으로 데몬을 재시작한다
+- [x] **IPC-04**: `invoke('get_sidecar_status')` IPC 명령으로 `{ running, pid, uptime }` 상태를 반환한다
+- [x] **IPC-05**: `invoke('get_daemon_logs')` IPC 명령으로 최근 데몬 로그를 반환한다
+- [x] **IPC-06**: `invoke('send_notification')` IPC 명령으로 OS 네이티브 알림을 전송한다
+- [x] **IPC-07**: `invoke('quit_app')` IPC 명령으로 데몬 graceful shutdown 후 Tauri 앱을 종료한다
 
 ### 시스템 트레이
 
-- [ ] **TRAY-01**: 시스템 트레이에 3색 상태 아이콘(녹=정상, 주황=경고, 빨강=정지)이 표시된다
-- [ ] **TRAY-02**: 트레이 컨텍스트 메뉴에 Open Dashboard / Pause / Resume / Quit 항목이 있다
-- [ ] **TRAY-03**: 30초 폴링으로 데몬 상태를 확인하고 아이콘 색상이 자동 업데이트된다
+- [x] **TRAY-01**: 시스템 트레이에 3색 상태 아이콘(녹=정상, 주황=경고, 빨강=정지)이 표시된다
+- [x] **TRAY-02**: 트레이 컨텍스트 메뉴에 Open Dashboard / Pause / Resume / Quit 항목이 있다
+- [x] **TRAY-03**: 30초 폴링으로 데몬 상태를 확인하고 아이콘 색상이 자동 업데이트된다
 
 ### Setup Wizard
 
@@ -107,19 +107,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIDE-07 | Phase 460 | Complete |
 | SIDE-08 | Phase 460 | Complete |
 | VIEW-01 | Phase 460 | Complete |
-| VIEW-02 | Phase 461 | Pending |
+| VIEW-02 | Phase 461 | Complete |
 | VIEW-03 | Phase 460 | Complete |
-| VIEW-04 | Phase 461 | Pending |
-| IPC-01 | Phase 461 | Pending |
-| IPC-02 | Phase 461 | Pending |
-| IPC-03 | Phase 461 | Pending |
-| IPC-04 | Phase 461 | Pending |
-| IPC-05 | Phase 461 | Pending |
-| IPC-06 | Phase 461 | Pending |
-| IPC-07 | Phase 461 | Pending |
-| TRAY-01 | Phase 461 | Pending |
-| TRAY-02 | Phase 461 | Pending |
-| TRAY-03 | Phase 461 | Pending |
+| VIEW-04 | Phase 461 | Complete |
+| IPC-01 | Phase 461 | Complete |
+| IPC-02 | Phase 461 | Complete |
+| IPC-03 | Phase 461 | Complete |
+| IPC-04 | Phase 461 | Complete |
+| IPC-05 | Phase 461 | Complete |
+| IPC-06 | Phase 461 | Complete |
+| IPC-07 | Phase 461 | Complete |
+| TRAY-01 | Phase 461 | Complete |
+| TRAY-02 | Phase 461 | Complete |
+| TRAY-03 | Phase 461 | Complete |
 | WIZA-01 | Phase 462 | Pending |
 | WIZA-02 | Phase 462 | Pending |
 | WIZA-03 | Phase 462 | Pending |
