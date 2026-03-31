@@ -673,6 +673,277 @@ fn main() {
 - 개발 모드(`cargo tauri dev`): Tauri가 devUrl의 localhost를 자동 허용하므로 `CapabilityBuilder::remote()` 불필요. `#[cfg(not(dev))]` 가드로 프로덕션에서만 적용.
 - 프로덕션: WebView가 Sidecar가 서빙하는 localhost URL을 로드하므로 remote capability 필수.
 
+### 3.8 CSP 예외 전략 (IPC-04)
+
+> **(v33.0 신규)** Admin Web UI의 기존 CSP와 Tauri WebView에서의 CSP 충돌점을 분석하고, Desktop 전용 CSP 오버라이드 전략을 명세한다.
+
+**Admin Web UI 기존 CSP (브라우저용):**
+
+```
+default-src 'none';
+script-src 'self';
+style-src 'self' 'unsafe-inline';
+connect-src 'self';
+img-src 'self' data:;
+font-src 'self';
+```
+
+**Tauri WebView에서의 CSP 충돌점:**
+
+| 지시어 | 충돌 원인 | 필요한 추가 허용 |
+|--------|-----------|-----------------|
+| `connect-src` | IPC 통신 (`ipc:` 스키마) | Tauri 내부 IPC는 CSP와 무관 (native bridge) -- 추가 불필요 |
+| `connect-src` | WalletConnect Relay 연결 | `wss://relay.walletconnect.com`, `https://rpc.walletconnect.com` |
+| `connect-src` | Reown Cloud 서비스 | `https://pulse.walletconnect.org` (analytics, optional) |
+| `script-src` | @reown/appkit 동적 로드 | `'wasm-unsafe-eval'` (일부 체인 어댑터가 WASM 사용 가능) |
+| `img-src` | WalletConnect QR 코드, 지갑 아이콘 | `https:` (외부 이미지 리소스) |
+| `frame-src` | @reown/appkit 모달 UI | `https://secure.walletconnect.com` (선택적, embedded wallet) |
+
+> **참고:** Tauri 2.x의 IPC(`invoke()`)는 WebView의 네이티브 브릿지를 통해 통신하므로 CSP `connect-src` 제한에 영향을 받지 않는다. IPC를 위한 CSP 조정은 불필요하다.
+
+**CSP 우선순위:**
+
+| CSP 소스 | 적용 대상 | 우선순위 |
+|----------|-----------|---------|
+| Admin Web UI HTML `<meta http-equiv="Content-Security-Policy">` | 브라우저 접근 시 | 브라우저에서 적용 |
+| `tauri.conf.json` `app.security.csp` | Tauri WebView | HTML meta CSP를 **오버라이드** |
+
+**전략:** Tauri의 `app.security.csp` 설정에서 Desktop 전용 CSP를 지정한다. Admin Web UI의 HTML meta CSP는 브라우저용으로 유지하고, Tauri WebView에서는 `tauri.conf.json`의 CSP가 우선 적용된다.
+
+**`tauri.conf.json` CSP 설정:**
+
+```json
+{
+  "app": {
+    "security": {
+      "csp": "default-src 'self' http://127.0.0.1:* http://localhost:*; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* http://localhost:* wss://relay.walletconnect.com https://rpc.walletconnect.com https://pulse.walletconnect.org; img-src 'self' data: https:; font-src 'self'; frame-src https://secure.walletconnect.com"
+    }
+  }
+}
+```
+
+**플랫폼별 CSP 동작 차이:**
+
+| 플랫폼 | WebView 엔진 | `'self'` 해석 | 비고 |
+|--------|-------------|--------------|------|
+| macOS | WKWebView | `tauri://localhost` | 커스텀 프로토콜 origin |
+| Linux | WebKitGTK | `tauri://localhost` | macOS와 동일 |
+| Windows | WebView2 | `http://tauri.localhost` | HTTP origin (Tauri 2.x 기본) |
+
+> **주의:** Tauri 2.x에서 `'self'`는 WebView의 origin을 의미하지만, Admin Web UI는 localhost에서 로드되므로 `'self'`만으로는 API 호출 origin이 일치하지 않을 수 있다. `connect-src`에 `http://127.0.0.1:*`과 `http://localhost:*`를 명시적으로 포함하여 모든 포트에서의 API 호출을 허용한다.
+
+**`'unsafe-eval'` 회피 전략:**
+- `'unsafe-eval'`은 사용하지 않는다 (XSS 벡터)
+- @reown/appkit이 `eval()`을 사용하는 경우, `'wasm-unsafe-eval'`로 WASM만 허용
+- @reown/appkit v1.x는 `eval()` 미사용 확인됨 -- `'wasm-unsafe-eval'`은 예방적 허용
+- 향후 @reown/appkit 업데이트 시 CSP 호환성 재검증 필요
+
+### 3.9 조건부 렌더링 상세 전략 (IPC-05)
+
+> **(v33.0 신규)** Desktop 전용 컴포넌트 3개의 조건부 렌더링 패턴을 코드 예시와 함께 상세화한다. 기존 섹션 13.3의 간략한 언급을 대체한다.
+
+#### 공통 패턴: lazy + isDesktop() 가드
+
+```tsx
+// packages/admin/src/utils/desktop-loader.ts
+import { h, type ComponentType } from 'preact';
+import { Suspense, lazy } from 'preact/compat';
+import { isDesktop } from './platform';
+
+/**
+ * Desktop 전용 컴포넌트를 lazy load하는 헬퍼.
+ * 브라우저에서는 null을 렌더링한다.
+ */
+export function desktopComponent<P>(
+  loader: () => Promise<{ default: ComponentType<P> }>,
+  fallback: h.JSX.Element = h('div', { class: 'loading-spinner' }),
+): ComponentType<P> {
+  if (!isDesktop()) {
+    return () => null;  // 브라우저: 아무것도 렌더링하지 않음
+  }
+
+  const LazyComponent = lazy(loader);
+  return (props: P) => h(Suspense, { fallback }, h(LazyComponent, props));
+}
+```
+
+#### 1. Setup Wizard (`packages/admin/src/desktop/wizard/SetupWizard.tsx`)
+
+**진입 조건:**
+- `isDesktop() === true` AND 데몬 초기 설정 미완료
+- 초기 설정 완료 여부: `GET /health` 응답의 `setup_complete` 필드 (데몬이 마스터 패스워드 설정 전이면 false)
+- 데몬 미실행 시에도 Wizard 표시 (IPC로 `start_daemon` 호출하여 데몬 시작부터 안내)
+
+**라우터 통합:**
+
+```tsx
+// packages/admin/src/app.tsx (라우터 설정)
+import { Router, Route } from 'preact-router';
+import { isDesktop } from './utils/platform';
+import { desktopComponent } from './utils/desktop-loader';
+
+const SetupWizard = desktopComponent(
+  () => import('./desktop/wizard/SetupWizard'),
+);
+
+function App() {
+  return (
+    <Router>
+      {/* Desktop 전용: Setup Wizard */}
+      {isDesktop() && <Route path="/setup-wizard" component={SetupWizard} />}
+
+      {/* 기존 Admin Web UI 라우트 */}
+      <Route path="/admin" component={Dashboard} />
+      <Route path="/admin/wallets" component={Wallets} />
+      {/* ... 기존 19페이지 라우트 */}
+    </Router>
+  );
+}
+```
+
+**브라우저에서 `/setup-wizard` 접근 시:** 라우트 자체가 등록되지 않으므로 404 또는 기본 리다이렉트로 처리된다.
+
+**Wizard 5단계 플로우:**
+
+| 단계 | 컴포넌트 | 설명 | IPC/API 호출 |
+|------|---------|------|-------------|
+| 1 | `PasswordStep.tsx` | 마스터 패스워드 설정 | `POST /v1/admin/setup` |
+| 2 | `ChainStep.tsx` | 활성화할 체인 선택 (EVM/Solana) | `PUT /v1/admin/settings` |
+| 3 | `WalletStep.tsx` | 첫 번째 월렛 생성 | `POST /v1/admin/wallets` |
+| 4 | `OwnerStep.tsx` | Owner 연결 (선택적, 건너뛰기 가능) | WalletConnect QR |
+| 5 | `CompleteStep.tsx` | 설정 완료 요약 + 대시보드 이동 | - |
+
+#### 2. Sidecar Status Panel (`packages/admin/src/desktop/sidecar-panel/SidecarStatus.tsx`)
+
+**조건부 렌더링:**
+
+```tsx
+// packages/admin/src/pages/dashboard.tsx
+import { desktopComponent } from '../utils/desktop-loader';
+
+const SidecarStatus = desktopComponent(
+  () => import('../desktop/sidecar-panel/SidecarStatus'),
+);
+
+function Dashboard() {
+  return (
+    <div class="dashboard">
+      <h1>Dashboard</h1>
+
+      {/* Desktop 전용: Sidecar 상태 패널 */}
+      <SidecarStatus />
+
+      {/* 기존 대시보드 컨텐츠 */}
+      <WalletSummary />
+      <RecentTransactions />
+    </div>
+  );
+}
+```
+
+**IPC 폴링 Hook:**
+
+```tsx
+// packages/admin/src/desktop/sidecar-panel/useSidecarStatus.ts
+import { signal, effect } from '@preact/signals';
+import type { DaemonStatus } from '../bridge/types';
+
+const daemonStatus = signal<DaemonStatus | null>(null);
+const POLL_INTERVAL = 30_000; // 30초
+
+export function useSidecarStatus() {
+  effect(() => {
+    let timer: ReturnType<typeof setInterval>;
+
+    (async () => {
+      const { getDaemonStatus } = await import('../bridge/tauri-bridge');
+
+      const poll = async () => {
+        try {
+          daemonStatus.value = await getDaemonStatus();
+        } catch {
+          daemonStatus.value = {
+            running: false, pid: null, port: 0,
+            uptime_secs: 0, health: { type: 'Unknown' },
+          };
+        }
+      };
+
+      await poll(); // 초기 로드
+      timer = setInterval(poll, POLL_INTERVAL);
+    })();
+
+    return () => clearInterval(timer);
+  });
+
+  return daemonStatus;
+}
+```
+
+**Sidecar 상태 카드 UI:**
+
+| 상태 | 표시 | 색상 | 액션 버튼 |
+|------|------|------|-----------|
+| `running + Healthy` | "Running" + uptime | 녹색 | Restart, Stop |
+| `running + Unhealthy` | "Unhealthy: {reason}" | 주황 | Restart, View Logs |
+| `running + Unknown` | "Starting..." | 회색 | - |
+| `!running` | "Stopped" | 빨간 | Start |
+
+#### 3. WalletConnect QR (`packages/admin/src/desktop/walletconnect/WalletConnectButton.tsx`)
+
+**조건부 렌더링:**
+
+```tsx
+// packages/admin/src/pages/wallet-detail.tsx (월렛 상세 페이지)
+import { desktopComponent } from '../utils/desktop-loader';
+
+const WalletConnectButton = desktopComponent(
+  () => import('../desktop/walletconnect/WalletConnectButton'),
+);
+
+function WalletDetail({ walletId }: { walletId: string }) {
+  return (
+    <div class="wallet-detail">
+      {/* 기존 월렛 상세 UI */}
+      <WalletInfo walletId={walletId} />
+
+      {/* Desktop 전용: WalletConnect QR 연결 */}
+      <WalletConnectButton walletId={walletId} />
+
+      <TransactionHistory walletId={walletId} />
+    </div>
+  );
+}
+```
+
+**@reown/appkit dynamic import:**
+
+```tsx
+// packages/admin/src/desktop/walletconnect/useWalletConnect.ts
+export async function initWalletConnect(projectId: string) {
+  // @reown/appkit을 dynamic import로 로드
+  const { createAppKit } = await import('@reown/appkit');
+  const { SolanaAdapter } = await import('@reown/appkit-adapter-solana');
+
+  const appKit = createAppKit({
+    adapters: [new SolanaAdapter()],
+    projectId,
+    metadata: {
+      name: 'WAIaaS Desktop',
+      description: 'AI Agent Wallet Manager',
+      url: 'https://waiaas.dev',
+      icons: ['https://waiaas.dev/icon.png'],
+    },
+  });
+
+  return appKit;
+}
+```
+
+**로딩 상태:** `desktopComponent()` 헬퍼가 `Suspense` fallback으로 로딩 스피너를 자동 표시한다. @reown/appkit의 번들 크기(~150KB gzip)로 인해 초기 로드에 1-2초 소요될 수 있다.
+
+> **섹션 13.3 참조:** 기존 섹션 13.3의 "환경 감지", "Dynamic Import 규칙" 내용은 본 섹션(3.5, 3.9)에서 상세화되었다. 섹션 13.3은 요약으로 유지하며, 상세는 본 섹션을 참조한다.
+
 ---
 
 ## 4. Sidecar 관리
@@ -2398,19 +2669,13 @@ sequenceDiagram
 
 Admin Web UI는 브라우저에서 `http://localhost:{port}/admin`으로 접근하도록 설계되었다. Desktop WebView에서도 동일 URL을 로드하므로, Admin Web UI의 기존 동작(masterAuth, apiCall, 라우팅, CSP)이 그대로 적용된다.
 
-**환경 감지:**
-- Desktop 전용 코드는 `isDesktop()` 가드 내에서만 실행되어야 한다.
-- `window.__TAURI_INTERNALS__` 전역 객체의 존재 여부로 환경을 판별한다.
-- `packages/admin/src/utils/platform.ts`에 `isDesktop()` 함수를 정의한다.
+**환경 감지:** `isDesktop()` 함수로 Desktop 전용 코드의 진입점을 가드한다. 상세 구현과 사용 규칙은 **섹션 3.5** 참조.
 
-**Dynamic Import 규칙:**
-- Desktop 전용 모듈(`@tauri-apps/api`, `@reown/appkit`)은 반드시 dynamic import로 로드하여 브라우저 번들에 포함되지 않도록 한다.
-- `packages/admin/src/desktop/` 디렉토리 하위의 모든 모듈은 `isDesktop()` 가드 내에서만 import된다.
+**Dynamic Import 규칙:** Desktop 전용 모듈은 반드시 `isDesktop()` 가드 내에서 dynamic import한다. 모듈 경계와 ESLint 강제 규칙은 **섹션 6.4** 참조.
 
-**CSP 조정:**
-- Admin Web UI의 기존 CSP(`default-src 'none'`)는 Desktop에서 추가 조정이 필요할 수 있다.
-- Tauri WebView의 CSP 정책은 `tauri.conf.json`에서 별도 설정한다.
-- Desktop에서는 `connect-src`에 `tauri://localhost`(macOS/Linux) 및 `http://tauri.localhost`(Windows)를 추가해야 할 수 있다.
+**CSP 조정:** Tauri WebView의 CSP는 `tauri.conf.json`에서 별도 설정한다. 플랫폼별 CSP 충돌점과 오버라이드 전략은 **섹션 3.8** 참조.
+
+**조건부 렌더링:** Desktop 전용 컴포넌트 3개(Setup Wizard, Sidecar Status, WalletConnect QR)의 렌더링 패턴은 **섹션 3.9** 참조.
 
 **인증 패턴:**
 - Admin Web UI는 `apiCall()`에서 `X-Master-Password` 헤더를 자동 첨부한다.
