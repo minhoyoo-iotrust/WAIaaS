@@ -1,10 +1,26 @@
 # Project Milestones: WAIaaS
 
+## v33.0 Desktop App 아키텍처 재설계 (Shipped: 2026-03-31)
+
+**Phases completed:** 3 phases, 6 plans, 12 tasks
+
+**Key accomplishments:**
+
+- Design doc 39 sections 2.1/2.2/3.1/3.3 rewritten from React 18 SPA to Admin Web UI (Preact 10.x) WebView load architecture with apiCall() relative path reuse
+- Design doc 39 sections 6/7/13 rewritten: 8-screen React frontend replaced with Admin Web UI 19-page reuse + 3 Desktop-only extensions (Setup Wizard, Sidecar Status, WalletConnect QR)
+- isDesktop() environment detection, 6-command IPC bridge spec with Rust/TS signatures, Tauri Capability settings, CSP exception strategy, and desktopComponent() conditional rendering pattern for 3 Desktop-only components
+- Module boundary rules with ESLint enforcement, 6 Desktop-only dependencies as optional peers, 4-layer tree-shaking strategy, and HMR-first Tauri development workflow with Vite mode=desktop
+- TCP bind(0) dynamic port allocation protocol with stdout/tempfile delivery, plus full consistency cleanup of stale paths, React references, and hardcoded port 3100 across design doc 39
+- m33-02 Desktop App objectives updated with __TAURI_INTERNALS__ detection, 6 IPC commands, TCP bind(0) port protocol, and packages/admin/src/desktop/ path structure; m33-00 status advanced to IN_PROGRESS
+
+---
+
 ## v32.10 에이전트 스킬 정리 + OpenClaw 플러그인 (Shipped: 2026-03-18)
 
 **Phases completed:** 4 phases (452-455), 7 plans, 48 requirements
 
 **Key accomplishments:**
+
 - docs/guides/ → docs/agent-guides/ 디렉토리 구조 분리 + docs/admin-manual/ 9개 파일 생성 (masterAuth 운영 가이드 이전)
 - skills/ 12개 파일에서 masterAuth 콘텐츠 완전 제거 — admin/setup 스킬 삭제, 나머지 7개 sessionAuth 전용 정리
 - @waiaas/openclaw-plugin 패키지 구현 — 17개 sessionAuth 도구(5 그룹), register() 진입점, fetch 기반 HTTP 클라이언트
@@ -12,6 +28,7 @@
 - openclaw-integration.md 플러그인 우선 구조로 재작성 + openclaw-plugin SEO 랜딩 페이지 + 사이트 30페이지 빌드
 
 **Stats:**
+
 - 28 commits, 239 files changed, +17,896/-10,026 lines
 - ~327,768 LOC TS
 - Timeline: 1 day (2026-03-18)
@@ -23,6 +40,7 @@
 **Phases completed:** 3 phases (449-451), 7 plans, 32 requirements
 
 **Key accomplishments:**
+
 - ntfy.sh SSE 의존성 완전 제거 — ResponseChannelSchema/APPROVAL_METHODS에서 ntfy 타입 삭제, NtfyChannel/ntfy config/hot-reload 코드 전량 삭제
 - Push Relay 서버 자체 응답 저장소(sign_responses DB) 전환 + long-polling API 구현
 - PushRelaySigningChannel HTTP POST + long-polling으로 데몬 서명/알림 채널 재작성
@@ -30,6 +48,7 @@
 - Wallet SDK ntfy 함수 deprecated 처리 + Admin UI Push Relay URL 기반 워크플로우 전환
 
 **Stats:**
+
 - 36 commits, 118 files changed, +5,426/-4,411 lines
 - ~326,625 LOC TS
 - Timeline: ~2 hours (2026-03-18)
@@ -42,6 +61,7 @@
 **Phases completed:** 6 phases (444-448.1), 17 plans, 48 requirements
 
 **Key accomplishments:**
+
 - DeFi Provider 5종(Jupiter/0x/LiFi/Lido+Jito/Aave) + Pipeline 상태 머신 엣지 케이스 79 신규 테스트
 - daemon Infra(IncomingTx/RPC Proxy/Admin API/Notification) 195 신규 테스트, 임계값 L:90/F:95 달성
 - EVM adapter Branches 76%→91%, wallet-sdk Branches 79%→95%, 116 신규 테스트
@@ -49,6 +69,7 @@
 - 7개 오픈 이슈 전량 해결 (EVM 체크섬, PositionTracker RPC, DeFi UAT 시나리오 등)
 
 **Stats:**
+
 - 6 phases (444-448.1), 17 plans, 48 requirements complete
 - 58 commits, 131 files changed, +21,334/-185 lines
 - ~368,589 LOC TS, ~620+ 신규 테스트
@@ -62,6 +83,7 @@
 **Phases completed:** 5 phases (439-443), 7 plans, 33 requirements
 
 **Key accomplishments:**
+
 - ESM 빌드 파이프라인 (`site/build.mjs`) — 19개 마크다운 파일을 CRT 테마 HTML 페이지로 변환, 빌드타임 구문 강조
 - Blog/Docs 목록 페이지 + 활성 네비게이션 + 259개 내부 링크 검증 (0 broken)
 - sitemap.xml (22 URL), JSON-LD 구조화 데이터 (Article/TechArticle + BreadcrumbList), canonical URL
@@ -70,6 +92,7 @@
 - SEO 랜딩 페이지 3종 ("AI wallet" 카테고리) + SUBMISSION_KIT (7 플랫폼) + 커뮤니티 포스팅 초안 4개
 
 **Stats:**
+
 - 5 phases (439-443), 7 plans, 33 requirements complete
 - 30 commits, 53 files changed, +6,080/-867 lines
 - ~355,935 LOC TS
@@ -83,6 +106,7 @@
 **Phases completed:** 4 phases (435-438), 9 plans, 46 requirements
 
 **Key accomplishments:**
+
 - N+1 쿼리 6곳 배치 전환 — sessions/wallets/tokens 조회를 IN()/GROUP BY 단일 쿼리로 통합
 - sessions/policies API limit/offset 페이지네이션 — SDK listSessions/listPolicies + MCP list_sessions 도구 추가
 - migrate.ts 분할 — 3,529줄 → 285줄 러너 + schema-ddl.ts + 6개 버전별 마이그레이션 모듈
@@ -92,6 +116,7 @@
 - Solana mapError() 중앙화 (14개 catch 패턴 통합) + ILogger 인터페이스 도입 (@waiaas/core)
 
 **Stats:**
+
 - 4 phases (435-438), 9 plans, 46 requirements complete
 - 34 commits, 83 files changed, +13,451/-9,755 lines
 - ~313,564 LOC TS
@@ -105,6 +130,7 @@
 **Phases completed:** 3 phases (432-434), 8 plans, 30 requirements
 
 **Key accomplishments:**
+
 - PositionQueryContext 타입 정의 + IPositionProvider 시그니처 확장 — 8개 프로바이더 마이그레이션, 체인 가드 패턴 적용
 - Lido 5네트워크 / Aave V3 5네트워크 / Pendle 2네트워크 멀티체인 포지션 조회 — Promise.allSettled 병렬 실행, 단일 네트워크 실패 격리
 - Solana 프로바이더(Jito/Kamino/Drift) 동적 네트워크 추출 — ctx.networks[0] 패턴으로 하드코딩 제거
@@ -113,6 +139,7 @@
 - 이슈 3건 수정: E2E 정책 스키마(#376), WalletConnect UAT 제거(#377), admin-ops 카테고리 신설(#378)
 
 **Stats:**
+
 - 3 phases (432-434), 8 plans, 30 requirements complete
 - 37 commits, 94 files changed, +5,349/-880 lines
 - ~339,000 LOC TS
@@ -127,6 +154,7 @@
 **Phases completed:** 5 phases (427-431), 11 plans, 21 tasks, 51 requirements
 
 **Key accomplishments:**
+
 - safeJsonParse<T> 범용 헬퍼 + POLICY_RULES_SCHEMAS 20종 export (@waiaas/core SSoT)
 - IChainSubscriber 9메서드(6 base + 3 optional) 확장 + services/infrastructure에서 api/ import 0건
 - DatabasePolicyEngine 20건 JSON.parse→Zod safeParse 전환 + 17개 로컬 인터페이스 제거
@@ -135,6 +163,7 @@
 - 4건 이슈 수정: IncomingTxMonitor 캐시(#359), NFT Indexer 키(#361), 사이드바 Protocols(#360), 프로토콜 토글 분리(#362)
 
 **Stats:**
+
 - 5 phases (427-431), 11 plans, 51 requirements complete
 - 47 commits, 140 files changed, +7,233/-1,967 lines
 - ~349,000 LOC TS
@@ -148,6 +177,7 @@
 **Phases completed:** 3 phases, 3 plans, 14 requirements
 
 **Key accomplishments:**
+
 - SSRF 가드 범용화(infrastructure/security/) + Admin RPC Test 엔드포인트 SSRF 방어(validateUrlSafety 적용)
 - hostGuard startsWith 우회 취약점 수정 — 정확 매칭(===)만 허용
 - SlidingWindowRateLimiter 인메모리 3계층(IP/세션/트랜잭션) Rate Limit 미들웨어 + RATE_LIMITED 에러 코드
@@ -155,6 +185,7 @@
 - 알림 채널(Ntfy/Discord/Slack) fetch 10초 timeout + AutoStop EventBus 리스너 정리
 
 **Stats:**
+
 - 3 phases (424-426), 3 plans, 14 requirements complete
 - 16 commits, 20 files changed, +1,228/-273 lines
 - 32 new tests (12 SSRF/hostGuard + 11 rate limit + 9 CORS/resource)
@@ -169,6 +200,7 @@
 **Phases completed:** 3 phases, 4 plans, 24 requirements
 
 **Key accomplishments:**
+
 - ContractNameRegistry 4단계 우선순위 동기 해석 서비스 (Action Provider > Well-known > Whitelist > Fallback)
 - Well-known 컨트랙트 305+ 정적 엔트리 (5 EVM 체인 + Solana mainnet)
 - 17개 Action Provider에 displayName 메타데이터 추가 + snakeCaseToDisplayName 자동 변환
@@ -177,6 +209,7 @@
 - Admin UI 트랜잭션 목록 + 지갑 상세 Activity 탭에서 컨트랙트 이름 표시
 
 **Stats:**
+
 - 3 phases (421-423), 4 plans, 24 requirements complete
 - 22 commits, 64 files changed, +4,839 / -975 lines
 - Timeline: 1 day (2026-03-15)
@@ -191,6 +224,7 @@
 **Phases completed:** 4 phases, 7 plans, 38 requirements
 
 **Key accomplishments:**
+
 - 사이드바 5개 섹션 헤더(Wallets/Trading/Security/Channels/System) 그룹화로 정보 구조(IA) 확립
 - Tokens/RPC Proxy 독립 페이지를 Wallets/Settings 페이지 탭으로 병합
 - Hyperliquid/Polymarket Settings 탭 제거 → Providers 페이지 중앙화(SSoT)
@@ -198,6 +232,7 @@
 - 레거시 경로 리다이렉트(5개) + Ctrl+K 검색 인덱스 동기화 + TabNav 통일
 
 **Stats:**
+
 - 4 phases (417-420), 7 plans, 38 requirements complete
 - 30 commits, 52 files changed, +3,311 / -515 lines
 - Timeline: 1 day (2026-03-15)
@@ -386,6 +421,7 @@
 **Phases completed:** 375-379 (5 phases, 8 plans, 16 requirements)
 
 **Key accomplishments:**
+
 - parseTokenAmount/contract-encoding 유틸리티 통합 — 7개 프로바이더 중복 제거, ~260줄 코드 삭제, 공통 amount-parser + contract-encoding 모듈
 - WalletRow SmartAccount 타입 확장 + `as any` 24곳 제거, resolveChainId 단일화, CAIP-19 regex 통합, NFT 인터페이스 타입 가드
 - admin.ts (3,107줄) → 5개 도메인 모듈(auth/settings/notifications/wallets/monitoring) + thin aggregator (98줄, 96.8% 축소)
@@ -393,6 +429,7 @@
 - 10개 명명 상수 추출 — daemon/cli/admin 3개 constants.ts 생성, 22개 소스 파일 매직 넘버 교체
 
 **Stats:**
+
 - 5 phases (375-379), 8 plans, 32 commits
 - 89 files changed, +6,742 / -3,472 lines
 - Timeline: 1 day (2026-03-11)
@@ -404,6 +441,7 @@
 **Phases completed:** 370-374 (5 phases, 14 plans, 29 requirements)
 
 **Key accomplishments:**
+
 - Polymarket 심층 리서치 + 설계 문서 doc 80 (1,345 lines, 12 sections, EIP-712 3-domain 서명 구조 설계)
 - EIP-712 CLOB 주문 인프라 — PolymarketSigner(3 domains), ClobClient(HMAC L2), OrderBuilder(USDC.e 6d precision), RateLimiter(10 req/s)
 - Gamma API 마켓 조회(30s TTL 캐시) + PositionTracker(가중평균가) + PnlCalculator(bigint) + CTF 온체인 리딤(5 actions)
@@ -411,12 +449,14 @@
 - E2E 스모크 4시나리오 + Agent UAT defi-13 시나리오 (6-section 포맷, 메인넷 검증 가능)
 
 ### Known Gaps
+
 - **CLOB-08**: FAK partial fill order — not implemented
 - **CLOB-09**: Batch orders — not implemented
 - **FIND-01**: ResolutionMonitor notification callback not wired in daemon.ts (SETL-04 partial)
 - **FIND-02**: Python SDK missing Polymarket methods (TypeScript SDK fully covered)
 
 **Stats:**
+
 - 5 phases (370-374), 14 plans, 48 commits
 - 93 files changed, +10,363 lines
 - ~235 new tests across 22 test files
@@ -429,6 +469,7 @@
 **Phases completed:** 5 phases, 12 plans
 
 **Key accomplishments:**
+
 - Agent UAT 마크다운 시나리오 포맷 정의 — 6-section 표준(Metadata/Prerequisites/Steps/Verification/Cost/Troubleshooting), YAML 프론트매터, `/agent-uat` skill 파일
 - Testnet 7개 + Mainnet 기본 전송 6개 시나리오 — ETH/SOL/ERC-20/SPL/L2/NFT/Hyperliquid/수신TX 자기 전송 패턴
 - DeFi 프로토콜 12개 시나리오 — Jupiter/0x/LI.FI/Across/Lido/Jito/Aave/Kamino/Pendle/Drift/Hyperliquid/DCent
@@ -436,6 +477,7 @@
 - CI 시나리오 등록 강제 — Provider 매핑/포맷/인덱스/Admin 라우트 4개 검증 스크립트 + ci.yml Stage 1 통합
 
 **Stats:**
+
 - 5 phases (365-369), 12 plans, 41 commits
 - 89 files changed, +10,962 / -203 lines, 45 scenario files
 
@@ -446,6 +488,7 @@
 **Phases completed:** 8 phases, 21 plans, 16 tasks
 
 **Key accomplishments:**
+
 - @waiaas/e2e-tests 독립 패키지 — E2EScenario 타입, 데몬/Push Relay 라이프사이클 관리, 세션/HTTP 클라이언트 헬퍼
 - 오프체인 E2E 스모크 테스트 — 코어(인증/지갑/세션/정책), 인터페이스(Admin/MCP/SDK/알림/토큰/백업), 고급(Smart Account/UserOp/x402/ERC-8004/8128/DeFi/Push Relay)
 - CI/CD 통합 — e2e-smoke.yml RC publish 트리거, 실패 시 GitHub Issue 자동 생성, CI 리포터
@@ -454,6 +497,7 @@
 - 이슈 해결 — #282 네트워크 설정 키 완전성 테스트, #283 README 동적 테스트 배지
 
 **Stats:**
+
 - 8 phases (357-364), 21 plans, 55 commits
 - 122 files changed, +12,359 / -99 lines, ~527,949 LOC TS
 
@@ -466,6 +510,7 @@
 **Phases completed:** 5 phases (352-356), 8 plans, 33 requirements
 
 **Key accomplishments:**
+
 - Across Protocol bridge design doc (doc 79) — 5 API endpoints spec, SpokePool depositV3 12 params, fee model, 12 design decisions
 - AcrossApiClient (5 REST endpoints) + AcrossBridgeActionProvider (5 actions: quote/execute/status/routes/limits)
 - Late-bind quote pattern — Stage 5 실행 직전 fresh /suggested-fees 재조회로 stale quote 방지
@@ -474,6 +519,7 @@
 - 110 tests (67 unit + 43 integration) — calldata encoding, pipeline flow, error handling, status tracker 검증
 
 **Stats:**
+
 - 5 phases, 8 plans, 33 requirements, 31 commits
 - 66 files changed, +8,815 / -373 lines, ~259,644 LOC TS
 
@@ -486,6 +532,7 @@
 **Phases completed:** 5 phases (347-351), 12 plans, 44 requirements
 
 **Key accomplishments:**
+
 - HyperEVM Mainnet/Testnet (Chain ID 999/998) 체인 등록 — 기존 EVM 지갑이 HyperEVM에서 즉시 동작
 - ApiDirectResult 패턴 — off-chain DEX API 결과를 Stage 5에서 on-chain TX 없이 CONFIRMED 처리하는 파이프라인 분기
 - Hyperliquid Perp Trading — 7 actions (Market/Limit/Stop-Loss/Take-Profit/Cancel/Leverage/Margin Mode), margin 기반 정책 평가
@@ -494,6 +541,7 @@
 - 전 인터페이스 통합 — 22 MCP tools + 22 SDK methods + 9 Admin Settings + Admin UI 5-tab page (Overview/Orders/Spot/Sub-accounts/Settings) + connect-info capability + skill files 3개 업데이트
 
 **Stats:**
+
 - 5 phases, 12 plans, 44 requirements, 38 commits
 - 112 files changed, +12,755 / -166 lines, ~337,060 LOC TS
 
@@ -506,6 +554,7 @@
 **Phases completed:** 5 phases (342-346), 9 plans, 37 requirements
 
 **Key accomplishments:**
+
 - DCent Swap API 7-endpoint deep research + 936-line integration design doc (doc 77, 17 design decisions)
 - CAIP-19 ↔ DCent Currency ID bidirectional converter with 24h stale-while-revalidate cache (8 native token mappings)
 - DEX Swap execution via approve+txdata BATCH pipeline with min/max validation and provider sorting
@@ -514,6 +563,7 @@
 - Full integration: DcentSwapActionProvider (IActionProvider) + 4 MCP tools + 4 SDK methods + policy engine + 7 Admin Settings keys + connect-info capability + skill files + 116 tests
 
 **Stats:**
+
 - 5 phases, 9 plans, 37 requirements, 54 commits
 - 110 files changed, +11,612 / -211 lines, ~248,459 LOC TS
 
@@ -526,6 +576,7 @@
 **Phases completed:** 4 phases (338-341), 8 plans, 58 requirements
 
 **Key accomplishments:**
+
 - Provider Lite/Full 모드 — Smart Account를 프로바이더 없이 생성 가능 (Lite), aaProvider 설정 시 Full 모드 전환
 - UserOp Build API — POST /v1/wallets/:id/userop/build, unsigned UserOp 구성 (nonce, callData, factory 자동 감지, Bundler 불필요)
 - UserOp Sign API — callData 이중 검증 + sender 일치 확인 + INSTANT 정책 평가 + 서명 + USEROP_SIGNED 감사 로그
@@ -534,6 +585,7 @@
 - Admin UI — Provider None (Lite mode) 옵션 + Lite/Full 배지 (상세/목록)
 
 **Stats:**
+
 - 4 phases, 8 plans, 58 requirements, 27 commits
 - 64 files changed, +6,821 / -186 lines, ~278,864 LOC TS
 
@@ -546,6 +598,7 @@
 **Phases completed:** 5 phases (333-337), 12 plans, 58 requirements
 
 **Key accomplishments:**
+
 - NFT_TRANSFER 6번째 discriminatedUnion type + APPROVE nft 확장 + DB v44 마이그레이션 + CAIP-19 NFT 네임스페이스(erc721/erc1155/metaplex)
 - INftIndexer 인터페이스 + Alchemy NFT API v3(EVM) + Helius DAS API(Solana) + 재시도/캐싱/암호화 API 키
 - IChainAdapter 25 메서드 확장 — ERC-721/ERC-1155 safeTransferFrom, ERC-165 표준 감지, Metaplex SPL 전송
@@ -554,6 +607,7 @@
 - MCP 3도구 + SDK 3메서드 + Admin UI NFT 탭(그리드/리스트 뷰) + 인덱서 설정 UI + 스킬 파일 3개
 
 **Stats:**
+
 - 5 phases, 12 plans, 58 requirements, 38 commits
 - 112 files changed, +12,784 / -146 lines, ~239,575 LOC TS
 
@@ -566,6 +620,7 @@
 **Phases completed:** 3 phases (330-332), 5 plans, 27 requirements
 
 **Key accomplishments:**
+
 - Admin UI 메뉴 DeFi/Agent Identity 재명명 + 라우트 변경 + 레거시 리다이렉트
 - ERC-8004 Agent Identity 페이지에 활성화/비활성화 토글 통합 — 한 페이지 완결적 관리
 - 전체 10개 액션 프로바이더 기본 활성화 + DB v42 마이그레이션 (INSERT OR IGNORE, 기존 설정 존중)
@@ -573,6 +628,7 @@
 - Admin UI Description 컬럼 + Tier 드롭다운 + 오버라이드 인디케이터 + Reset to default
 
 **Stats:**
+
 - 3 phases, 5 plans, 27 requirements, 23 commits
 - 48 files changed, +2,984 / -370 lines, ~266,814 LOC TS
 
@@ -1330,8 +1386,6 @@
 
 ---
 
-
-
 ## v1.1 코어 인프라 + 기본 전송 (Shipped: 2026-02-10)
 
 **Delivered:** CLI로 init → start → SOL 전송 → 확인까지 동작하는 최소 데몬 구현 — 모노레포 스캐폴드, SQLite 7-table, AES-256-GCM 키스토어, 6단계 데몬 라이프사이클, Hono API 서버, SolanaAdapter, 6-stage 트랜잭션 파이프라인, CLI 4개 명령어, 281개 테스트 통과
@@ -1382,7 +1436,6 @@
 
 ---
 
-
 ## v1.2 인증 + 정책 엔진 (Shipped: 2026-02-10)
 
 **Delivered:** v1.1 코어 인프라 위에 3-tier 인증 체계(sessionAuth JWT HS256 + masterAuth Argon2id + ownerAuth Ed25519)와 4-tier 정책 엔진(DatabasePolicyEngine)을 구현하여, 세션 기반 에이전트 접근 제어, 금액별 보안 분류, DELAY/APPROVAL 워크플로우, Owner 3-State 점진적 보안 해금이 동작하는 상태를 달성
@@ -1411,7 +1464,6 @@
 **What's next:** v1.3 SDK + MCP + 알림 — TypeScript/Python SDK, MCP Server, SessionManager, 알림 3채널
 
 ---
-
 
 ## v1.3 SDK + MCP + 알림 (Shipped: 2026-02-11)
 
@@ -1442,7 +1494,6 @@
 
 ---
 
-
 ## v1.3.1 Admin Web UI 설계 (Shipped: 2026-02-11)
 
 **Delivered:** 데몬 내장 경량 관리 웹 UI(5 페이지 SPA)의 전체 설계 문서(67-admin-web-ui-spec.md, 10개 섹션)를 작성하여 v1.3.2에서 즉시 구현 착수할 수 있는 상태를 확립
@@ -1468,7 +1519,6 @@
 **What's next:** v1.3.2 Admin Web UI 구현 — 설계 문서 67 기반 Preact SPA 구현
 
 ---
-
 
 ## v1.3.2 Admin Web UI 구현 (Shipped: 2026-02-11)
 
@@ -1499,7 +1549,6 @@
 
 ---
 
-
 ## v1.3.4 알림 이벤트 트리거 연결 + 어드민 알림 패널 (Shipped: 2026-02-12)
 
 **Delivered:** v1.3 알림 인프라(NotificationService, 3채널, 21 이벤트 템플릿)를 파이프라인/라우트에 실제 연결하고, notification_logs DB 테이블 + 어드민 UI 알림 패널을 추가하여, 데몬에서 발생하는 주요 이벤트가 실제로 사용자에게 알림으로 전달되고 어드민이 브라우저에서 상태를 확인/테스트/로그 조회할 수 있는 상태를 달성
@@ -1527,7 +1576,6 @@
 **What's next:** v1.4 토큰 + 컨트랙트 확장 — SPL/ERC-20 토큰 전송, 컨트랙트 호출, Approve, Batch, EVM 어댑터
 
 ---
-
 
 ## v1.4 토큰 + 컨트랙트 확장 (Shipped: 2026-02-12)
 
@@ -1559,7 +1607,6 @@
 
 ---
 
-
 ## v1.4.1 EVM 지갑 인프라 + REST API 5-type 통합 + Owner Auth SIWE (Shipped: 2026-02-12)
 
 **Delivered:** v1.4 EVM 어댑터를 데몬에 연결하여 EVM 에이전트 생성(secp256k1)부터 트랜잭션 실행까지 풀 라이프사이클이 동작하고, REST API가 5가지 트랜잭션 타입을 수용하며, Owner Auth SIWE(EIP-4361)가 지원되는 상태를 달성
@@ -1590,7 +1637,6 @@
 
 ---
 
-
 ## v1.4.2 용어 변경 (agent -> wallet) (Shipped: 2026-02-13)
 
 **Delivered:** 코드베이스 전체에서 "agent"를 "wallet"으로 일괄 변경하여 WAIaaS가 관리하는 엔티티의 실체(AI 에이전트가 사용하는 지갑)를 정확히 반영 — DB schema_version 3 마이그레이션, REST API /v1/wallets, JWT wlt claim, Zod/Enum/에러코드/i18n rename, MCP/CLI/SDK/Admin UI 전체 용어 통일, 설계 문서 15개 갱신, grep 전수 검사 0건 확인
@@ -1620,7 +1666,6 @@
 
 ---
 
-
 ## v1.4.3 EVM 토큰 레지스트리 + MCP/Admin DX 개선 + 버그 수정 (Shipped: 2026-02-13)
 
 **Delivered:** EVM 지갑의 토큰 자산 조회 한계를 해소하고, Admin UI에서 MCP 토큰 발급까지 원스톱 처리 가능한 상태를 달성 — 체인별 내장 토큰 레지스트리(5 네트워크 24 토큰), getAssets() ERC-20 연동, POST /v1/mcp/tokens API + Admin UI MCP 섹션, EVM/Solana 확인 타임아웃 fallback, 패키지 버전 관리 스크립트, BUG-013~016 전수 해소
@@ -1649,7 +1694,6 @@
 
 ---
 
-
 ## v1.4.4 Admin Settings + MCP 5-type + Skill Files (Shipped: 2026-02-14)
 
 **Delivered:** Admin UI에서 운영 설정을 DB 기반으로 관리하고(hot-reload), MCP가 REST API/SDK와 동등하게 5가지 트랜잭션 타입을 지원하며, AI 에이전트가 5개 스킬 파일을 로드하여 즉시 API를 사용할 수 있는 상태를 달성
@@ -1676,7 +1720,6 @@
 **What's next:** v1.5 DeFi + 가격 오라클 — IPriceOracle, Action Provider, Jupiter Swap, USD 정책
 
 ---
-
 
 ## v1.4.5 멀티체인 월렛 모델 설계 (Shipped: 2026-02-14)
 
@@ -1705,7 +1748,6 @@
 **What's next:** v1.4.6 멀티체인 월렛 모델 구현 — 설계 문서 68-72 기반 코드 구현
 
 ---
-
 
 ## v1.4.6 멀티체인 월렛 구현 (Shipped: 2026-02-14)
 
@@ -1736,7 +1778,6 @@
 
 ---
 
-
 ## v1.4.7 임의 트랜잭션 서명 API (Shipped: 2026-02-15)
 
 **Delivered:** 외부 dApp/프로토콜이 빌드한 unsigned 트랜잭션을 WAIaaS가 정책 평가 후 서명하여 반환하는 sign-only API를 구현 — Solana/EVM unsigned tx 파서, 기본 거부 정책 3개 토글, EVM calldata 인코딩 유틸리티, MCP 스킬 리소스 노출, 정책 거부 알림 보강까지 REST API + TS/Python SDK + MCP 전체 인터페이스 완성
@@ -1766,7 +1807,6 @@
 
 ---
 
-
 ## v1.4.8 Admin DX + 알림 개선 (Shipped: 2026-02-15)
 
 **Delivered:** OPEN 이슈 12건(020~031) 일괄 해소 — DB 마이그레이션 순서 버그 수정, MCP 고아 프로세스 방지, MCP/CLI/SDK 멀티체인 DX 도구 확장, Admin 대시보드/월렛 상세/세션 개선, 알림 테스트 버그 수정 + Slack 채널 + 메시지 저장
@@ -1794,7 +1834,6 @@
 **What's next:** v1.5 DeFi + 가격 오라클 또는 v1.4.8 후속 이슈 대응
 
 ---
-
 
 ## v1.5 DeFi Price Oracle + Action Provider Framework (Shipped: 2026-02-15)
 
@@ -1824,7 +1863,6 @@
 
 ---
 
-
 ## v1.5.2 Admin UI 정책 폼 UX 개선 (Shipped: 2026-02-16)
 
 **Delivered:** Admin UI에서 12개 정책 타입별 구조화된 전용 폼으로 정책을 생성/수정할 수 있고, 목록에서 타입별 의미 있는 시각화를 확인할 수 있으며, 기존 정책 수정 시 현재값이 프리필되어 수정/저장이 가능한 상태 달성
@@ -1846,7 +1884,6 @@
 **Git range:** `v1.5.1` → `7d19887` (Phase 135 complete)
 
 ---
-
 
 ## v1.6 운영 인프라 + 잔액 모니터링 (Shipped: 2026-02-16)
 
@@ -1876,7 +1913,6 @@
 
 ---
 
-
 ## v1.6.1 WalletConnect Owner 승인 (Shipped: 2026-02-16)
 
 **Delivered:** WalletConnect v2 경유 Owner 승인 워크플로우가 동작하는 상태 달성 — QR 페어링으로 외부 지갑(MetaMask/Phantom) 연결, APPROVAL 거래 시 WC 서명 요청 자동 전송, WC 실패 시 Telegram Bot 자동 전환, Admin UI/MCP/SDK/CLI 전체 인터페이스 통합
@@ -1899,7 +1935,6 @@
 - Timeline: 2026-02-16 (~3 hours)
 
 ---
-
 
 ## v1.7 품질 강화 + CI/CD (Shipped: 2026-02-17)
 
@@ -1930,7 +1965,6 @@
 
 ---
 
-
 ## v1.8 업그레이드 + 배포 인프라 (Shipped: 2026-02-17)
 
 **Delivered:** 설치된 WAIaaS가 새 버전 출시를 자동 감지하여 사용자에게 알리고, `waiaas upgrade`로 7단계 시퀀스(확인-중지-백업-업데이트-마이그레이션-검증-재시작)로 안전하게 업그레이드할 수 있는 상태 달성. npm/Docker 2개 채널 업그레이드 경로 동작, DB 호환성 매트릭스가 자동 마이그레이션/시작 거부를 판별. release-please 기반 2-게이트 릴리스 모델 구축 완료.
@@ -1956,7 +1990,6 @@
 **What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
 
 ---
-
 
 ## v2.2 테스트 커버리지 강화 (Shipped: 2026-02-18)
 
@@ -1984,7 +2017,6 @@
 
 ---
 
-
 ## v2.3 Admin UI 기능별 메뉴 재구성 (Shipped: 2026-02-18)
 
 **Delivered:** 모놀리식 Settings 페이지를 해체하여 7개 기능별 메뉴(Dashboard/Wallets/Sessions/Policies/Notifications/Security/System)로 재배치하고, Ctrl+K 설정 검색 + 미저장 경고 다이얼로그 + 전 필드 description help text로 Admin UI DX를 개선한 상태 달성.
@@ -2008,7 +2040,6 @@
 - Git range: feat(182-01) → docs(187-01)
 
 ---
-
 
 ## v2.4 npm Trusted Publishing 전환 (Shipped: 2026-02-19)
 
@@ -2036,7 +2067,6 @@
 **What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
 
 ---
-
 
 ## v2.4.1 Admin UI 테스트 커버리지 복원 (Shipped: 2026-02-19)
 
@@ -2089,7 +2119,6 @@
 
 ---
 
-
 ## v2.6 Wallet SDK 설계 (Shipped: 2026-02-20)
 
 **Delivered:** 지갑 개발사(D'CENT 등)가 WAIaaS와 통합하기 위한 Wallet Signing SDK, 개방형 서명 프로토콜, 지갑 앱 알림 채널, Push Relay Server의 공통 설계를 확정. 설계 문서 3개 신규(73/74/75) + 기존 4개(35/37/25/67) 갱신, 교차 검증 5항목 PASS, 설계 부채 0건 유지.
@@ -2114,7 +2143,6 @@
 **What's next:** 후속 구현 마일스톤 (m26-01 Wallet Signing SDK 구현, m26-02 알림 채널 구현, m26-03 Push Relay Server 구현)
 
 ---
-
 
 ## v2.6.1 WAIaaS Wallet Signing SDK (Shipped: 2026-02-20)
 
@@ -2145,7 +2173,6 @@
 **What's next:** Wallet SDK 설계 고도화 or 추가 서명 채널 (Slack/Discord)
 
 ---
-
 
 ## v2.7 지갑 앱 알림 채널 (Shipped: 2026-02-20)
 
@@ -2191,7 +2218,6 @@
 
 ---
 
-
 ## v26.4 멀티 지갑 세션 + 에이전트 자기 발견 (Shipped: 2026-02-21)
 
 **Delivered:** 하나의 세션 토큰으로 여러 지갑에 접근할 수 있는 1:N 세션 모델을 구축하고, 에이전트가 마스터 패스워드 없이 자기 상황을 파악할 수 있는 GET /v1/connect-info 자기 발견 엔드포인트를 제공. SDK/MCP/Admin UI/CLI 전면 통합 완료. 병행하여 이슈 #119-#120 해소 및 릴리스 자동화 워크플로우 구축.
@@ -2217,8 +2243,6 @@
 **What's next:** 다음 마일스톤 계획 (/gsd:new-milestone)
 
 ---
-
-
 
 ---
 
@@ -2248,16 +2272,15 @@
 
 ---
 
-
 ## v27.3 토큰별 지출 한도 정책 (Shipped: 2026-02-22)
 
 **Phases completed:** 153 phases, 323 plans, 50 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-
 
 ## v27.4 Admin UI UX 개선 (Shipped: 2026-02-23)
 
@@ -2289,7 +2312,6 @@
 
 ---
 
-
 ## v28.0 기본 DeFi 프로토콜 설계 (Shipped: 2026-02-23)
 
 **Delivered:** 5개 DeFi 프로토콜(Jupiter Swap, 0x EVM Swap, LI.FI Bridge, Lido/Jito Staking, Gas Conditional Execution) 구현을 위한 공통 설계 산출물을 완성. 코드 구현 없이 설계 문서만 산출하며, m28-01~m28-05 구현 마일스톤의 입력으로 소비된다. 25개 설계 요구사항 전량 충족, 59개 설계 결정 확정.
@@ -2320,36 +2342,35 @@
 
 ---
 
-
 ## v28.1 Jupiter Swap (Shipped: 2026-02-23)
 
 **Phases completed:** 153 phases, 323 plans, 50 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-
 
 ## v28.2 0x EVM DEX Swap (Shipped: 2026-02-23)
 
 **Phases completed:** 154 phases, 328 plans, 50 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-
 
 ## v28.3 LI.FI 크로스체인 브릿지 (Shipped: 2026-02-23)
 
 **Phases completed:** 157 phases, 334 plans, 50 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-
 
 ## v28.4 Liquid Staking (Lido + Jito) (Shipped: 2026-02-24)
 
@@ -2359,6 +2380,7 @@
 **Timeline:** 2026-02-24 (1 day, 47 commits)
 
 **Key accomplishments:**
+
 - LidoStakingActionProvider — Lido 컨트랙트 직접 ABI 인코딩, ETH→stETH 스테이킹 + Withdrawal Queue unstake
 - JitoStakingActionProvider — SPL Stake Pool 프로그램으로 SOL→JitoSOL 스테이킹/unstake, 순수 TS PDA 유틸
 - IAsyncStatusTracker — LidoWithdrawalTracker + JitoEpochTracker + STAKING_UNSTAKE_COMPLETED/TIMEOUT 알림
@@ -2368,7 +2390,6 @@
 
 ---
 
-
 ## v28.5 가스비 조건부 실행 (Shipped: 2026-02-25)
 
 **Phases:** 258-259 (2 phases, 4 plans, 18 tasks)
@@ -2377,6 +2398,7 @@
 **Timeline:** 2026-02-25 (1 day, 38 commits)
 
 **Key accomplishments:**
+
 - GasCondition Zod schema — maxGasPrice/maxPriorityFee/timeout on all 7 discriminatedUnion request types
 - Pipeline Stage 3.5 — gas condition check between policy evaluation and wait branching (GAS_WAITING state)
 - GasConditionTracker (IAsyncStatusTracker) — EVM eth_gasPrice/Solana getRecentPrioritizationFees RPC queries, 10s cache, daemon executeFromStage4 re-entry
@@ -2386,16 +2408,15 @@
 
 ---
 
-
 ## v28.6 RPC Pool -- 멀티 엔드포인트 로테이션 (Shipped: 2026-02-25)
 
 **Phases completed:** 163 phases, 344 plans, 50 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-
 
 ## v28.8 빌트인 지갑 프리셋 자동 설정 (Shipped: 2026-02-26)
 
@@ -2420,7 +2441,6 @@
 - Timeline: 1 day (2026-02-25 → 2026-02-26)
 
 ---
-
 
 ## v29.0 고급 DeFi 프로토콜 설계 (Shipped: 2026-02-26)
 
@@ -2455,40 +2475,35 @@
 
 ---
 
-
 ## v29.2 EVM Lending -- Aave V3 (Shipped: 2026-02-27)
 
 **Phases completed:** 174 phases, 371 plans, 50 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-
 
 ## v29.3 기본 지갑/기본 네트워크 개념 제거 (Shipped: 2026-02-27)
 
 **Phases completed:** 178 phases, 381 plans, 50 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-
-
-
 
 ## v29.5 내부 일관성 정리 (Shipped: 2026-02-28)
 
 **Phases completed:** 180 phases, 387 plans, 52 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-
-
-
 
 ## v29.9 세션 점진적 보안 모델 (Shipped: 2026-03-02)
 
@@ -2513,13 +2528,12 @@
 
 ---
 
-
 ## v29.10 ntfy 토픽 지갑별 설정 전환 (Shipped: 2026-03-02)
 
 **Phases completed:** 183 phases, 392 plans, 50 tasks
 
 **Key accomplishments:**
+
 - (none recorded)
 
 ---
-

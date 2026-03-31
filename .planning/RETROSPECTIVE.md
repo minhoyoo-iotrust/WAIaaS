@@ -2,6 +2,44 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v33.0 — Desktop App 아키텍처 재설계
+
+**Shipped:** 2026-03-31
+**Phases:** 3 | **Plans:** 6
+
+### What Was Built
+- 설계 문서 39의 6개 섹션(2.1, 2.2, 3.3, 6, 7, 13)을 React 18 SPA에서 Admin Web UI(Preact 10.x) 재사용 아키텍처로 전면 재작성
+- isDesktop() 환경 감지 전략, IPC 브릿지 6개 명령 명세(Rust+TS 시그니처), Tauri Capability 설정, CSP 예외 전략
+- 조건부 렌더링 패턴(desktopComponent), 모듈 경계 규칙, 4-layer tree-shaking 전략
+- TCP bind(0) 동적 포트 할당 프로토콜(stdout/tempfile 이중 전달)
+- m33-02 Desktop App 구현 objectives 갱신 — 새 아키텍처와 완전 정합
+
+### What Worked
+- 3-phase 파이프라인이 깨끗함: 기존 섹션 재작성(456) → 신규 설계 추가(457) → 구조 검증+정합(458)
+- 설계 전용 마일스톤으로 코드 없이 아키텍처 방향 전환 — React 18 별도 구현 대비 유지보수 비용 대폭 절감
+- Phase 458에서 일관성 검증이 스테일 참조(React 18, 포트 3100, desktop/src/pages/) 5건 발견 및 수정
+
+### What Was Inefficient
+- 설계 문서가 ~1,900줄로 비대함 — 전체 읽기+수정 사이클이 컨텍스트를 많이 소모
+- Nyquist validation이 설계 전용 마일스톤에 미적용(MISSING) — 설계 전용 예외 기준 필요
+
+### Patterns Established
+- Admin Web UI 재사용 패턴: WebView에서 기존 Admin UI를 로드, Desktop 전용 코드는 packages/admin/src/desktop/ 격리
+- isDesktop() + dynamic import 조건부 렌더링 패턴
+- TCP bind(0) + stdout/tempfile 포트 전달 프로토콜
+
+### Key Lessons
+1. 설계 전용 마일스톤은 구현 마일스톤과 다른 검증 기준 필요 — VERIFICATION.md 대신 감사 보고서로 대체 가능
+2. Admin Web UI 재사용 결정이 핵심 — React 18 별도 구현 대비 ~8,000줄 코드 절감 예상
+3. 구조 검증 phase가 일관성 문제 5건 발견 — 대규모 설계 변경 시 필수 단계
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 3 phases 같은 날 완료, 설계 전용이므로 27 files +5,772/-1,843 lines (전부 markdown)
+
+---
+
 ## Milestone: v32.10 — 에이전트 스킬 정리 + OpenClaw 플러그인
 
 **Shipped:** 2026-03-18
