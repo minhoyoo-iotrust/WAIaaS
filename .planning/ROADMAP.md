@@ -151,7 +151,11 @@ Plans:
   2. Owner 연결 단계에서 "나중에" 스킵이 가능하고, 설정 완료 후 재실행 시 대시보드로 직행한다
   3. WalletConnect QR 코드로 외부 지갑(Phantom/MetaMask)과 페어링하여 SIWS/SIWE Owner 등록이 가능하다 (Plan A 실패 시 Plan B 대체)
   4. Setup Wizard와 WalletConnect 컴포넌트가 Desktop 환경에서만 렌더링되고 브라우저에서는 숨겨진다
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 462-01-PLAN.md — Setup Wizard 5단계 컴포넌트 + wizard-store + App.tsx 통합
+- [ ] 462-02-PLAN.md — WalletConnect QR 페어링 커넥터 + QR 모달 + tree-shaking 검증
+- [ ] 462-03-PLAN.md — Owner 단계 WC 와이어링 + 전체 플로우 통합 검증
 **UI hint**: yes
 
 ### Phase 463: GitHub Releases CI + Auto-Update
@@ -175,5 +179,5 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 | 459. WalletConnect Spike | 1/1 | Complete   | 2026-03-31 |
 | 460. Tauri Shell + Sidecar Manager | 3/3 | Complete   | 2026-03-31 |
 | 461. IPC Bridge + System Tray | 2/2 | Complete   | 2026-03-31 |
-| 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 0/TBD | Not started | - |
+| 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 0/3 | Not started | - |
 | 463. GitHub Releases CI + Auto-Update | 0/TBD | Not started | - |
