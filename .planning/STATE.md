@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v33.2
 milestone_name: Tauri Desktop App
-status: complete
+status: completed
 stopped_at: Completed Phase 463 (3/3 plans, GitHub Releases CI + Auto-Update)
-last_updated: "2026-03-31T16:51:00Z"
+last_updated: "2026-03-31T16:52:53.866Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 5
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Current Position
 
-Phase: 463 of 463 (GitHub Releases CI + Auto-Update)
-Plan: 3 of 3 in current phase
+Phase: 463 of 463 (github releases ci auto update)
+Plan: Not started
 Status: Milestone complete
 Last activity: 2026-03-31
 

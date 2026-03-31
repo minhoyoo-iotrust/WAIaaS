@@ -95,7 +95,7 @@ See `.planning/milestones/v33.0-ROADMAP.md` for full details.
 - [x] **Phase 460: Tauri Shell + Sidecar Manager** - Tauri 프로젝트 구조 + SEA 바이너리 빌드 + 사이드카 라이프사이클 + WebView 로드 (completed 2026-03-31)
 - [x] **Phase 461: IPC Bridge + System Tray** - 7개 IPC 명령 + 시스템 트레이 3색 상태 + isDesktop() + 4-layer tree-shaking (completed 2026-03-31)
 - [x] **Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장** - 5단계 Setup Wizard + WalletConnect QR 페어링 + Desktop 전용 컴포넌트 (completed 2026-03-31)
-- [ ] **Phase 463: GitHub Releases CI + Auto-Update** - 3 플랫폼 빌드 매트릭스 + 코드 사이닝 + 자동 업데이트
+- [x] **Phase 463: GitHub Releases CI + Auto-Update** - 3 플랫폼 빌드 매트릭스 + 코드 사이닝 + 자동 업데이트 (completed 2026-03-31)
 
 ## Phase Details
 
@@ -180,8 +180,8 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 459. WalletConnect Spike | 1/1 | Complete   | 2026-03-31 |
-| 460. Tauri Shell + Sidecar Manager | 3/3 | Complete   | 2026-03-31 |
-| 461. IPC Bridge + System Tray | 2/2 | Complete   | 2026-03-31 |
-| 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 3/3 | Complete   | 2026-03-31 |
-| 463. GitHub Releases CI + Auto-Update | 3/3 | Complete   | 2026-03-31 |
+| 459. WalletConnect Spike | 1/1 | Complete    | 2026-03-31 |
+| 460. Tauri Shell + Sidecar Manager | 3/3 | Complete    | 2026-03-31 |
+| 461. IPC Bridge + System Tray | 2/2 | Complete    | 2026-03-31 |
+| 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 3/3 | Complete    | 2026-03-31 |
+| 463. GitHub Releases CI + Auto-Update | 3/3 | Complete    | 2026-03-31 |
