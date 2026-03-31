@@ -101,8 +101,8 @@ See `.planning/milestones/v32.10-ROADMAP.md` for full details.
 **Requirements**: DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, DOC-06
 **Plans:** 2/2 plans complete
 Plans:
-- [ ] 456-01-PLAN.md — 아키텍처 다이어그램 + 계층 분리 + HTTP 통신 재작성 (Section 2.1, 2.2, 3.3)
-- [ ] 456-02-PLAN.md — 프로젝트 구조 + UI 플로우 + 구현 노트 재작성 (Section 6, 7, 13)
+- [x] 456-01-PLAN.md — 아키텍처 다이어그램 + 계층 분리 + HTTP 통신 재작성 (Section 2.1, 2.2, 3.3)
+- [x] 456-02-PLAN.md — 프로젝트 구조 + UI 플로우 + 구현 노트 재작성 (Section 6, 7, 13)
 **Success Criteria** (what must be TRUE):
   1. 아키텍처 다이어그램이 WebView에서 Admin Web UI(localhost)를 로드하는 구조를 보여준다
   2. 계층 역할 분리 섹션에서 React 18 언급이 완전히 제거되고 Preact Admin Web UI 재사용이 기술되어 있다
@@ -114,13 +114,16 @@ Plans:
 **Goal**: Desktop 전용 기능의 환경 감지, IPC 브릿지, CSP 예외, 조건부 렌더링, 번들 경계가 설계 문서에 완전히 명세된다
 **Depends on**: Phase 456
 **Requirements**: IPC-01, IPC-02, IPC-03, IPC-04, IPC-05, BLD-01, BLD-02, BLD-03, BLD-04
+**Plans:** 2 plans
+Plans:
+- [ ] 457-01-PLAN.md — isDesktop() 환경 감지 + IPC 브릿지 명세 + Capability 설정 + CSP 예외 + 조건부 렌더링
+- [ ] 457-02-PLAN.md — 번들 경계 + tree-shaking 전략 + Desktop 의존성 관리 + Vite/Tauri 워크플로우
 **Success Criteria** (what must be TRUE):
   1. isDesktop() 환경 감지 전략(window.__TAURI_INTERNALS__ 체크)이 문서에 명세되어 있다
   2. IPC 브릿지 6개 명령의 시그니처와 동작이 문서화되어 있다
   3. Tauri CapabilityBuilder.remote() URL 패턴과 CSP 예외 전략이 명세되어 있다
   4. packages/admin/src/desktop/ 모듈 경계와 dynamic import 규칙이 정의되어 있다
   5. 브라우저 번들에 Desktop 전용 코드가 포함되지 않는 tree-shaking 전략이 문서화되어 있다
-**Plans**: TBD
 
 ### Phase 458: 구조 검증 + Objectives 정합
 **Goal**: 변경된 설계 문서 39가 내부적으로 일관되고, m33-02 Desktop App 구현 objectives가 새 아키텍처와 정합한다
@@ -165,5 +168,5 @@ Phases execute in numeric order: 456 → 457 → 458
 | 454. OpenClaw Plugin Package | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 455. CI/CD, Documentation, SEO | v32.10 | 2/2 | Complete | 2026-03-18 |
 | 456. 설계 문서 39 기존 섹션 재작성 | v33.0 | 2/2 | Complete    | 2026-03-31 |
-| 457. Desktop 환경 감지 + IPC + 번들 설계 | v33.0 | 0/TBD | Not started | - |
+| 457. Desktop 환경 감지 + IPC + 번들 설계 | v33.0 | 0/2 | Not started | - |
 | 458. 구조 검증 + Objectives 정합 | v33.0 | 0/TBD | Not started | - |
