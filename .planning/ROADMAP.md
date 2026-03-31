@@ -167,11 +167,11 @@ Plans:
   2. macOS 빌드에 Developer ID 코드 사이닝 + notarization이 적용되어 Gatekeeper를 통과한다
   3. 앱 시작 시 `latest.json`에서 최신 버전을 확인하고, 사용자 확인 후 업데이트 다운로드 + 패치가 완료된다
   4. 변조된 바이너리의 업데이트가 Ed25519 서명 검증 실패로 거부된다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 463-01-PLAN.md — Tauri updater 플러그인 등록 + Ed25519 키 설정
-- [ ] 463-02-PLAN.md — GitHub Actions 3-platform 빌드 매트릭스 + desktop-release.yml
-- [ ] 463-03-PLAN.md — 자동 업데이트 UI (UpdateBanner) + 전체 검증
+- [x] 463-01-PLAN.md — Tauri updater 플러그인 등록 + Ed25519 키 설정
+- [x] 463-02-PLAN.md — GitHub Actions 3-platform 빌드 매트릭스 + desktop-release.yml
+- [x] 463-03-PLAN.md — 자동 업데이트 UI (UpdateBanner) + 전체 검증
 
 ## Progress
 
@@ -184,4 +184,4 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 | 460. Tauri Shell + Sidecar Manager | 3/3 | Complete   | 2026-03-31 |
 | 461. IPC Bridge + System Tray | 2/2 | Complete   | 2026-03-31 |
 | 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 3/3 | Complete   | 2026-03-31 |
-| 463. GitHub Releases CI + Auto-Update | 0/3 | Not started | - |
+| 463. GitHub Releases CI + Auto-Update | 3/3 | Complete   | 2026-03-31 |

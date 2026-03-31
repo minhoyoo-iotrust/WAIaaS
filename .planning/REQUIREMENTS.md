@@ -58,15 +58,15 @@ Requirements for Tauri Desktop App milestone. Each maps to roadmap phases.
 
 ### GitHub Releases CI
 
-- [ ] **DIST-01**: `tauri-action`으로 3 플랫폼(macOS arm64/x64, Windows x64, Linux x64) 빌드 매트릭스가 동작한다
-- [ ] **DIST-02**: 태그 푸시(`desktop-v*`) 시 GitHub Releases에 `.dmg`, `.msi`, `.AppImage`, `.deb` 아티팩트가 업로드된다
-- [ ] **DIST-03**: macOS 빌드에 Developer ID 코드 사이닝 + notarization이 적용된다
+- [x] **DIST-01**: `tauri-action`으로 3 플랫폼(macOS arm64/x64, Windows x64, Linux x64) 빌드 매트릭스가 동작한다
+- [x] **DIST-02**: 태그 푸시(`desktop-v*`) 시 GitHub Releases에 `.dmg`, `.msi`, `.AppImage`, `.deb` 아티팩트가 업로드된다
+- [x] **DIST-03**: macOS 빌드에 Developer ID 코드 사이닝 + notarization이 적용된다
 
 ### 자동 업데이트
 
-- [ ] **UPDT-01**: Tauri updater 플러그인으로 앱 시작 시 GitHub Releases의 `latest.json`에서 최신 버전을 확인한다
-- [ ] **UPDT-02**: 사용자 확인 후 업데이트 다운로드 + 자동 패치가 완료된다
-- [ ] **UPDT-03**: 변조된 바이너리의 업데이트가 서명 검증 실패로 거부된다
+- [x] **UPDT-01**: Tauri updater 플러그인으로 앱 시작 시 GitHub Releases의 `latest.json`에서 최신 버전을 확인한다
+- [x] **UPDT-02**: 사용자 확인 후 업데이트 다운로드 + 자동 패치가 완료된다
+- [x] **UPDT-03**: 변조된 바이너리의 업데이트가 서명 검증 실패로 거부된다
 
 ## Future Requirements
 
@@ -129,12 +129,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WCON-03 | Phase 462 | Complete |
 | WCON-04 | Phase 462 | Complete |
 | WCON-05 | Phase 462 | Complete |
-| DIST-01 | Phase 463 | Pending |
-| DIST-02 | Phase 463 | Pending |
-| DIST-03 | Phase 463 | Pending |
-| UPDT-01 | Phase 463 | Pending |
-| UPDT-02 | Phase 463 | Pending |
-| UPDT-03 | Phase 463 | Pending |
+| DIST-01 | Phase 463 | Complete |
+| DIST-02 | Phase 463 | Complete |
+| DIST-03 | Phase 463 | Complete |
+| UPDT-01 | Phase 463 | Complete |
+| UPDT-02 | Phase 463 | Complete |
+| UPDT-03 | Phase 463 | Complete |
 
 **Coverage:**
 - v33.2 requirements: 37 total
