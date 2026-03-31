@@ -136,7 +136,10 @@ Plans:
   2. 시스템 트레이에 3색 상태 아이콘(녹/주황/빨강)이 표시되고, 30초 폴링으로 자동 업데이트된다
   3. 트레이 컨텍스트 메뉴(Open Dashboard / Pause / Resume / Quit)가 동작한다
   4. `isDesktop()` 함수가 `window.__TAURI_INTERNALS__` 기반으로 환경을 감지하고, Desktop 전용 코드가 4-layer tree-shaking으로 브라우저 번들에 포함되지 않는다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 461-01-PLAN.md — IPC Bridge TS 래퍼 + isDesktop() + quit_app + 4-layer tree-shaking
+- [ ] 461-02-PLAN.md — System Tray 3색 아이콘 + 컨텍스트 메뉴 + 30초 폴링
 **UI hint**: yes
 
 ### Phase 462: Setup Wizard + WalletConnect + Desktop UI 확장
@@ -171,6 +174,6 @@ Phase 459 and Phase 460 are parallelizable. After both complete: 461 -> 462 -> 4
 |-------|----------------|--------|-----------|
 | 459. WalletConnect Spike | 1/1 | Complete   | 2026-03-31 |
 | 460. Tauri Shell + Sidecar Manager | 3/3 | Complete   | 2026-03-31 |
-| 461. IPC Bridge + System Tray | 0/TBD | Not started | - |
+| 461. IPC Bridge + System Tray | 0/2 | Not started | - |
 | 462. Setup Wizard + WalletConnect + Desktop UI 확장 | 0/TBD | Not started | - |
 | 463. GitHub Releases CI + Auto-Update | 0/TBD | Not started | - |
