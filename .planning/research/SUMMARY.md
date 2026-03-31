@@ -1,149 +1,197 @@
 # Project Research Summary
 
-**Project:** v32.10 에이전트 스킬 정리 + OpenClaw 플러그인
-**Domain:** AI Agent SDK integration — skill file restructuring, plugin packaging, documentation
-**Researched:** 2026-03-18
+**Project:** WAIaaS Desktop App Architecture Redesign (m33-00)
+**Domain:** Tauri 2 Desktop Shell + Preact Admin Web UI Reuse
+**Researched:** 2026-03-31
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This milestone has two tightly coupled goals: (1) clean the agent-facing skill files of all masterAuth content so AI agents stop encountering 401 failures, and (2) package WAIaaS as a first-class OpenClaw plugin that installs via `openclaw plugins install @waiaas/openclaw-plugin`. Both goals share a core principle — strict agent/admin boundary enforcement. Research confirms that the recommended approach is content extraction (not reorganization): masterAuth content moves to a new `docs/admin-manual/` directory while agent skills become sessionAuth-only. The OpenClaw plugin is then built as a thin stateless SDK wrapper exposing exactly the ~22 sessionAuth tools that remain after cleanup.
+The core insight of this research is that WAIaaS already has everything needed for a desktop app — a Preact 10.x Admin Web UI (19 pages) served via Hono, a Node.js daemon with REST API, and a hash-based router that works in any WebView. The architecture redesign eliminates the original plan of building a separate React 18 SPA and instead loads the existing Admin UI directly inside a Tauri 2 WebView via `http://127.0.0.1:{dynamic_port}/admin/`. Changes to the Admin Web UI package are additive only: a `packages/admin/src/desktop/` directory with `isDesktop()` detection, typed IPC bridge wrappers, and lazy-loaded desktop-only components (Setup Wizard, Sidecar Status). All 19 existing pages remain entirely unchanged.
 
-The recommended stack requires zero new libraries. The OpenClaw plugin uses `openclaw/plugin-sdk/core` as a peerDependency for types, and `@waiaas/sdk` as the sole runtime dependency. Build tooling (TypeScript 5.7, vitest 3.0) and documentation tooling (site/build.mjs with gray-matter + marked) are all existing infrastructure. The package structure mirrors existing monorepo packages, uses ESM output, and integrates with the existing release-please + npm trusted publishing pipeline without modifications to the pipeline itself.
+The recommended stack is Tauri 2.10.x (Rust shell, OS WebView, capabilities security model), Node.js 22 SEA for the daemon sidecar binary (5 platform targets), `@tauri-apps/plugin-shell` for sidecar lifecycle, `@tauri-apps/plugin-updater` for GitHub Releases auto-update, and `@reown/appkit` in vanilla JavaScript mode (not React adapter) for WalletConnect QR pairing. The critical architectural pattern is `WebviewUrl::External` loading the daemon's HTTP server — not `tauri-plugin-localhost`, not Tauri custom protocol — which means the existing `apiCall()` relative-path fetch client, CSP `connect-src 'self'`, and hash routing all continue working without modification.
 
-The key risks concentrate in two areas: silent failures and boundary leakage. The pre-existing `EXCLUDE_DIRS = ['admin-manual']` in `site/build.mjs` (line 30) will silently suppress admin manual pages if not removed. The `sync-skills.mjs` script has no exclusion logic and will blindly recopy any admin files that accidentally land in `skills/`. On the plugin side, the principal risk is declaring `@waiaas/sdk` as a regular dependency instead of a peer dependency, causing duplicate SDK instances. All five critical pitfalls have deterministic prevention strategies: grep-based validation scripts, explicit tool allowlists, and post-build page count checks.
+The top risks are: (1) CSP blocking Tauri IPC because `connect-src 'self'` does not cover `ipc:` and `http://ipc.localhost` protocols — must be designed before any IPC command is written; (2) Node.js SEA binary size (150-250MB) and startup delay (3-8 seconds) requiring a native splash screen and lazy daemon service initialization; (3) auto-update signing key mismanagement where losing the Ed25519 private key permanently breaks update delivery to existing installations. These risks are well-understood and have documented mitigations — the project can proceed with high confidence if the design phase addresses them explicitly.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new libraries are required. The OpenClaw plugin is a new package (`packages/openclaw-plugin/`) using the existing monorepo toolchain. The manifest-level integration uses `openclaw/plugin-sdk/core` as an optional peerDependency (types only; runtime provided by OpenClaw Gateway). Actual API calls flow through `@waiaas/sdk`, a zero-dependency package, keeping the plugin bundle minimal. Documentation generation extends `site/build.mjs` with a one-line change.
+Tauri 2.10.x is the unambiguous choice over Electron: OS WebView (not bundled Chromium) keeps the installer ~20MB vs 200MB+, the Rust backend is the right process manager for the Node.js sidecar, and the capabilities system enforces least-privilege IPC — consistent with WAIaaS security principles. All Tauri plugins needed (`plugin-shell`, `plugin-updater`, `plugin-notification`, `plugin-process`, `plugin-dialog`) are stable Tauri 2 releases. Node.js 22 SEA replaces the deprecated `pkg` (Vercel) as the official mechanism for single-binary daemon distribution, with native addons (sodium-native, better-sqlite3, argon2) bundled as SEA assets.
 
 **Core technologies:**
-- `openclaw/plugin-sdk/core` (peerDependency): OpenClaw plugin type definitions — provides `OpenClawPluginDefinition` and `OpenClawPluginApi` types without bundling the full Gateway runtime
-- `@waiaas/sdk ^2.11.0` (runtime dependency): All tool handlers delegate to this; zero-dependency and safe to bundle; declared as peerDependency to avoid version coupling
-- `TypeScript ^5.7` (devDependency): Existing monorepo tsconfig reused; ESM output required by OpenClaw's jiti loader
-- `site/build.mjs` (existing): Handles admin-manual HTML generation by removing `'admin-manual'` from `EXCLUDE_DIRS`; no new documentation tooling needed
+- Tauri 2.10.x (Rust crate + `@tauri-apps/cli`): Desktop shell with OS WebView, sidecar management, system tray — Electron alternative with ~10x smaller binary and capabilities-based security
+- `@tauri-apps/api` 2.10.x: WebView-side IPC bridge (`invoke()`) — version must stay in sync with Tauri Rust crate (major.minor)
+- `@tauri-apps/plugin-shell` 2.x: Sidecar spawn/kill with stdout/stderr streaming — core of daemon lifecycle management
+- `@tauri-apps/plugin-updater` 2.10.x: GitHub Releases auto-update with Ed25519 signature verification — integrates naturally with existing release-please pipeline
+- Node.js 22 SEA: Single Executable Application for daemon binary — official replacement for deprecated pkg, supports native addon bundling via SEA assets
+- `@reown/appkit` 1.8.x (vanilla JS mode): WalletConnect v2 QR pairing — React adapter explicitly avoided due to Preact JSX runtime conflicts
 
 ### Expected Features
 
-Research confirms a clear priority ordering. The skill cleanup is the prerequisite for everything else — the plugin's tool list cannot be finalized until the agent-only boundary is established.
+The Admin Web UI reuse pattern means most features are already implemented and need only conditional exposure in desktop context.
 
 **Must have (table stakes):**
-- Agent-only skill files (13 files, 0 masterAuth references outside the standard security notice) — agents currently experience 401 failures on every admin endpoint they encounter; ~43 masterAuth references across 7 mixed files require surgical extraction
-- `openclaw.plugin.json` manifest with `id`, `configSchema` (sessionToken required, daemonUrl with default), `uiHints` (sessionToken `sensitive: true`)
-- `register(api)` synchronous entry point registering ~22 sessionAuth-only tools via `api.registerTool()`
-- `docs/admin-manual/` with 8 markdown files containing extracted masterAuth content and standard frontmatter (`section: "docs"`)
-- npm package `@waiaas/openclaw-plugin` publishable via existing CI/CD pipeline
-- `docs/guides/` renamed to `docs/agent-guides/` with all references updated
+- WebView loading `http://127.0.0.1:{dynamic_port}/admin/` — the entire Admin UI works in WebView with zero changes to existing pages
+- Dynamic port allocation via ephemeral bind (port 0) — prevents conflict with standalone daemon instances; port must be resolved before WebView navigates
+- `isDesktop()` environment detection via `window.__TAURI__` — single utility function gates all desktop-only code paths
+- IPC bridge for 6 daemon lifecycle commands (start, stop, restart, status, quit app, send OS notification) — typed wrappers with `isDesktop()` guard; no raw invoke in components
+- Tauri capability configuration with `remote.urls: ["http://127.0.0.1:*/*"]` — required for IPC to work from HTTP-loaded WebView
+- CORS additions in daemon Hono server: `tauri://localhost`, `http://tauri.localhost`, `https://tauri.localhost` — safety measure for platform-specific WebView origins
 
-**Should have (differentiators):**
-- `uiHints` with `sensitive: true` on sessionToken (most plugins omit this; WAIaaS has high-value security credentials)
-- `providerAuthEnvVars: ["WAIAAS_SESSION_TOKEN", "WAIAAS_DAEMON_URL"]` for CI/CD headless config
-- SEO build inclusion: admin-manual pages + OpenClaw landing page in sitemap.xml and llms-full.txt (~31 total URLs, up from 22)
-- Domain-grouped tool files (wallet/transfer/defi/nft/utility) mirroring MCP tool structure for parity verification
+**Should have (competitive differentiators):**
+- Setup Wizard (first-run UX): lazy-loaded, desktop-only page at hash route `/wizard` — browser Admin UI has no onboarding; wizard calls IPC to init daemon config
+- WalletConnect QR in Desktop: `@reown/appkit` vanilla JS mode, dynamic import only when `isDesktop() && route === '/walletconnect'` — ~200KB+, must never enter browser bundle
+- Sidecar Status Panel: daemon process health, uptime, log viewer — uses IPC not HTTP (available when daemon is down), pairs with 3-color system tray icon
+- System Tray: 3-color icon (green/yellow/red) + context menu (Open/Pause/Resume/Quit) — pure Rust, no WebView interaction
+- Auto-Update: GitHub Releases + `tauri-plugin-updater`, integrated with release-please CI — requires Ed25519 key setup and backup before first release
+- Native splash screen during sidecar startup: critical UX mitigation for 3-8 second SEA init time
 
-**Defer (v2+):**
-- Hyperliquid, Polymarket, ERC-8004, ERC-8128, x402 tools — specialized protocols; suitable as separate OpenClaw plugins when demand exists
-- Interactive features in admin-manual — static markdown is the correct format; Admin UI handles interactive config
+**Defer indefinitely:**
+- OS Native Notifications Bridge via Tauri `plugin-notification` — Push Relay (v32.9) already handles notification delivery via HTTP POST; desktop OS notifications are supplementary
+- Multi-window WebView — all 19 pages + desktop extensions fit in single WebView with hash router
+- Master password caching in platform keychain — store session token (time-limited JWT) only; re-auth for sensitive operations
 
 ### Architecture Approach
 
-The architecture is a clean four-component separation. `skills/` (root) becomes the SSoT for agent-only content (13 files). A new `packages/openclaw-plugin/` is a thin stateless bridge: its `register()` creates a single `WAIaaSClient` from OpenClaw-validated config and calls `api.registerTool()` 22 times, each handler delegating directly to one SDK method. `docs/admin-manual/` becomes the canonical location for masterAuth content, fed into the SEO build. The existing `site/build.mjs` handles HTML generation for admin-manual by removing the pre-existing exclusion.
+The architecture centers on two clean communication boundaries: (1) HTTP fetch for all wallet/transaction/policy API calls, unchanged from browser mode, since the WebView loads from the daemon's own HTTP origin; (2) Tauri IPC `invoke()` exclusively for operations impossible via HTTP — daemon process lifecycle, OS native features. Desktop-specific TypeScript lives in `packages/admin/src/desktop/` (detect.ts, ipc-bridge.ts, setup-wizard.tsx, sidecar-status.tsx), all behind dynamic imports and `isDesktop()` guards that Vite tree-shakes out of the browser build. The Tauri Rust shell lives in a new `apps/desktop/` monorepo package — Rust-only, no duplicate frontend code.
 
 **Major components:**
-1. `skills/` (root, modified) — SSoT agent-only skill files; 2 files removed (`admin.skill.md`, `setup.skill.md`), 7 files trimmed of masterAuth content; `sync-skills.mjs` copies to npm distributable with added admin-marker validation
-2. `packages/openclaw-plugin/` (new) — OpenClaw manifest + synchronous `register(api)` entry + 5 domain tool files (wallet/transfer/defi/nft/utility); depends only on `@waiaas/sdk` as peerDependency; single `WAIaaSClient` instance created once in `register()` from `api.config`
-3. `docs/admin-manual/` (new) — 8 markdown files with standard frontmatter (`section: "docs"`, `category: "Admin Manual"`); content extracted (not copied) from skill files; fed into `site/build.mjs`
-4. `docs/agent-guides/` (renamed from `docs/guides/`) — 5 existing guide files; zero published URL impact since build routes via frontmatter `section`/`slug`, not filesystem path
-5. `site/build.mjs` (modified one line) — `EXCLUDE_DIRS = []`; auto-generates HTML, sitemap.xml, llms-full.txt for all docs
+1. **Sidecar Manager** (`apps/desktop/src-tauri/src/sidecar.rs`) — allocates ephemeral port, spawns daemon SEA binary, polls `/health`, passes port to WebView URL; handles crash recovery
+2. **IPC Commands** (`apps/desktop/src-tauri/src/commands.rs`) — 6 typed Rust handlers exposed via capabilities; validates all input via Serde deserialization before execution
+3. **System Tray** (`apps/desktop/src-tauri/src/tray.rs`) — 3-color status icon driven by daemon state events; context menu for quick actions
+4. **Auto Updater** (`apps/desktop/src-tauri/src/updater.rs`) — polls GitHub Releases `latest.json`; Ed25519 signature verification embedded at compile time
+5. **IPC Bridge (TS)** (`packages/admin/src/desktop/ipc-bridge.ts`) — typed `invoke()` wrappers with `isDesktop()` guard; dynamic import ensures no Tauri deps in browser bundle
+6. **Desktop Extensions (TSX)** (`packages/admin/src/desktop/`) — Setup Wizard, Sidecar Status; lazy-loaded, extend existing `@preact/signals` state model
+7. **Existing Admin Web UI** (`packages/admin/src/pages/*.tsx`, 19 pages) — **entirely unchanged**; loads same-origin in WebView, CSP works without modification
 
 ### Critical Pitfalls
 
-1. **Reference breakage cascade from docs/guides/ rename** — Run `grep -rn 'docs/guides' .` before and after; update README.md (4 links on lines 136, 218-221), site/index.html (1 link on line 1238), guide internal cross-references; leave archived planning docs unchanged (historical records)
-2. **masterAuth content leaking into agent skills after incomplete extraction** — After extraction, run `grep -c 'masterAuth\|master_password\|X-Master-Password' skills/*.skill.md`; only the standard security notice pattern is acceptable; automate as CI check; ~43 references across 7 files require section-by-section review
-3. **SDK declared as regular dependency causing version coupling** — Declare `@waiaas/sdk` as `peerDependency: ">=2.11.0"` and separately as `devDependency`; regular dependency causes duplicate SDK instances, type conflicts, and forces coordinated releases
-4. **sync-skills.mjs blind copy of any admin files** — Script uses blanket `*.skill.md` glob with no exclusion logic; add post-copy validation scanning for `> **Operator only.**` admin marker and failing if found; prevents future regressions
-5. **EXCLUDE_DIRS silently blocks admin-manual pages with zero warning** — `site/build.mjs` line 30 has `['admin-manual']` pre-configured; remove before Phase 4 SEO build; verify with post-build page count (`~31 = 22 existing + 9 new`)
+1. **CSP blocks Tauri IPC in production build** — `connect-src 'self'` does not cover `ipc:` and `http://ipc.localhost`; `invoke()` fails silently. Design CSP exception for desktop mode in Phase 1, before any IPC command is implemented. Verify with `tauri build` + production install, not just `tauri dev` (which may bypass CSP).
+
+2. **Node.js SEA binary size (150-250MB) + 3-8 second startup** — acceptable trade-off, but requires native splash screen from Tauri Rust backend, sidecar stdout progress indicators, and lazy DeFi provider initialization after core HTTP server passes health check. Prototype binary size and startup time in Phase 2 before committing to SEA strategy.
+
+3. **Auto-update signing key loss = permanent update breakage** — Ed25519 key embedded at compile time; if lost, users must manually reinstall. Generate offline, back up to 2+ locations, integrate `TAURI_SIGNING_PRIVATE_KEY` as GitHub Secret before first release. Test full update cycle (check → download → verify → install → restart) in CI.
+
+4. **Desktop-only deps leaking into browser bundle** — `@reown/appkit` alone is 500KB+ minified; static imports from any shared component will include it in the browser build. Enforce `packages/admin/src/desktop/` as a dynamic-import-only boundary; add CI bundle analyzer step that fails if `@tauri-apps` strings appear in browser build output.
+
+5. **WebView rendering differences across platforms** — WKWebView (macOS), WebView2 (Windows), WebKitGTK (Linux) diverge on CSS features; Admin UI was tested in Chromium only. Set minimum WebKitGTK 2.42+, audit CSS for `:has()`, `backdrop-filter`, `container-query` usage, add cross-platform visual regression testing before beta.
 
 ## Implications for Roadmap
 
-The dependency chain is deterministic. Content restructuring is the prerequisite for plugin tool list finalization, which is the prerequisite for CI/CD and documentation polish. Four phases map directly to the architecture's component boundaries.
+Based on combined research, the architecture splits naturally into 5 phases with clear dependency ordering. This is a design-first milestone (m33-00); implementation phases belong to m33-02+.
 
-### Phase 1: Document Structure Rename
-**Rationale:** Isolated filesystem operation with no code dependencies; establishes the `docs/agent-guides/` path that subsequent phases reference; zero URL impact makes it safe to do first
-**Delivers:** `docs/guides/` renamed to `docs/agent-guides/`; README.md and site/index.html updated; site build verified (URL output unchanged)
-**Addresses:** docs/guides/ rename (table stakes feature)
-**Avoids:** Pitfall 1 (reference breakage cascade) — use grep before/after to verify 0 remaining references in non-archived files
+### Phase 1: IPC Security + Bundle Boundary Design
 
-### Phase 2: Skills Cleanup + Admin Manual Creation
-**Rationale:** Must happen before plugin work because the plugin's 22-tool allowlist is defined by what remains in agent skills after cleanup; admin manual must be written before trimming skills (content must exist before the source is removed)
-**Delivers:** 13 agent-only skill files with 0 masterAuth references outside security notice; `docs/admin-manual/` with 8 files + README index; `sync-skills.mjs` updated with admin-marker validation; `openclaw.ts` installer output fixed (remove WAIAAS_MASTER_PASSWORD from line 59); site/build.mjs EXCLUDE_DIRS cleared; `packages/skills/` CLI updated to remove admin/setup from install targets
-**Addresses:** Agent-only skill files, docs/admin-manual/ (table stakes); progressive disclosure (differentiator)
-**Avoids:** Pitfall 2 (masterAuth residue), Pitfall 4 (sync-skills blind copy), Pitfall 10 (installer MASTER_PASSWORD output), Pitfall 13 (admin-manual section misrouting — use `section: "docs"` not `"blog"`)
+**Rationale:** Three pitfalls (CSP blocking IPC, bundle bloat, IPC over-exposure) must be designed before any code is written — they are architectural decisions that cannot be retrofitted cheaply. Port allocation design is also a hard dependency for all subsequent phases.
 
-### Phase 3: OpenClaw Plugin Package
-**Rationale:** Depends on Phase 2 finalized tool list; plugin is a thin bridge with no business logic; `register()` must be synchronous (OpenClaw constraint: async register() is silently ignored); single WAIaaSClient created from OpenClaw-validated config
-**Delivers:** `packages/openclaw-plugin/` with `openclaw.plugin.json` manifest, `src/index.ts` (synchronous `register()`), 5 domain tool files (~22 tools with `waiaas_` prefix), test suite including admin tool exclusion test; turbo.json build task (depends on `@waiaas/sdk#build`); release-please-config.json entry
-**Uses:** `openclaw/plugin-sdk/core` (types), `@waiaas/sdk` as peerDependency + devDependency, TypeScript ESM build
-**Implements:** OpenClaw plugin architecture component
-**Avoids:** Pitfall 3 (SDK coupling — use peerDependency `>=2.11.0`), Pitfall 6 (admin tools in register() — explicit sessionAuth-only allowlist), Pitfall 7 (manifest format mismatch — fully researched in STACK.md with HIGH confidence), Pitfall 11 (turbo build order — declare SDK dependency explicitly)
+**Delivers:** Design doc update (doc 39) covering: CSP exception strategy for desktop mode, Tauri capabilities minimal set (6 commands only), dynamic port allocation protocol (ephemeral bind → health poll → WebView URL), `packages/admin/src/desktop/` module boundary rules, dev workflow (3-process startup order), and CI bundle analyzer gate spec.
 
-### Phase 4: CI/CD, Documentation, SEO
-**Rationale:** All functional changes complete; this phase validates integration, enables npm publishing, and surfaces documentation to search engines and AI crawlers; release-please must be configured in BOTH config and manifest files
-**Delivers:** Updated `docs/agent-guides/openclaw-integration.md` (plugin method first, skills legacy method second); `docs/seo/openclaw-plugin.md` SEO landing page; `skills/integrations.skill.md`; `packages/openclaw-plugin/README.md`; `.release-please-manifest.json` entry; verified sitemap.xml (~31 URLs) and llms-full.txt; npm publish dry-run
-**Avoids:** Pitfall 5 (EXCLUDE_DIRS already cleared in Phase 2), Pitfall 8 (stale sitemap — post-build page count check), Pitfall 9 (release-please manifest desync — add to BOTH `release-please-config.json` AND `.release-please-manifest.json`)
+**Addresses:** Table stakes features — dynamic port allocation, IPC bridge design, CORS additions design, Tauri capabilities configuration
+
+**Avoids:** Pitfall 1 (CSP/IPC), Pitfall 3 (bundle bloat), Pitfall 6 (IPC over-exposure), Pitfall 7 (dev workflow friction), Pitfall 2 (port collision)
+
+### Phase 2: Tauri Shell Scaffold + Sidecar Manager
+
+**Rationale:** Rust backend is independent of Admin UI code — can be built and validated before any TypeScript changes. Creates working proof of concept (Tauri opens Admin UI in WebView via sidecar) that validates architecture assumptions before investing in desktop extensions.
+
+**Delivers:** `apps/desktop/` with working Rust backend: sidecar spawn/kill with ephemeral port, `/health` polling, WebView pointing to daemon's HTTP server, 3-color system tray, 6 IPC command stubs. Admin UI loads unchanged in WebView on all 3 platforms.
+
+**Uses:** Tauri 2.10.x, `@tauri-apps/plugin-shell`, Tauri `tray-icon` core feature, Node.js 22 SEA prototype (measure binary size + startup time here)
+
+**Implements:** Sidecar Manager, System Tray, IPC Commands (stub) components
+
+### Phase 3: Desktop Environment Detection + IPC Bridge (TypeScript)
+
+**Rationale:** After Rust backend proves sidecar loading works, add the TypeScript layer: `isDesktop()` utility and typed IPC bridge wrappers. Verify all 19 existing pages render unchanged in WebView (zero regression). Configure Tauri capabilities (`remote.urls`) and CORS additions. Validate CSP compatibility with production build.
+
+**Delivers:** `packages/admin/src/desktop/detect.ts` + `ipc-bridge.ts`, Tauri capabilities configured, CORS allowlist updated, zero regression on 19 existing pages verified on macOS/Windows/Linux, IPC invoke working from HTTP-loaded WebView, CSP verified with `tauri build` production install.
+
+**Avoids:** Pitfall 4 (WebView rendering — cross-platform test at this phase), Pitfall 1 (CSP — verify production build not just dev)
+
+### Phase 4: Desktop-Only UI Extensions
+
+**Rationale:** With environment detection and IPC bridge proven stable, add user-facing desktop features as additive components behind `isDesktop()` guards and dynamic imports. All additive, no existing page modifications.
+
+**Delivers:** Setup Wizard (first-run, lazy-loaded, hash route `/wizard`), Sidecar Status Panel, WalletConnect QR integration (`@reown/appkit` vanilla JS, dynamic import), Desktop sidebar extensions, auto-update banner, quit/restart controls in System page.
+
+**Addresses:** All differentiator features from FEATURES.md
+
+**Avoids:** Pitfall 3 (bundle bloat — verify browser bundle size after each addition with bundle analyzer), Anti-Pattern 1 (no dual frontend codebase)
+
+### Phase 5: Build Pipeline + Distribution
+
+**Rationale:** Cross-platform SEA binary bundling and Tauri signing are independent of feature development and gated on finalized architecture. Must come last because binary targets and capabilities affect signing and update manifest structure.
+
+**Delivers:** Node.js 22 SEA daemon binaries (5 targets: macOS aarch64/x86_64, Windows x86_64, Linux x86_64/aarch64), Tauri cross-platform builds (`.dmg`, `.msi`, `.AppImage`), CI matrix via `tauri-action@v1`, GitHub Releases auto-update pipeline, Ed25519 signing key provisioned and backed up to 2+ locations.
+
+**Avoids:** Pitfall 5 (SEA binary size — add native splash/lazy init here), Pitfall 8 (signing key loss — key backup procedure mandated before first publish)
 
 ### Phase Ordering Rationale
 
-- Phase 1 before Phase 2: The rename establishes the `docs/agent-guides/` path; Phase 2 creates admin-manual as a sibling
-- Phase 2 before Phase 3: The plugin's 22-tool allowlist is derived from cleaned agent skills; cannot finalize the list until cleanup is complete
-- Phase 3 before Phase 4: README, integration guide, and SEO page reference the plugin package; npm dry-run requires the package to exist
-- Admin manual creation before skill trimming (within Phase 2): Content must be preserved before it is removed from skills
+- Phase 1 before all others: CSP + bundle boundary decisions are architectural foundations. Getting these wrong requires expensive refactoring of all subsequent phases.
+- Phase 2 before Phase 3: Rust Sidecar Manager proves dynamic port allocation works before TypeScript code depends on it. Fail fast on Rust-side assumptions.
+- Phase 3 before Phase 4: `isDesktop()` and IPC bridge must exist and be verified (including cross-platform) before desktop UI components build on them.
+- Phase 4 before Phase 5: WalletConnect lazy import boundary must be validated (bundle size check) before shipping distribution builds.
+- Phase 5 last: signing key and binary targets are immutable once published — must be decided with full architecture knowledge.
 
 ### Research Flags
 
-Phases with well-documented patterns (skip additional research):
-- **Phase 1 (rename):** Pure filesystem + reference update; standard git mv pattern with grep validation
-- **Phase 2 (skills cleanup):** Content extraction; all target files and counts are already known (43 masterAuth references in 7 files, 2 files to remove, 5 installers to update)
-- **Phase 3 (plugin):** OpenClaw manifest format, `register(api)` API, tool registration pattern, and npm packaging are fully documented in STACK.md and ARCHITECTURE.md with HIGH confidence; the objective's pre-research flag has been resolved by this research
-- **Phase 4 (CI/CD):** Follow existing `packages/skills` pattern exactly for release-please; no new pipeline components
+Phases likely needing deeper research during planning:
+
+- **Phase 2 (SEA Sidecar):** sodium-native uses `libsodium` dynamic linking — behavior inside SEA bundle is not fully documented for all platforms. Prototype to discover whether `process.dlopen()` from SEA assets works reliably for sodium-native, better-sqlite3, and argon2. May need per-platform workarounds or fall back to shipping `.node` files alongside the binary.
+- **Phase 3 (CORS/Capability on Windows):** WebView2 on Windows uses `http://tauri.localhost` origin for some internal navigation. Behavior with `remote.urls: ["http://127.0.0.1:*/*"]` capability pattern needs verification against actual Windows WebView2. Platform-specific origin behavior is the highest-uncertainty area in the entire architecture.
+- **Phase 5 (SEA binary size):** 150-250MB estimate is based on comparable Node.js SEA projects. Measure actual binary size in Phase 2 prototype. If >250MB, evaluate `bun build --compile` as SEA alternative before Phase 5 commits to the strategy.
+
+Phases with standard patterns (skip additional research):
+
+- **Phase 1 (Design):** All design decisions are derived from Tauri 2 official docs and existing design doc 39. No new research needed.
+- **Phase 4 (Desktop UI Extensions):** Standard Preact component work behind `isDesktop()` guards. `@reown/appkit` vanilla JS API is documented. No external research needed.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | OpenClaw official docs + GitHub source confirmed manifest format, `register()` API, tool registration; npm packaging decisions follow established monorepo patterns with exact precedents |
-| Features | HIGH | Tool list derived from codebase inspection of existing 42 MCP tools; sessionAuth boundary verified against SDK method signatures; exact file counts and names confirmed by direct codebase analysis |
-| Architecture | HIGH | All component relationships verified against actual codebase files with line numbers (site/build.mjs line 30, sync-skills.mjs glob pattern, openclaw.ts line 59, turbo.json, release-please-config.json) |
-| Pitfalls | HIGH | All critical pitfalls sourced from direct codebase analysis with specific line references; grep counts verified; not inferred from general patterns |
+| Stack | HIGH | Tauri 2.10.x stable since Oct 2024. All plugins have official docs. Node.js 22 SEA stable in 22.x. `@reown/appkit` vanilla JS + Preact is MEDIUM (no official Preact test cases; vanilla JS mode is framework-agnostic by design so inferred to work) |
+| Features | HIGH | Feature scope is well-bounded: 6 IPC commands, 3 new desktop-only pages, no new REST API surface. Existing 19 pages are unchanged. Feature complexity is low except WalletConnect QR (MEDIUM — 200KB+ lazy load, Preact modal rendering in WebView) |
+| Architecture | HIGH | HTTP-over-localhost + IPC-for-native-only is the correct Tauri pattern; verified against official docs and multiple community references. No custom protocol, no tauri-plugin-localhost. Zero ambiguity on the approach |
+| Pitfalls | HIGH | All 8 pitfalls sourced from official Tauri GitHub issues + official docs (CSP bug #8476, dev server bug #8362, WebKitGTK discussion #12311). CSP/IPC interaction is the highest-certainty risk with documented mitigation |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **OpenClaw `register()` signature variant:** STACK.md notes two valid patterns — `export default { register(api) {...} }` (object with method) vs `export default function register(api)` (plain function). Research shows both work but notes `async register()` is silently ignored. Confirm the exact pattern expected by the specific OpenClaw version in the target environment before Phase 3 implementation.
-- **`@waiaas/sdk` peer dependency range:** The recommended `">=2.11.0"` range assumes no breaking API changes in the SDK after 2.11. Validate SDK changelog discipline before committing to the peer range; a tighter `"^2.11.0"` range is safer if the SDK has not yet committed to SemVer stability.
-- **`api.config` availability at `register()` call time:** Architecture uses `api.config` in `register()` to create one shared WAIaaSClient. STACK.md references both `ctx.config` (in handler) and `api.config` (in register). Confirm that `api.config` is populated before `register()` is called in the actual OpenClaw runtime (not just in handler context).
+- **SEA native addon loading (sodium-native):** sodium-native dynamically links `libsodium.so/.dylib/.dll`. SEA bundling of a shared library alongside the `.node` addon file is not covered in official Node.js 22 SEA docs. Must prototype this specifically in Phase 2 before committing to SEA strategy. Fallback: ship addon files alongside the binary in a sidecar-adjacent directory.
+- **`@reown/appkit` Preact modal rendering in WebView:** `createAppKit()` in vanilla JS mode creates its own DOM elements (QR modal). On Tauri WebView, iframe sandboxing and CSP `frame-src` may block this. Must test the full WalletConnect pairing flow in WebView, not just in browser.
+- **Linux system tray on Wayland:** Tauri tray icon requires a tray-compatible desktop environment. On Wayland sessions (common in Ubuntu 22.04+), tray icon may be invisible. Needs explicit fallback design (window-based status indicator when tray unavailable). Address in Phase 1 design doc update.
+- **masterAuth session persistence across app restarts:** Current Admin UI re-authenticates on every browser open (session token in memory). Desktop users expect not to re-enter master password on every app restart. Research `tauri-plugin-keychain` as session token cache (not master password). Security boundary: store session token (time-limited JWT) only, never the master password.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [OpenClaw Plugin Documentation](https://docs.openclaw.ai/tools/plugin) — manifest format, `register(api)`, configSchema, uiHints, tool registration API
-- [OpenClaw GitHub plugin.md](https://github.com/openclaw/openclaw/blob/main/docs/tools/plugin.md) — plugin types, loading pipeline, capability registration
-- Codebase inspection: `site/build.mjs`, `packages/skills/`, `packages/mcp/src/tools/` (45 files), `packages/sdk/`, `turbo.json`, `release-please-config.json` — all component relationships verified directly against source
+- [Tauri 2.0 Stable Release](https://v2.tauri.app/blog/tauri-20/) — v2.10.x stability, features
+- [Tauri Configuration Reference](https://v2.tauri.app/reference/config/) — tauri.conf.json, capabilities schema
+- [Tauri Sidecar Documentation](https://v2.tauri.app/develop/sidecar/) — externalBin, target triple naming
+- [Tauri Node.js Sidecar Guide](https://v2.tauri.app/learn/sidecar-nodejs/) — SEA binary sidecar pattern
+- [Tauri System Tray](https://v2.tauri.app/learn/system-tray/) — tray-icon feature, event handling
+- [Tauri Updater Plugin](https://v2.tauri.app/plugin/updater/) — Ed25519 signing, GitHub Releases endpoints
+- [Tauri Capabilities](https://v2.tauri.app/security/capabilities/) — remote URL IPC access
+- [Tauri v2 CSP Documentation](https://v2.tauri.app/security/csp/) — IPC protocol requirements
+- [Tauri Shell Plugin](https://v2.tauri.app/plugin/shell/) — sidecar spawn/kill API
+- [Tauri GitHub Pipelines](https://v2.tauri.app/distribute/pipelines/github/) — CI build matrix
 
 ### Secondary (MEDIUM confidence)
-- [OpenClaw Plugin Architecture (DeepWiki)](https://deepwiki.com/openclaw/openclaw/9.1-plugin-architecture) — in-process loading model, jiti loader
-- [OpenClaw Plugin SDK Deep Dive (DEV Community)](https://dev.to/wonderlab/openclaw-deep-dive-4-plugin-sdk-and-extension-development-51ki) — `register()` patterns, factory pattern for tool arrays
-- [OpenClaw Plugin Manifest (LearnClawdBot)](https://www.learnclawdbot.org/docs/plugins/manifest) — field details, configPatch
-- [Plugin SDK Fundamentals (zread.ai)](https://zread.ai/openclaw/openclaw/18-plugin-sdk-fundamentals) — SDK fundamentals
-- [Coinbase AgentKit](https://github.com/coinbase/agentkit) — AI wallet tool exposure pattern (admin/agent separation reference)
-- [Agent Skills Specification](https://agentskills.io/home) — progressive disclosure best practice
+- [Tauri CSP IPC bug #8476](https://github.com/tauri-apps/tauri/issues/8476) — external URL CSP/IPC interaction
+- [Tauri CSP pagehide bug #14707](https://github.com/tauri-apps/tauri/issues/14707) — IPC blocked during page lifecycle
+- [Vite watching src-tauri bug #8362](https://github.com/tauri-apps/tauri/issues/8362) — 45s dev startup from watching Rust build artifacts
+- [WebKitGTK cross-platform discussion #12311](https://github.com/tauri-apps/tauri/discussions/12311) — Linux rendering differences
+- [Reown AppKit Overview](https://docs.reown.com/appkit/overview) — vanilla JS (framework-agnostic) mode support confirmed
+- [Tauri IPC Protocol Implementation (DeepWiki)](https://deepwiki.com/tauri-apps/tauri/3.1-ipc-protocol-and-invoke()-system) — internal IPC mechanism
 
-### Tertiary (LOW confidence)
-- [What Are AI Agent Plugins (nevo.systems)](https://nevo.systems/blogs/nevo-journal/what-are-ai-agent-plugins) — 2026 plugin ecosystem trends; informational context only
+### Tertiary (LOW confidence — needs implementation validation)
+- Node.js 22 SEA + sodium-native native addon bundling — `process.dlopen()` from SEA assets with dynamic library dependency; no official coverage
+- `@reown/appkit` vanilla JS mode in Tauri WebView — no documented test cases; inferred from framework-agnostic design
 
 ---
-*Research completed: 2026-03-18*
+*Research completed: 2026-03-31*
 *Ready for roadmap: yes*
