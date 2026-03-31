@@ -31,6 +31,24 @@
     ],
     "externalBin": [
       "binaries/waiaas-daemon"
-    ]
+    ],
+    "createUpdaterArtifacts": "v1Compatible",
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": null,
+      "providerShortName": null
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/minhoyoo-iotrust/WAIaaS/releases/latest/download/latest.json"
+      ],
+      "pubkey": "PLACEHOLDER_REPLACE_WITH_REAL_KEY"
+    }
   }
 }

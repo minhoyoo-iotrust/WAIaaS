@@ -23,7 +23,8 @@
     "notification:allow-show",
     "process:allow-restart",
     "process:allow-exit",
-    "core:event:default"
+    "core:event:default",
+    "updater:default"
   ],
   "remote": {
     "urls": [
