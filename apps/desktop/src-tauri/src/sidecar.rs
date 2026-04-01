@@ -457,7 +457,7 @@ pub fn setup_job_object() -> Result<(), String> {
             std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
         );
 
-        if !result.as_bool() {
+        if result.is_err() {
             let _ = CloseHandle(job);
             return Err("Failed to set Job Object limits".to_string());
         }
@@ -465,7 +465,7 @@ pub fn setup_job_object() -> Result<(), String> {
         // Assign current process to the job
         let current = windows::Win32::System::Threading::GetCurrentProcess();
         let assign_result = AssignProcessToJobObject(job, current);
-        if !assign_result.as_bool() {
+        if assign_result.is_err() {
             let _ = CloseHandle(job);
             return Err("Failed to assign process to Job Object".to_string());
         }
