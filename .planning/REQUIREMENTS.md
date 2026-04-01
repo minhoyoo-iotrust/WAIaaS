@@ -16,7 +16,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **DL-05**: GitHub API 실패 시 "GitHub Releases에서 직접 다운로드" 폴백 링크가 표시된다
 - [x] **DL-06**: GitHub API 응답에 5분 TTL 클라이언트 캐시가 적용된다
 - [x] **DL-07**: 다운로드 페이지에 npm, Docker 대체 설치법이 명시된다
-- [ ] **DL-08**: 사이트 네비게이션에 Download 링크가 추가되고 sitemap.xml에 /download/ URL이 포함된다
+- [x] **DL-08**: 사이트 네비게이션에 Download 링크가 추가되고 sitemap.xml에 /download/ URL이 포함된다
 
 ### Installation Guide
 
@@ -30,7 +30,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Distribution
 
-- [ ] **DIST-01**: `site/distribution/SUBMISSION_KIT.md`에 Desktop App 배포 채널(다운로드 페이지, GitHub Releases) 항목이 추가된다
+- [x] **DIST-01**: `site/distribution/SUBMISSION_KIT.md`에 Desktop App 배포 채널(다운로드 페이지, GitHub Releases) 항목이 추가된다
 
 ## Future Requirements
 
@@ -75,7 +75,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DL-05 | Phase 465 | Complete |
 | DL-06 | Phase 465 | Complete |
 | DL-07 | Phase 465 | Complete |
-| DL-08 | Phase 466 | Pending |
+| DL-08 | Phase 466 | Complete |
 | IG-01 | Phase 464 | Complete |
 | IG-02 | Phase 464 | Complete |
 | IG-03 | Phase 464 | Complete |
@@ -83,7 +83,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IG-05 | Phase 464 | Complete |
 | IG-06 | Phase 464 | Complete |
 | IG-07 | Phase 464 | Complete |
-| DIST-01 | Phase 466 | Pending |
+| DIST-01 | Phase 466 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
