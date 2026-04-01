@@ -8,17 +8,20 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v33.2 Tauri Desktop App
+## Current Milestone: v33.3 Desktop App 배포 채널 확장
 
-**Goal:** Tauri 2 기반 데스크탑 앱으로 WAIaaS 데몬을 GUI에서 관리 — 기존 Admin Web UI를 WebView에 로드하여 코드 중복 없이 전체 기능 제공
+**Goal:** Tauri Desktop App의 배포 접근성을 높인다 — waiaas.ai 다운로드 페이지(OS 감지), Homebrew Cask tap, Desktop 설치 가이드
 
 **Target features:**
-- Tauri 2 Shell + Sidecar Manager (Node.js SEA 바이너리 관리, crash detection, 동적 포트 할당)
-- IPC 브릿지 7개 명령 + 시스템 트레이 3색 상태 아이콘
-- Setup Wizard 5단계 (마스터 패스워드 → 체인 선택 → 월렛 생성 → Owner 연결 → 완료)
-- WalletConnect @reown/appkit 통합 (Phase 0 스파이크로 Go/No-Go 결정)
-- Admin Web UI Desktop 전용 확장 (isDesktop() 조건부 렌더링, 4-layer tree-shaking)
+- waiaas.ai 다운로드 페이지 (OS 자동 감지 + GitHub Releases API 연동, 클라이언트 사이드 JS, 대체 설치법 안내)
+- Homebrew Cask Tap (homebrew-waiaas 별도 repo, CI 자동 formula 업데이트)
+- Desktop 설치 가이드 (OS별 설치/Setup Wizard/트러블슈팅/업그레이드, docs/admin-manual/ 10번째 파일)
+- SUBMISSION_KIT.md Desktop 배포 채널 항목 추가
 - GitHub Releases CI (tauri-action 3 플랫폼 빌드) + Tauri 자동 업데이트
+
+## Previous Milestone: v33.2 Tauri Desktop App — SHIPPED 2026-04-01
+
+Tauri 2 기반 데스크탑 앱. Rust SidecarManager(Node.js SEA 바이너리 관리, crash detection, 동적 포트 할당), 7 IPC 명령, 3색 시스템 트레이, 5단계 Setup Wizard, WalletConnect QR(Plan B REST API), GitHub Releases CI 3 플랫폼 빌드 + Ed25519 auto-update. 5 phases, 12 plans, 37 requirements, 33 commits, 108 files, +32,011/-7,916 lines.
 
 ## Previous Milestone: v33.0 Desktop App 아키텍처 재설계 — SHIPPED 2026-03-31
 
