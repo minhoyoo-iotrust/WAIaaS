@@ -134,10 +134,10 @@ Plans:
   1. 사이트의 모든 페이지 네비게이션에 Download 링크가 표시된다
   2. sitemap.xml에 /download/ URL이 포함된다
   3. SUBMISSION_KIT.md에 Desktop App 배포 채널(다운로드 페이지, GitHub Releases) 항목이 존재한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 466-01: 네비게이션 + sitemap + SUBMISSION_KIT 업데이트
+- [ ] 466-01-PLAN.md — 네비게이션 Download 링크 + sitemap 등록 + SUBMISSION_KIT 업데이트
 
 ## Progress
 
