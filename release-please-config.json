@@ -65,7 +65,11 @@
         "packages/push-relay/package.json",
         "packages/actions/package.json",
         "packages/openclaw-plugin/package.json",
-        "python-sdk/pyproject.toml"
+        "python-sdk/pyproject.toml",
+        {
+          "path": "apps/desktop/src-tauri/tauri.conf.json",
+          "jsonpath": "$.version"
+        }
       ]
     }
   }

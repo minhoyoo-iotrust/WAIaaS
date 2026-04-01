@@ -53,6 +53,7 @@
 | 465 | BUG | HIGH | Wallet SDK sendViaRelay에 X-API-Key 헤더 누락 — 서명 응답 전송 시 401 | — | FIXED | 2026-03-26 |
 | 466 | BUG | HIGH | 데몬 PushRelaySigningChannel이 서명 응답을 base64 래핑 포맷으로 기대 (서버는 직접 JSON 반환) | — | FIXED | 2026-03-26 |
 | 467 | BUG | HIGH | Admin 테스트 서명 요청의 long-polling 응답 파싱도 base64 래핑 포맷으로 기대 (#466 동일 원인) | — | FIXED | 2026-03-26 |
+| 468 | ENHANCEMENT | MEDIUM | Desktop 릴리즈를 메인 릴리즈 파이프라인에 통합 (Gate 2 승인 후 병렬 배포) | — | FIXED | 2026-04-01 |
 
 ## Type Legend
 
@@ -68,5 +69,5 @@
 - **PLANNED:** 1
 - **FIXED:** 466
 - **WONTFIX:** 1
-- **Total:** 468
+- **Total:** 469
 - **Archived:** 428 (001–428)
