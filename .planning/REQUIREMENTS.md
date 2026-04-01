@@ -68,13 +68,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | — |
+| DL-01 | Phase 465 | Pending |
+| DL-02 | Phase 465 | Pending |
+| DL-03 | Phase 465 | Pending |
+| DL-04 | Phase 465 | Pending |
+| DL-05 | Phase 465 | Pending |
+| DL-06 | Phase 465 | Pending |
+| DL-07 | Phase 465 | Pending |
+| DL-08 | Phase 466 | Pending |
+| IG-01 | Phase 464 | Pending |
+| IG-02 | Phase 464 | Pending |
+| IG-03 | Phase 464 | Pending |
+| IG-04 | Phase 464 | Pending |
+| IG-05 | Phase 464 | Pending |
+| IG-06 | Phase 464 | Pending |
+| IG-07 | Phase 464 | Pending |
+| DIST-01 | Phase 466 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-01*
-*Last updated: 2026-04-01 after initial definition*
+*Last updated: 2026-04-01 after roadmap creation*
