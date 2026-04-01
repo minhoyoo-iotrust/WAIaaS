@@ -19,7 +19,7 @@
 | 471 | BUG | HIGH | Desktop 빌드 CI에서 workspace 패키지 dist 누락 | — | FIXED | 2026-04-01 |
 | 472 | BUG | HIGH | Desktop SEA 빌드 esbuild 외부 모듈 resolve 실패 | — | OPEN | — |
 | 473 | BUG | HIGH | Desktop 앱 동적 포트로 외부 에이전트 접속 불가 | — | OPEN | — |
-| 474 | ENHANCEMENT | LOW | Desktop 앱 아이콘을 사이트 파비콘 기반으로 교체 | — | OPEN | — |
+| 474 | ENHANCEMENT | LOW | Desktop 앱 아이콘을 사이트 파비콘 기반으로 교체 | — | FIXED | 2026-04-02 |
 
 ## Type Legend
 
@@ -31,9 +31,9 @@
 
 ## Summary
 
-- **OPEN:** 3
+- **OPEN:** 2
 - **PLANNED:** 0
-- **FIXED:** 470
+- **FIXED:** 471
 - **WONTFIX:** 1
 - **Total:** 474
 - **Archived:** 468 (001–468)
