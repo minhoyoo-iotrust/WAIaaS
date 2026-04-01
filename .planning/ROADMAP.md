@@ -148,6 +148,6 @@ Phases execute in numeric order: 464 → 465 → 466
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 464. Desktop Installation Guide | 1/1 | Complete   | 2026-04-01 |
+| 464. Desktop Installation Guide | 1/1 | Complete    | 2026-04-01 |
 | 465. Download Page | 0/2 | Not started | - |
 | 466. Site Integration & Distribution | 0/1 | Not started | - |
