@@ -124,7 +124,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 465-01-PLAN.md — Download page HTML + OS 감지 + GitHub API 연동 + 스타일링 + 폴백 + 대체 설치법
+- [x] 465-01-PLAN.md — Download page HTML + OS 감지 + GitHub API 연동 + 스타일링 + 폴백 + 대체 설치법
 
 ### Phase 466: Site Integration & Distribution
 **Goal**: 다운로드 페이지가 사이트 전체 네비게이션에 통합되고 배포 추적 문서가 업데이트된다
@@ -147,5 +147,5 @@ Phases execute in numeric order: 464 → 465 → 466
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 464. Desktop Installation Guide | 1/1 | Complete    | 2026-04-01 |
-| 465. Download Page | 0/1 | Not started | - |
+| 465. Download Page | 1/1 | Complete | 2026-04-01 |
 | 466. Site Integration & Distribution | 0/1 | Not started | - |

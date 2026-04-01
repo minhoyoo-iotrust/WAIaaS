@@ -9,13 +9,13 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Download Page
 
-- [ ] **DL-01**: 사용자가 waiaas.ai/download 페이지에서 자신의 OS에 맞는 다운로드 버튼을 주요 CTA로 볼 수 있다
-- [ ] **DL-02**: `navigator.userAgentData.platform` + `navigator.userAgent` 폴백으로 macOS/Windows/Linux를 자동 감지한다
-- [ ] **DL-03**: GitHub Releases API에서 `desktop-v*` 태그를 필터링하여 최신 Desktop 릴리스 바이너리 URL을 동적으로 로드한다
-- [ ] **DL-04**: 다운로드 페이지에 최신 버전 번호와 릴리스 날짜가 표시된다
-- [ ] **DL-05**: GitHub API 실패 시 "GitHub Releases에서 직접 다운로드" 폴백 링크가 표시된다
-- [ ] **DL-06**: GitHub API 응답에 5분 TTL 클라이언트 캐시가 적용된다
-- [ ] **DL-07**: 다운로드 페이지에 npm, Docker 대체 설치법이 명시된다
+- [x] **DL-01**: 사용자가 waiaas.ai/download 페이지에서 자신의 OS에 맞는 다운로드 버튼을 주요 CTA로 볼 수 있다
+- [x] **DL-02**: `navigator.userAgentData.platform` + `navigator.userAgent` 폴백으로 macOS/Windows/Linux를 자동 감지한다
+- [x] **DL-03**: GitHub Releases API에서 `desktop-v*` 태그를 필터링하여 최신 Desktop 릴리스 바이너리 URL을 동적으로 로드한다
+- [x] **DL-04**: 다운로드 페이지에 최신 버전 번호와 릴리스 날짜가 표시된다
+- [x] **DL-05**: GitHub API 실패 시 "GitHub Releases에서 직접 다운로드" 폴백 링크가 표시된다
+- [x] **DL-06**: GitHub API 응답에 5분 TTL 클라이언트 캐시가 적용된다
+- [x] **DL-07**: 다운로드 페이지에 npm, Docker 대체 설치법이 명시된다
 - [ ] **DL-08**: 사이트 네비게이션에 Download 링크가 추가되고 sitemap.xml에 /download/ URL이 포함된다
 
 ### Installation Guide
@@ -68,13 +68,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DL-01 | Phase 465 | Pending |
-| DL-02 | Phase 465 | Pending |
-| DL-03 | Phase 465 | Pending |
-| DL-04 | Phase 465 | Pending |
-| DL-05 | Phase 465 | Pending |
-| DL-06 | Phase 465 | Pending |
-| DL-07 | Phase 465 | Pending |
+| DL-01 | Phase 465 | Complete |
+| DL-02 | Phase 465 | Complete |
+| DL-03 | Phase 465 | Complete |
+| DL-04 | Phase 465 | Complete |
+| DL-05 | Phase 465 | Complete |
+| DL-06 | Phase 465 | Complete |
+| DL-07 | Phase 465 | Complete |
 | DL-08 | Phase 466 | Pending |
 | IG-01 | Phase 464 | Complete |
 | IG-02 | Phase 464 | Complete |
