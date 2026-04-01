@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.13.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.4...v2.13.0-rc.5) (2026-04-01)
+
+
+### Bug Fixes
+
+* **ci:** disable Windows desktop build, restore release-please version sync ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([a8d5a02](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a8d5a02662897b77d0ad1b60d9265cafc46c813a))
+* **ci:** install desktop deps separately and use npx --prefix ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([91c6519](https://github.com/minhoyoo-iotrust/WAIaaS/commit/91c6519e8a42c5f4ac2c29854bcb83b8ec594000))
+* **ci:** remove tauriScript to let tauri-action install CLI itself ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([ce9c2d9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ce9c2d9c12cd5cd41503ea10e8ee234a96d439f7))
+* **ci:** scope desktop build to daemon/CLI packages only ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([b94bb37](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b94bb376e7f0baa48028a3f9a4be7480d9d8f95a))
+* **ci:** use correct package name @waiaas/desktop in turbo filter ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([03bfcd6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/03bfcd65f805a029adaf981ae0d52ff6c8175781))
+* **ci:** use npx tauri instead of pnpm tauri for CLI resolution ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([5cf1804](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5cf18049f43df023f220e5432864ed77e4ecee90))
+* **ci:** use pnpm --filter instead of turbo --filter for desktop build ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([1f17747](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1f17747f7b5fead2ca527d5670918f49cd47e7d7))
+* **ci:** use turbo --filter=@waiaas/cli... for scoped SEA build ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([33cf737](https://github.com/minhoyoo-iotrust/WAIaaS/commit/33cf73750d2fece181fa217552f6bb06293a51a8))
+* desktop build pipeline — issues [#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472) [#473](https://github.com/minhoyoo-iotrust/WAIaaS/issues/473) [#474](https://github.com/minhoyoo-iotrust/WAIaaS/issues/474) ([f399203](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f39920318c4e4480d6bd1530c5dabe9a01ec7a59))
+* **desktop:** add icon.ico/icon.icns and remove Apple signing env ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([3fe9779](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3fe9779a5f372be0dc45e5638415fb2b224cc487))
+* **desktop:** add legacy Solana deps to esbuild external list ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([7705b2f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7705b2fe8b61a81b13e99f5a8b623dde4a46f626))
+* **desktop:** add remaining Solana transitive deps to esbuild external ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([b46972e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b46972e4c3853fc94df67096037f79dbe9be2081))
+* **desktop:** decouple desktop version from release-please ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([950e8c6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/950e8c66382eee16bad40c1e0dab818a7f42acdb))
+* **desktop:** replace placeholder icons with favicon-based icon set ([#474](https://github.com/minhoyoo-iotrust/WAIaaS/issues/474)) ([d0980c3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d0980c3ff14429f92841b17e367a9ec13df70292))
+* **desktop:** set Ed25519 updater public key in tauri.conf.json ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([8bfc4bf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8bfc4bffb5ab8a5f596b84678c8c943ee8b9330d))
+* **desktop:** update Windows API calls for windows crate v0.58 ([#472](https://github.com/minhoyoo-iotrust/WAIaaS/issues/472)) ([2759796](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2759796ec182500079fb339c81cab565e352cd4a))
+* **desktop:** use fixed port 3100 instead of dynamic port 0 ([#473](https://github.com/minhoyoo-iotrust/WAIaaS/issues/473)) ([46dd1b2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/46dd1b2b0317954e0769ddb3573f1137eee649d8))
+
 ## [2.13.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.3...v2.13.0-rc.4) (2026-04-01)
 
 
