@@ -142,7 +142,7 @@ async function main() {
         'better-sqlite3',
         'argon2',
         'fsevents',
-        // Legacy @solana/web3.js tree — transitive deps from @solana/spl-token etc.
+        // Legacy @solana/web3.js dependency tree — transitive deps from @solana/spl-token etc.
         // Our codebase uses @solana/kit; these are optional peer deps not needed at runtime.
         '@solana/web3.js',
         '@solana/buffer-layout-utils',
@@ -151,6 +151,10 @@ async function main() {
         '@project-serum/serum',
         'buffer-layout',
         'superstruct',
+        'pako',
+        'camelcase',
+        'js-sha256',
+        'snake-case',
       ],
       sourcemap: false,
       minify: false,
