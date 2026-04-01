@@ -92,7 +92,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build workspace packages (daemon/CLI only — excludes desktop/admin frontend)
-        run: pnpm turbo run build --filter='!@waiaas/admin' --filter='!apps/desktop'
+        run: pnpm turbo run build --filter='!@waiaas/admin' --filter='!@waiaas/desktop'
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
