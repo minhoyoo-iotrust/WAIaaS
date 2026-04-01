@@ -71,10 +71,12 @@ jobs:
             target: x86_64-unknown-linux-gnu
             rust_target: x86_64-unknown-linux-gnu
             args: ''
-          - platform: windows-latest
-            target: x86_64-pc-windows-msvc
-            rust_target: x86_64-pc-windows-msvc
-            args: ''
+          # Windows disabled: MSI requires numeric-only versions, incompatible with rc pre-release.
+          # Re-enable after #475 (desktop version management) is implemented.
+          # - platform: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          #   rust_target: x86_64-pc-windows-msvc
+          #   args: ''
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout
@@ -88,11 +90,14 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
-      - name: Install dependencies
+      - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build workspace packages
-        run: pnpm turbo run build
+      - name: Install desktop dependencies
+        run: cd apps/desktop && npm install
+
+      - name: Build daemon dependencies for SEA binary
+        run: pnpm turbo run build --filter=@waiaas/cli...
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -116,20 +121,13 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: apps/desktop
-          tauriScript: pnpm tauri
+          tauriScript: npx --prefix apps/desktop tauri
           args: ${{ matrix.args }}
           releaseId: ${{ needs.create-release.outputs.release_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # macOS code signing + notarization (optional -- skipped if not set)
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
   publish-release:
     needs: [create-release, build-tauri]

@@ -137,11 +137,24 @@ async function main() {
       target: 'node22',
       outfile: BUNDLE_OUTPUT,
       external: [
+        // Native addon modules (loaded via dlopen at runtime)
         'sodium-native',
         'better-sqlite3',
         'argon2',
-        // Keep native modules external
         'fsevents',
+        // Legacy @solana/web3.js dependency tree — transitive deps from @solana/spl-token etc.
+        // Our codebase uses @solana/kit; these are optional peer deps not needed at runtime.
+        '@solana/web3.js',
+        '@solana/buffer-layout-utils',
+        '@solana/spl-token-metadata',
+        '@project-serum/borsh',
+        '@project-serum/serum',
+        'buffer-layout',
+        'superstruct',
+        'pako',
+        'camelcase',
+        'js-sha256',
+        'snake-case',
       ],
       sourcemap: false,
       minify: false,
