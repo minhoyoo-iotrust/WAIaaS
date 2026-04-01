@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.1...v2.13.0-rc.2) (2026-04-01)
+
+
+### Bug Fixes
+
+* **ci:** fix release pipeline startup_failure ([a43930b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a43930b0e4aae6a6ff552938d8a3182fd4805a15))
+
 ## [2.13.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc...v2.13.0-rc.1) (2026-04-01)
 
 
