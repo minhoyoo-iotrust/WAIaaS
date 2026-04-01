@@ -1,7 +1,8 @@
 # 마일스톤 m33-02: Tauri Desktop App
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v33.2
+- **Completed:** 2026-04-01
 
 ## 목표
 

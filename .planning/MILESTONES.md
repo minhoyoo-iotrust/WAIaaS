@@ -1,5 +1,26 @@
 # Project Milestones: WAIaaS
 
+## v33.2 Tauri Desktop App (Shipped: 2026-04-01)
+
+**Phases completed:** 5 phases, 12 plans, 20 tasks
+
+**Key accomplishments:**
+
+- Tauri 2 spike project with @reown/appkit QR pairing, Solana/EVM dual adapters, and WalletConnect CSP ready for manual Go/No-Go verification
+- Tauri 2 project with Rust SidecarManager for daemon lifecycle management (spawn, stdout port parsing, health polling, crash restart, PID lockfile, graceful shutdown)
+- Node.js SEA build pipeline with esbuild bundling, native addon dlopen loader, and WAIAAS_PORT stdout protocol for sidecar port discovery
+- Splash page with Tauri 2.x event listeners for daemon lifecycle status, integrated with SidecarManager events and WebView navigation
+- 7 typed IPC command wrappers with isDesktop() detection and 4-layer tree-shaking ensuring Desktop code never leaks to browser builds
+- 3-color system tray icon with context menu and 30-second health polling using include_bytes! PNG icons
+- 5-step Desktop Setup Wizard with Preact signals state management, localStorage first-run detection, and dynamic import App.tsx integration
+- WalletConnect QR pairing connector using daemon REST API (Plan B) with zero @reown/appkit dependency and reactive QR modal
+- Owner step wired to WalletConnect QR modal with dynamic imports for complete 5-step Setup Wizard flow
+- Tauri updater plugin with Ed25519 signing config for secure auto-updates
+- GitHub Actions 3-platform build matrix (macOS arm64/x64, Windows x64, Linux x64) with draft-then-publish pattern
+- UpdateBanner auto-update UI with dynamic import tree-shaking for Desktop-only rendering
+
+---
+
 ## v33.0 Desktop App 아키텍처 재설계 (Shipped: 2026-03-31)
 
 **Phases completed:** 3 phases, 6 plans, 12 tasks

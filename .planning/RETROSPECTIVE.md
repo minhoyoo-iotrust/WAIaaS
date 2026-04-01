@@ -2,6 +2,47 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v33.2 — Tauri Desktop App
+
+**Shipped:** 2026-04-01
+**Phases:** 5 | **Plans:** 12
+
+### What Was Built
+- WalletConnect spike (Go/No-Go evaluation) → Plan B (daemon REST API) selected over Plan A (@reown/appkit)
+- Tauri 2 + Rust SidecarManager: SEA 바이너리 빌드, 사이드카 라이프사이클(spawn/restart/shutdown), PID lockfile, 동적 포트 발견
+- 7 IPC commands (start/stop/restart/status/logs/notification/quit) + isDesktop() + 4-layer tree-shaking
+- 3-color system tray (green/yellow/red) with context menu and 30s health polling
+- 5-step Setup Wizard (password → chain → wallet → owner → complete) with WalletConnect QR pairing
+- GitHub Actions 3-platform build matrix (macOS arm64/x64, Windows x64, Linux x64) + Ed25519 auto-update
+
+### What Worked
+- v33.0 설계 마일스톤이 v33.2 구현을 매끄럽게 만듦 — 아키텍처 결정이 모두 완료된 상태에서 코딩만 집중
+- Phase 459(spike)와 Phase 460(shell) 병렬 실행으로 시간 절약
+- Plan B 결정이 올바름 — REST API 기반 WC는 @reown/appkit 번들 의존 제거, tree-shaking 부담 없음
+- Admin Web UI 재사용이 핵심 성공 요인 — Desktop 전용 코드는 ~3,000줄만 추가
+
+### What Was Inefficient
+- Nyquist validation 전 phase MISSING — 구현 중심 마일스톤에서 자동화 테스트 부재
+- Placeholder 아이콘/키가 tech debt로 누적 (RGBA PNG, Ed25519 updater key)
+- IPC/Tray/Wizard에 자동화 테스트 없음 — Desktop 코드 특성상 E2E 테스트 환경 구축 필요
+
+### Patterns Established
+- SEA 바이너리 빌드 파이프라인: CLI → esbuild CJS → SEA blob → postject → Tauri externalBin
+- WAIAAS_PORT stdout + daemon.port 파일 이중 포트 발견 프로토콜
+- signal<ComponentType | null> lazy-load 패턴 for Desktop-only components
+- Plan B WalletConnect: daemon REST API /v1/wallets/{id}/wc/pair + polling
+
+### Key Lessons
+1. 설계+구현 분리(v33.0→v33.2) 패턴이 대형 기능에 효과적 — 설계 변경 비용을 구현 전에 흡수
+2. Plan A/B 스파이크를 별도 phase로 배치하면 리스크 조기 해소 가능
+3. Desktop 전용 코드는 tree-shaking CI 검증이 필수 — 브라우저 번들 오염 방지
+4. Tauri 2 generate_handler 패턴이 plugin system보다 단순하고 충분 (앱 레벨 IPC에 적합)
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 5 phases + 12 plans in ~1 day, 33 commits, 108 files, +32,011/-7,916 lines
+
 ## Milestone: v33.0 — Desktop App 아키텍처 재설계
 
 **Shipped:** 2026-03-31
