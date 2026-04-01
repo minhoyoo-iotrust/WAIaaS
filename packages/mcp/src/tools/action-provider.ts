@@ -215,7 +215,7 @@ export async function registerActionProviderTools(
           toolName,
           description,
           {
-            params: z.record(z.unknown()).optional()
+            params: z.record(z.string(), z.unknown()).optional()
               .describe('Action-specific parameters as key-value pairs'),
             ...COMMON_MCP_FIELDS,
           },

@@ -18,7 +18,7 @@ export function registerCallContract(server: McpServer, apiClient: ApiClient, wa
     {
       to: z.string().describe('Contract address'),
       calldata: z.string().optional().describe('Hex-encoded calldata (EVM)'),
-      abi: z.array(z.record(z.unknown())).optional().describe('ABI fragment for decoding (EVM)'),
+      abi: z.array(z.record(z.string(), z.unknown())).optional().describe('ABI fragment for decoding (EVM)'),
       value: z.string().optional().describe('Native token value in smallest units (wei). Example: "1000000000000000000" = 1 ETH'),
       programId: z.string().optional().describe('Program ID (Solana)'),
       instructionData: z.string().optional().describe('Base64-encoded instruction data (Solana)'),

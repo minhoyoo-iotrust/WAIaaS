@@ -16,7 +16,7 @@ export function registerSendBatch(server: McpServer, apiClient: ApiClient, walle
     'send_batch',
     withWalletPrefix('Send multiple instructions in a single atomic transaction (Solana only, 2-20 instructions).', walletContext?.walletName),
     {
-      instructions: z.array(z.record(z.unknown())).min(2).max(20)
+      instructions: z.array(z.record(z.string(), z.unknown())).min(2).max(20)
         .describe('Array of instruction objects (each is a TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE without the type field). All amount values must be in smallest units (wei/lamports). TOKEN_TRANSFER/APPROVE instructions can include an optional assetId field in the token object for CAIP-19 asset identification.'),
       network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Required for EVM wallets; auto-resolved for Solana.'),
       wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
