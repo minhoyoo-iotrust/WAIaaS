@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.13.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.3...v2.13.0-rc.4) (2026-04-01)
+
+
+### Bug Fixes
+
+* **ci:** add workspace build step to desktop release pipeline ([#471](https://github.com/minhoyoo-iotrust/WAIaaS/issues/471)) ([689a974](https://github.com/minhoyoo-iotrust/WAIaaS/commit/689a974040550470c842cb9d59177a9f79527b84))
+* **ci:** merge approval-gate into deploy job to eliminate double approval ([#470](https://github.com/minhoyoo-iotrust/WAIaaS/issues/470)) ([9a8a2f5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9a8a2f5a5fe402f236b51b44366cb48b82cce14d))
+* resolve issues [#469](https://github.com/minhoyoo-iotrust/WAIaaS/issues/469) [#470](https://github.com/minhoyoo-iotrust/WAIaaS/issues/470) [#471](https://github.com/minhoyoo-iotrust/WAIaaS/issues/471) ([1547af0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1547af0c7d1cc84cc1c1d312f2b885eee2c6da3a))
+* **site:** replace Korean fallback text with English on download page ([4f4a8ee](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4f4a8eec3eaab091268a1bcbcba39a0e57d294ab))
+
 ## [2.13.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.2...v2.13.0-rc.3) (2026-04-01)
 
 
