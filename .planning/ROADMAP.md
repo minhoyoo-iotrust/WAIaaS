@@ -107,10 +107,10 @@ See `.planning/milestones/v33.2-ROADMAP.md` for full details.
   3. Linux 사용자가 .AppImage/.deb 설치 절차와 권한 설정을 문서에서 확인할 수 있다
   4. Setup Wizard 5단계와 자동 업데이트(Ed25519) 동작 설명이 포함되어 있다
   5. docs/admin-manual/ README 목차에 desktop-installation.md 링크가 포함되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 464-01: Installation guide 작성 + admin-manual 목차 연동
+- [ ] 464-01-PLAN.md — Desktop Installation Guide 작성 + admin-manual 목차 연동
 
 ### Phase 465: Download Page
 **Goal**: 사용자가 waiaas.ai/download 페이지에서 자신의 OS에 맞는 Desktop App을 다운로드할 수 있다
