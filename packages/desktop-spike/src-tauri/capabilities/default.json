@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicco-io/tauri/main/crates/tauri-utils/schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for the WalletConnect spike",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

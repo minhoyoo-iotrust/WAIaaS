@@ -1471,8 +1471,23 @@ export async function startDaemon(state: DaemonState, dataDir: string, masterPas
         server.once('error', onError);
       });
 
+      // Discover actual port (supports port=0 for OS-assigned dynamic port)
+      const addr = server.address();
+      const actualPort = (typeof addr === 'object' && addr !== null) ? addr.port : port;
+
+      // Sidecar port discovery protocol (design doc 39, section 4.2.1)
+      // SidecarManager parses this from stdout to discover the daemon's port
+      console.log(`WAIAAS_PORT=${actualPort}`);
+
+      // Fallback: also write port to file for cases where stdout parsing fails
+      try {
+        writeFileSync(join(dataDir, 'daemon.port'), String(actualPort));
+      } catch {
+        // Non-critical: stdout protocol is primary, file is fallback
+      }
+
       state.logger.debug(
-        `Step 5: HTTP server listening on ${hostname}:${port}`,
+        `Step 5: HTTP server listening on ${hostname}:${actualPort}`,
       );
     })(),
     5_000,

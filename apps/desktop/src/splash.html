@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAIaaS Desktop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        .splash-container {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: #e94560;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo-sub {
+            font-size: 0.875rem;
+            color: #8888aa;
+            margin-bottom: 3rem;
+            letter-spacing: 0.05em;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 2rem;
+            border: 3px solid rgba(233, 69, 96, 0.15);
+            border-top-color: #e94560;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            font-size: 0.9375rem;
+            color: #a0a0c0;
+            min-height: 1.5em;
+            transition: opacity 0.3s ease;
+        }
+
+        .status-text.error {
+            color: #e94560;
+        }
+
+        .retry-btn {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 0.625rem 1.5rem;
+            background: #e94560;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .retry-btn:hover {
+            background: #c73650;
+        }
+
+        .retry-btn.visible {
+            display: inline-block;
+        }
+
+        .logs-btn {
+            display: none;
+            margin-top: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            color: #8888aa;
+            border: 1px solid #444466;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .logs-btn:hover {
+            border-color: #8888aa;
+        }
+
+        .logs-btn.visible {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-container">
+        <div class="logo">WAIaaS</div>
+        <div class="logo-sub">AI Agent Wallet Manager</div>
+        <div class="spinner" id="spinner"></div>
+        <div class="status-text" id="status">Starting daemon...</div>
+        <button class="retry-btn" id="retryBtn" onclick="retryStart()">Retry</button>
+        <button class="logs-btn" id="logsBtn" onclick="openLogs()">Open Logs</button>
+    </div>
+
+    <script>
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
+
+        const statusMessages = {
+            spawning: 'Starting WAIaaS daemon...',
+            port_discovery: 'Waiting for port assignment...',
+            health_check: 'Connecting to daemon...',
+            ready: 'Loading Admin Dashboard...',
+            restarting: 'Restarting daemon...',
+            error: 'Failed to start daemon',
+        };
+
+        function updateUI(stage, message) {
+            const statusEl = document.getElementById('status');
+            const spinner = document.getElementById('spinner');
+            const retryBtn = document.getElementById('retryBtn');
+            const logsBtn = document.getElementById('logsBtn');
+
+            if (stage === 'error') {
+                statusEl.className = 'status-text error';
+                statusEl.textContent = message || 'Failed to start daemon';
+                spinner.style.display = 'none';
+
+                if (retryCount < MAX_RETRIES) {
+                    retryBtn.classList.add('visible');
+                } else {
+                    retryBtn.classList.remove('visible');
+                    logsBtn.classList.add('visible');
+                    statusEl.textContent = 'Unable to start daemon. Please check the logs.';
+                }
+            } else {
+                statusEl.className = 'status-text';
+                statusEl.textContent = message || statusMessages[stage] || stage;
+                spinner.style.display = 'block';
+                retryBtn.classList.remove('visible');
+                logsBtn.classList.remove('visible');
+            }
+        }
+
+        // Listen for sidecar status events from Rust backend (Tauri 2.x)
+        // splash.html is loaded as a local file (tauri:// protocol),
+        // so __TAURI_INTERNALS__ is available directly.
+        if (window.__TAURI_INTERNALS__) {
+            // Tauri 2.x event listening via internal API
+            // The listen function registers a callback that fires when Rust emits events
+            var callbackId = window.__TAURI_INTERNALS__.transformCallback(function (event) {
+                if (event && event.payload) {
+                    updateUI(event.payload.stage, event.payload.message);
+                }
+            });
+
+            window.__TAURI_INTERNALS__.invoke('plugin:event|listen', {
+                event: 'sidecar-status',
+                target: { kind: 'Any' },
+                handler: callbackId,
+            }).catch(function (err) {
+                console.warn('Failed to register event listener:', err);
+            });
+
+            // Also listen for sidecar-crashed event
+            var crashCallbackId = window.__TAURI_INTERNALS__.transformCallback(function (event) {
+                if (event && event.payload) {
+                    updateUI('error', 'Daemon crashed (restart #' + event.payload.restart_count + ')');
+                }
+            });
+
+            window.__TAURI_INTERNALS__.invoke('plugin:event|listen', {
+                event: 'sidecar-crashed',
+                target: { kind: 'Any' },
+                handler: crashCallbackId,
+            }).catch(function () {});
+        }
+
+        async function retryStart() {
+            retryCount++;
+            updateUI('spawning', null);
+
+            try {
+                if (window.__TAURI_INTERNALS__) {
+                    await window.__TAURI_INTERNALS__.invoke('start_daemon', {});
+                }
+            } catch (err) {
+                updateUI('error', String(err));
+            }
+        }
+
+        async function openLogs() {
+            try {
+                if (window.__TAURI_INTERNALS__) {
+                    var logs = await window.__TAURI_INTERNALS__.invoke('get_daemon_logs', {
+                        args: { lines: 50 }
+                    });
+                    // Display logs in a simple overlay
+                    var overlay = document.createElement('div');
+                    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);padding:2rem;overflow:auto;z-index:100;';
+                    overlay.innerHTML = '<pre style="color:#e0e0e0;font-size:12px;white-space:pre-wrap;">' +
+                        (logs || []).join('\n') + '</pre>' +
+                        '<button onclick="this.parentElement.remove()" style="position:fixed;top:1rem;right:1rem;background:#e94560;color:#fff;border:none;padding:0.5rem 1rem;border-radius:4px;cursor:pointer;">Close</button>';
+                    document.body.appendChild(overlay);
+                }
+            } catch (err) {
+                console.error('Failed to get logs:', err);
+            }
+        }
+    </script>
+</body>
+</html>

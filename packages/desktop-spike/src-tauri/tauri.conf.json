@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicco-io/tauri/main/crates/tauri-utils/schema.json",
+  "productName": "WAIaaS Spike",
+  "version": "0.0.0",
+  "identifier": "com.waiaas.spike",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "WAIaaS WalletConnect Spike",
+        "width": 800,
+        "height": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://relay.walletconnect.com https://rpc.walletconnect.com https://pulse.walletconnect.org https://*.infura.io https://*.alchemy.com https://api.web3modal.org https://api.web3modal.com; img-src 'self' data: https:; font-src 'self' data:; frame-src https://secure.walletconnect.com https://secure.web3modal.com"
+    }
+  }
+}

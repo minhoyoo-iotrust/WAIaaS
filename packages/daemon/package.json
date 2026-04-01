@@ -39,7 +39,8 @@
     "test:platform": "[ -d src/__tests__/platform ] && vitest run --dir src/__tests__/platform || true",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "build:sea": "node scripts/build-sea.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.9",
@@ -73,6 +74,8 @@
     "@types/qrcode": "^1.5.6",
     "@types/semver": "^7.7.1",
     "drizzle-kit": "^0.30.0",
-    "msw": "^2.12.10"
+    "esbuild": "^0.25.0",
+    "msw": "^2.12.10",
+    "postject": "^1.0.0-alpha.6"
   }
 }

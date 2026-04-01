@@ -28,6 +28,18 @@
   "dependencies": {
     "@waiaas/shared": "workspace:*"
   },
+  "peerDependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-updater": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@tauri-apps/api": {
+      "optional": true
+    },
+    "@tauri-apps/plugin-updater": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.0",
     "@preact/signals": "^2.0.0",

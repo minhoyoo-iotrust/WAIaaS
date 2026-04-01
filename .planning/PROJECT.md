@@ -8,17 +8,21 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v33.0 Desktop App 아키텍처 재설계
+## Current Milestone: v33.2 Tauri Desktop App
 
-**Goal:** 설계 문서 39(Tauri Desktop Architecture)를 Admin Web UI 재사용 아키텍처로 변경 — React 18 별도 구현을 폐기하고, 기존 Admin Web UI(Preact 10.x)를 Tauri WebView에서 로드하는 구조로 전환
+**Goal:** Tauri 2 기반 데스크탑 앱으로 WAIaaS 데몬을 GUI에서 관리 — 기존 Admin Web UI를 WebView에 로드하여 코드 중복 없이 전체 기능 제공
 
 **Target features:**
-- 설계 문서 39 수정 (6개 섹션 변경: 아키텍처 다이어그램, 계층 역할 분리, HTTP localhost, 프로젝트 구조, UI 화면별 플로우, 구현 노트)
-- 신규 설계 항목 추가 (Desktop 환경 감지 `isDesktop()`, IPC 브릿지, 조건부 렌더링 전략)
-- 데몬 포트 동적 할당 + 번들 최적화 전략 (dynamic import, lazy load)
-- m33-02 objectives 정합성 갱신
+- Tauri 2 Shell + Sidecar Manager (Node.js SEA 바이너리 관리, crash detection, 동적 포트 할당)
+- IPC 브릿지 7개 명령 + 시스템 트레이 3색 상태 아이콘
+- Setup Wizard 5단계 (마스터 패스워드 → 체인 선택 → 월렛 생성 → Owner 연결 → 완료)
+- WalletConnect @reown/appkit 통합 (Phase 0 스파이크로 Go/No-Go 결정)
+- Admin Web UI Desktop 전용 확장 (isDesktop() 조건부 렌더링, 4-layer tree-shaking)
+- GitHub Releases CI (tauri-action 3 플랫폼 빌드) + Tauri 자동 업데이트
 
-**Scope:** 설계 전용 마일스톤 (코드 구현 없음). 문서 39의 v0.5 이후 괴리 해소.
+## Previous Milestone: v33.0 Desktop App 아키텍처 재설계 — SHIPPED 2026-03-31
+
+설계 문서 39를 React 18 SPA에서 Admin Web UI(Preact 10.x) WebView 로드 아키텍처로 전환. isDesktop() 환경 감지, 7개 IPC 명령 규격, 4-layer tree-shaking, TCP bind(0) 동적 포트 할당 설계 완료. m33-02 objectives 정합성 갱신. 3 phases, 6 plans, 18 requirements, 26 commits, +5,772/-1,843 lines.
 
 ## Previous Milestone: v32.10 에이전트 스킬 정리 + OpenClaw 플러그인 — SHIPPED 2026-03-18
 
