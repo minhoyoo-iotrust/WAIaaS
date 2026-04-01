@@ -130,6 +130,12 @@ importers:
 
   packages/admin:
     dependencies:
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.10.1
+      '@tauri-apps/plugin-updater':
+        specifier: ^2.0.0
+        version: 2.10.0
       '@waiaas/shared':
         specifier: workspace:*
         version: link:../shared
@@ -311,9 +317,15 @@ importers:
       drizzle-kit:
         specifier: ^0.30.0
         version: 0.30.6
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
       msw:
         specifier: ^2.12.10
         version: 2.12.10(@types/node@25.2.3)(typescript@5.9.3)
+      postject:
+        specifier: ^1.0.0-alpha.6
+        version: 1.0.0-alpha.6
 
   packages/desktop-spike:
     dependencies:
@@ -4574,6 +4586,9 @@ packages:
     engines: {node: '>= 10'}
     hasBin: true
 
+  '@tauri-apps/plugin-updater@2.10.0':
+    resolution: {integrity: sha512-ljN8jPlnT0aSn8ecYhuBib84alxfMx6Hc8vJSKMJyzGbTPFZAC44T2I1QNFZssgWKrAlofvJqCC6Rr472JWfkQ==}
+
   '@testing-library/dom@8.20.1':
     resolution: {integrity: sha512-/DiOQ5xBxgdYRC8LNk7U+RWat0S3qRLeIw3ZIkMQ9kkVlRmwD/Eg8k8CqIpD6GW7u20JIUOfMKbxtiLutpjQ4g==}
     engines: {node: '>=12'}
@@ -8285,6 +8300,11 @@ packages:
   postcss@8.5.8:
     resolution: {integrity: sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==}
     engines: {node: ^10 || ^12 || >=14}
+
+  postject@1.0.0-alpha.6:
+    resolution: {integrity: sha512-b9Eb8h2eVqNE8edvKdwqkrY6O7kAwmI8kcnBv1NScolYJbo59XUF0noFq+lxbC1yN20bmC0WBEbDC5H/7ASb0A==}
+    engines: {node: '>=14.0.0'}
+    hasBin: true
 
   preact-router@4.1.2:
     resolution: {integrity: sha512-uICUaUFYh+XQ+6vZtQn1q+X6rSqwq+zorWOCLWPF5FAsQh3EJ+RsDQ9Ee+fjk545YWQHfUxhrBAaemfxEnMOUg==}
@@ -16621,6 +16641,10 @@ snapshots:
       '@tauri-apps/cli-win32-ia32-msvc': 2.10.1
       '@tauri-apps/cli-win32-x64-msvc': 2.10.1
 
+  '@tauri-apps/plugin-updater@2.10.0':
+    dependencies:
+      '@tauri-apps/api': 2.10.1
+
   '@testing-library/dom@8.20.1':
     dependencies:
       '@babel/code-frame': 7.29.0
@@ -19461,8 +19485,7 @@ snapshots:
 
   commander@2.20.3: {}
 
-  commander@9.5.0:
-    optional: true
+  commander@9.5.0: {}
 
   commondir@1.0.1:
     optional: true
@@ -22270,6 +22293,10 @@ snapshots:
       nanoid: 3.3.11
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  postject@1.0.0-alpha.6:
+    dependencies:
+      commander: 9.5.0
 
   preact-router@4.1.2(preact@10.28.3):
     dependencies:
