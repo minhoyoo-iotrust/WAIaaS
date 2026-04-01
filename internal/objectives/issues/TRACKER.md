@@ -17,6 +17,7 @@
 | 469 | BUG | CRITICAL | MCP tools/list Zod 4 z.record() toJSONSchema 크래시 | — | FIXED | 2026-04-01 |
 | 470 | ENHANCEMENT | MEDIUM | 릴리스 파이프라인 승인 2회 요구 | — | FIXED | 2026-04-01 |
 | 471 | BUG | HIGH | Desktop 빌드 CI에서 workspace 패키지 dist 누락 | — | FIXED | 2026-04-01 |
+| 472 | BUG | HIGH | Desktop SEA 빌드 esbuild 외부 모듈 resolve 실패 | — | OPEN | — |
 
 ## Type Legend
 
@@ -28,9 +29,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **PLANNED:** 0
 - **FIXED:** 470
 - **WONTFIX:** 1
-- **Total:** 471
+- **Total:** 472
 - **Archived:** 468 (001–468)
