@@ -44,7 +44,18 @@ m33-02에서 GitHub Releases CI가 3 플랫폼 바이너리를 자동 빌드+업
 | CI 자동화 | Desktop 릴리스 시 `homebrew-waiaas` repo에 PR 자동 생성 (GitHub Actions에서 formula 업데이트) |
 | 지원 아키텍처 | arm64(Apple Silicon) + x64(Intel) universal binary |
 
-### 3. SUBMISSION_KIT.md 업데이트
+### 3. Desktop 설치 가이드
+
+| 항목 | 내용 |
+|------|------|
+| 경로 | `docs/admin-manual/desktop-installation.md` |
+| OS별 설치 | macOS(`.dmg` + Homebrew), Windows(`.msi`), Linux(`.AppImage` / `.deb`) 각각의 설치 절차 |
+| 초기 설정 | Setup Wizard 5단계 안내 (마스터 비밀번호 → 네트워크 → 지갑 → Owner → 완료) |
+| 트러블슈팅 | macOS Gatekeeper 경고 해제, Windows SmartScreen 허용, Linux 권한 설정 등 OS별 일반적 문제 대응 |
+| 업그레이드 | 자동 업데이트(Ed25519 서명 검증) 동작 설명 + 수동 업그레이드 방법 |
+| 기존 매뉴얼 연계 | `docs/admin-manual/` 9파일 체계에 10번째 파일로 추가. 목차(README) 업데이트 |
+
+### 4. SUBMISSION_KIT.md 업데이트
 
 기존 `site/distribution/SUBMISSION_KIT.md`의 체크리스트에 Desktop App 배포 채널 항목 추가.
 
@@ -59,6 +70,10 @@ site/
   assets/
     download.js                          # OS 감지 + GitHub Releases API 클라이언트
     download.css                         # 다운로드 버튼 스타일
+
+docs/
+  admin-manual/
+    desktop-installation.md              # Desktop App 설치 + 초기 설정 + 트러블슈팅 가이드
 
 homebrew-waiaas/                         # 별도 GitHub repo
   Casks/
@@ -82,7 +97,7 @@ homebrew-waiaas/                         # 별도 GitHub repo
 
 ## E2E 검증 시나리오
 
-**자동화 비율: 60%+ — `[HUMAN]` 3건, `[L1]` 5건**
+**자동화 비율: 70%+ — `[HUMAN]` 3건, `[L1]` 8건**
 
 ### 다운로드 페이지
 
@@ -101,11 +116,19 @@ homebrew-waiaas/                         # 별도 GitHub repo
 | 6 | Cask 설치 → 앱 실행 | `brew install --cask waiaas` → `/Applications/WAIaaS.app` 존재 → 앱 실행 → health check 성공 assert | [HUMAN] |
 | 7 | Formula 자동 업데이트 PR | Desktop 릴리스 → `homebrew-waiaas` repo에 PR 자동 생성 → 새 버전 + sha256 반영 assert | [HUMAN] |
 
+### 설치 가이드
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 8 | OS별 설치 절차 완전성 | macOS/Windows/Linux 각 섹션에 설치 명령 또는 단계가 존재 assert | [L1] |
+| 9 | Setup Wizard 안내 일치 | 가이드의 5단계 설명이 실제 Setup Wizard 컴포넌트 흐름과 일치 assert | [L1] |
+| 10 | 트러블슈팅 항목 | Gatekeeper / SmartScreen / Linux 권한 최소 3개 트러블슈팅 항목 존재 assert | [L1] |
+
 ### 사용자 경험 (HUMAN)
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
-| 8 | 다운로드 페이지 UX | 다운로드 페이지 방문 → 3초 이내에 자신의 OS용 다운로드 버튼을 식별할 수 있는지 확인. 대체 설치법이 명확하게 제시되는지 확인 | [HUMAN] |
+| 11 | 다운로드 페이지 UX | 다운로드 페이지 방문 → 3초 이내에 자신의 OS용 다운로드 버튼을 식별할 수 있는지 확인. 대체 설치법이 명확하게 제시되는지 확인 | [HUMAN] |
 
 ---
 
@@ -132,9 +155,9 @@ homebrew-waiaas/                         # 별도 GitHub repo
 
 | 항목 | 예상 |
 |------|------|
-| 페이즈 | 2개 (다운로드 페이지 1 / Homebrew Cask + CI 자동화 1) |
-| 신규 파일 | 5-8개 (사이트 페이지 2-3개, Homebrew formula 1개, CI 워크플로우 1-2개) |
-| 테스트 | 8-12개 |
+| 페이즈 | 3개 (다운로드 페이지 1 / Homebrew Cask + CI 자동화 1 / 설치 가이드 1) |
+| 신규 파일 | 6-9개 (사이트 페이지 2-3개, 설치 가이드 1개, Homebrew formula 1개, CI 워크플로우 1-2개) |
+| 테스트 | 11-15개 |
 
 ---
 
