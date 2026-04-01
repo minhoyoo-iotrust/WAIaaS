@@ -86,7 +86,7 @@ impl SidecarManager {
         let command = shell
             .sidecar("waiaas-daemon")
             .map_err(|e| format!("SpawnFailed: {}", e))?
-            .args(["--port=0", &format!("--data-dir={}", data_dir)]);
+            .args(["--port=3100", &format!("--data-dir={}", data_dir)]);
 
         let (mut rx, child) = command
             .spawn()
