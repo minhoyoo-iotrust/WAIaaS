@@ -88,8 +88,11 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
-      - name: Install dependencies
+      - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install desktop dependencies
+        run: cd apps/desktop && npm install
 
       - name: Build daemon dependencies for SEA binary
         run: pnpm turbo run build --filter=@waiaas/cli...
@@ -116,6 +119,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: apps/desktop
+          tauriScript: npx --prefix apps/desktop tauri
           args: ${{ matrix.args }}
           releaseId: ${{ needs.create-release.outputs.release_id }}
         env:
