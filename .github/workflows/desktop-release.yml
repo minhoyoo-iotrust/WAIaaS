@@ -129,7 +129,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
   publish-release:
-    needs: build-tauri
+    needs: [create-release, build-tauri]
     runs-on: ubuntu-latest
     steps:
       - name: Publish release (remove draft)
