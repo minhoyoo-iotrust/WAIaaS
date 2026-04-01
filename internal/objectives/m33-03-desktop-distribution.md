@@ -1,7 +1,8 @@
 # 마일스톤 m33-03: Desktop App 배포 채널 확장
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v33.3
+- **Completed:** 2026-04-01
 
 ## 목표
 
