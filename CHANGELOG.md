@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.13.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0...v2.13.0-rc) (2026-04-01)
+
+
+### Features
+
+* **459-01:** create Tauri spike project with @reown/appkit integration ([a924e7a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a924e7a8f8d77cb305a61e9acb5320ba0b35362a))
+* **460-01:** Tauri 2 project scaffolding + SidecarManager implementation ([8fb9b4e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8fb9b4e43ec5cccaf11e1378ecfe44da887cc412))
+* **460-02:** SEA binary build pipeline + native-loader + dynamic port output ([6c4e8ca](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6c4e8ca9ea8e7a14a1d269080365e1ff2ca809e3))
+* **460-03:** splash -&gt; daemon start -&gt; WebView navigate integration ([85b4173](https://github.com/minhoyoo-iotrust/WAIaaS/commit/85b41734d91456f3ffc576570051a53ab31391a3))
+* **461-01:** add 4-layer tree-shaking config and CI bundle verification ([2aae71b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2aae71beca2c8828d15d4cf1e3a010c2f4062a41))
+* **461-01:** add quit_app IPC command, isDesktop() detection, and TS bridge wrappers ([24b43f1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/24b43f1ff62151fbdadc27960da5b50f5aa9b4cb))
+* **461-02:** add system tray module with 3-color icons, context menu, and 30s health polling ([43412e7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/43412e745444295e2bf2fb6b04aea86f6c259ade))
+* **461-02:** integrate system tray in main.rs with tray-icon and image-png features ([00b1116](https://github.com/minhoyoo-iotrust/WAIaaS/commit/00b11161895e5cb9072a4c709e6d671b47377c65))
+* **462-01:** Setup Wizard orchestrator + App.tsx dynamic import integration ([7c19769](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7c19769b19cf9cd6681f232c7e5f7d0c30358880))
+* **462-01:** wizard store + 5 step components for Desktop Setup Wizard ([b4b89af](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b4b89afefb1e834eef8ed0ac401c0e3955e56fff))
+* **462-02:** WalletConnect QR connector + modal via daemon REST API (Plan B) ([7153984](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7153984cb4a7aa5eba7181e98c7b7dcd73853994))
+* **462-03:** wire Owner step to WalletConnect QR modal via dynamic imports ([5cb0c99](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5cb0c992201c2b8d7a096f265405e4799b4a8359))
+* **463-01:** integrate Tauri updater plugin with Ed25519 signing config ([17ce11b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/17ce11be358bcfee3b53a7e62bdd52837ce03fb4))
+* **463-02:** add 3-platform desktop release CI workflow ([bff990d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bff990d7c66ba0555d114ccefb6d7de22419d1a9))
+* **463-03:** add auto-update UI with UpdateBanner and update-checker ([3348fa3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3348fa3d6541ea159e5b3c23525fedc246bb6cb5))
+
+
+### Bug Fixes
+
+* remove build script from desktop-spike to unblock CI ([bf21754](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bf21754a1847745a29aeec1827092076bd37e9a9))
+* update pnpm-lock.yaml for Tauri desktop dependencies ([f3b5c94](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f3b5c94e703556c83b6c89ef53e6e76810209d55))
+
 ## [2.12.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0-rc.16...v2.12.0) (2026-03-31)
 
 
