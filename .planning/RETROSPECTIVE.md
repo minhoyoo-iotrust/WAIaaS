@@ -2,6 +2,40 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v33.3 — Desktop App 배포 채널 확장
+
+**Shipped:** 2026-04-01
+**Phases:** 3 | **Plans:** 3
+
+### What Was Built
+- macOS/Windows/Linux Desktop App 설치 가이드 (Gatekeeper/SmartScreen 우회, 5-step Setup Wizard, Ed25519 auto-update)
+- OS 자동 감지 다운로드 페이지 (GitHub Releases API + 5분 TTL 캐시, 플랫폼별 바이너리 링크, npm/Docker 대체 설치법)
+- 사이트 전체 네비게이션 Download 링크 통합 + sitemap 등록 + SUBMISSION_KIT 배포 채널 업데이트
+
+### What Worked
+- 문서+정적 사이트 전용 마일스톤이라 빠르게 완료 — 코드 변경 없이 순수 콘텐츠 작업
+- build.mjs의 기존 ACTIVE_BLOG/ACTIVE_DOCS 패턴 재사용으로 ACTIVE_DOWNLOAD 즉시 추가
+- GitHub Releases API 클라이언트 사이드 연동이 서버 의존 없이 동적 콘텐츠 제공
+
+### What Was Inefficient
+- Nyquist validation 전 phase MISSING — 문서 마일스톤에서도 VALIDATION.md 생성 안 됨
+- 다운로드 페이지에서 설치 가이드로의 크로스 링크 누락 (DX 개선 기회)
+
+### Patterns Established
+- ACTIVE_{PAGE} placeholder 패턴이 사이트 네비게이션 활성 상태 관리의 표준 방법으로 확립
+- detectOS() dual fallback (userAgentData.platform + userAgent) 패턴
+- GitHub Releases API + localStorage 5분 TTL 캐시 패턴
+
+### Key Lessons
+1. 문서 마일스톤은 scope를 작게 유지하면 1세션으로 완료 가능
+2. 정적 사이트에서 GitHub API 클라이언트 연동 시 폴백(no-JS + API 실패)이 필수
+3. Homebrew Cask는 별도 마일스톤으로 분리한 결정이 적절 — scope creep 방지
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 3 phases + 3 plans in ~1 session, 58 commits, 151 files, +34,792/-8,273 lines
+
 ## Milestone: v33.2 — Tauri Desktop App
 
 **Shipped:** 2026-04-01

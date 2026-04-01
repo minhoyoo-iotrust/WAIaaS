@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v33.2
-milestone_name: Tauri Desktop App
-status: archived
+milestone: v33.3
+milestone_name: Desktop App 배포 채널 확장
+status: completed
 stopped_at: Milestone archived
-last_updated: "2026-04-01T01:30:00.000Z"
+last_updated: "2026-04-01T06:00:00.000Z"
 last_activity: 2026-04-01
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 3
+  completed_plans: 3
   percent: 100
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 463 of 463 (milestone complete, archived)
-Plan: N/A
-Status: Archived — ready for next milestone
+Phase: 466 of 3 (milestone complete)
+Plan: All complete
+Status: Milestone v33.3 archived
 Last activity: 2026-04-01
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-(Cleared at milestone boundary — see .planning/milestones/v33.2-ROADMAP.md for archived decisions)
+(Cleared at milestone boundary — see .planning/milestones/v33.3-ROADMAP.md for archived decisions)
 
 ### Pending Todos
 
@@ -49,5 +49,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-01
-Stopped at: Milestone v33.2 archived
+Stopped at: Milestone v33.3 archived
 Resume file: None

@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download — WAIaaS</title>
+  <meta name="description" content="Download WAIaaS Desktop App for macOS, Windows, and Linux. Self-hosted Wallet-as-a-Service for AI agents with multi-chain support, DeFi protocols, and MCP integration.">
+  <meta name="keywords" content="WAIaaS download, desktop app, wallet daemon, AI agent wallet, macOS, Windows, Linux">
+  <link rel="canonical" href="https://waiaas.ai/download/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Download WAIaaS Desktop App">
+  <meta property="og:description" content="Download WAIaaS Desktop for macOS, Windows, and Linux. Self-hosted wallet daemon for AI agents.">
+  <meta property="og:url" content="https://waiaas.ai/download/">
+  <meta property="og:site_name" content="WAIaaS">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Download WAIaaS Desktop App">
+  <meta name="twitter:description" content="Download WAIaaS Desktop for macOS, Windows, and Linux. Self-hosted wallet daemon for AI agents.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- JSON-LD SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "WAIaaS Desktop",
+    "description": "Self-hosted Wallet-as-a-Service desktop application for AI agents. Manage crypto wallets across EVM and Solana chains with built-in security, DeFi protocols, and MCP integration.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "macOS, Windows, Linux",
+    "url": "https://waiaas.ai/download/",
+    "downloadUrl": "https://github.com/minhoyoo-iotrust/WAIaaS/releases?q=desktop-v",
+    "author": {
+      "@type": "Organization",
+      "name": "WAIaaS",
+      "url": "https://github.com/minhoyoo-iotrust/WAIaaS"
+    },
+    "license": "https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/LICENSE",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0c0c0c;
+      --surface: #111111;
+      --border: #2a2a2a;
+      --text: #b0b0b0;
+      --text-bright: #d4d4d4;
+      --text-dim: #666666;
+      --green: #00ff41;
+      --green-dim: #00cc33;
+      --cyan: #00d4ff;
+      --yellow: #ffcc00;
+      --magenta: #ff44cc;
+      --red: #ff4444;
+      --amber: #ff9500;
+      --blue: #4488ff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      font-size: 15px;
+    }
+
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { color: var(--green); text-decoration: underline; }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+    /* Nav */
+    nav {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 0;
+    }
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--green);
+      letter-spacing: 0.05em;
+      text-decoration: none;
+    }
+    .logo::before { content: "> "; color: var(--text-dim); }
+    .nav-links { display: flex; gap: 20px; align-items: center; }
+    .nav-links a {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+    }
+    .nav-links a:hover { color: var(--green); text-decoration: none; }
+    .nav-links a::before { content: "["; color: var(--text-dim); }
+    .nav-links a::after { content: "]"; color: var(--text-dim); }
+    .nav-links a.active { color: var(--green); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 0;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    footer p::before { content: "// "; color: #444444; }
+
+    /* Scanline effect */
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      z-index: 9999;
+    }
+
+    /* Download Hero */
+    .download-hero {
+      text-align: center;
+      padding: 64px 0 32px;
+    }
+    .download-hero h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+    .download-hero .detected-os {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+    .download-hero .detected-os span {
+      color: var(--cyan);
+    }
+
+    /* Primary CTA */
+    .download-primary {
+      text-align: center;
+      padding: 24px 0 48px;
+    }
+    .download-primary .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 48px;
+      background: var(--green);
+      color: var(--bg);
+      font-family: inherit;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: box-shadow 0.2s ease;
+    }
+    .download-primary .cta-btn:hover {
+      box-shadow: 0 0 24px rgba(0, 255, 65, 0.4), 0 0 48px rgba(0, 255, 65, 0.15);
+      text-decoration: none;
+      color: var(--bg);
+    }
+    .download-primary .cta-btn .os-icon {
+      font-size: 1.4rem;
+    }
+    .download-primary .cta-meta {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    /* Download Meta */
+    .download-meta {
+      text-align: center;
+      padding: 0 0 40px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+    .download-meta .version {
+      color: var(--yellow);
+      font-weight: 500;
+    }
+    .download-meta .release-date {
+      margin-left: 16px;
+    }
+    .download-meta .github-link {
+      margin-left: 16px;
+    }
+
+    /* Platform Cards */
+    .download-secondary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 0 0 48px;
+    }
+    .platform-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+    }
+    .platform-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 12px;
+    }
+    .platform-card h3 .platform-icon {
+      margin-right: 8px;
+    }
+    .platform-card ul {
+      list-style: none;
+    }
+    .platform-card ul li {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    .platform-card ul li:last-child {
+      border-bottom: none;
+    }
+    .platform-card ul li a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .platform-card ul li .file-size {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+    }
+
+    /* Fallback */
+    .download-fallback {
+      text-align: center;
+      padding: 48px 0;
+    }
+    .download-fallback .fallback-box {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px 48px;
+    }
+    .download-fallback .fallback-box p {
+      margin-bottom: 12px;
+      color: var(--text-dim);
+    }
+    .download-fallback .fallback-box a {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    /* Alt Install */
+    .download-alt {
+      border-top: 1px solid var(--border);
+      padding: 48px 0;
+    }
+    .download-alt h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .download-alt h2::before {
+      content: "## ";
+      color: var(--text-dim);
+    }
+    .alt-methods {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+    .alt-method {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px;
+    }
+    .alt-method h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 12px;
+    }
+    .alt-method .code-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      font-size: 0.8rem;
+      color: var(--green);
+      position: relative;
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.6;
+    }
+    .alt-method .code-block .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: inherit;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      cursor: pointer;
+    }
+    .alt-method .code-block .copy-btn:hover {
+      color: var(--green);
+      border-color: var(--green);
+    }
+
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 32px 0;
+      color: var(--text-dim);
+    }
+    .loading::after {
+      content: "";
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* Hidden by default, shown via JS */
+    .js-show { display: none; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav-links { gap: 12px; }
+      .nav-links a { font-size: 0.75rem; }
+      .download-hero h1 { font-size: 1.4rem; }
+      .download-primary .cta-btn {
+        padding: 14px 32px;
+        font-size: 1rem;
+      }
+      .download-secondary {
+        grid-template-columns: 1fr;
+      }
+      .alt-methods {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <a href="/" class="logo" style="text-decoration:none">WAIaaS</a>
+      <div class="nav-links">
+        <a href="https://github.com/minhoyoo-iotrust/WAIaaS">GitHub</a>
+        <a href="https://www.npmjs.com/package/@waiaas/cli">npm</a>
+        <a href="https://hub.docker.com/u/waiaas">Docker</a>
+        <a href="/download/" class="active">Download</a>
+        <a href="/blog/">Blog</a>
+        <a href="/docs/">Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- Hero -->
+    <section class="download-hero">
+      <h1>Download WAIaaS Desktop</h1>
+      <p class="detected-os" id="detected-os">Detecting your operating system...</p>
+    </section>
+
+    <!-- Loading -->
+    <div class="loading" id="loading">Fetching latest release</div>
+
+    <!-- Primary CTA (shown via JS) -->
+    <section class="download-primary js-show" id="download-primary">
+      <a class="cta-btn" id="cta-btn" href="#">
+        <span class="os-icon" id="cta-icon"></span>
+        <span id="cta-text">Download</span>
+      </a>
+      <div class="cta-meta" id="cta-meta"></div>
+    </section>
+
+    <!-- Version / Release Meta (shown via JS) -->
+    <div class="download-meta js-show" id="download-meta"></div>
+
+    <!-- Platform Cards (shown via JS) -->
+    <section class="download-secondary js-show" id="download-secondary">
+      <!-- macOS -->
+      <div class="platform-card">
+        <h3><span class="platform-icon">&#63743;</span> macOS</h3>
+        <ul id="platform-macos">
+          <li class="loading">Loading...</li>
+        </ul>
+      </div>
+      <!-- Windows -->
+      <div class="platform-card">
+        <h3><span class="platform-icon">&#8862;</span> Windows</h3>
+        <ul id="platform-windows">
+          <li class="loading">Loading...</li>
+        </ul>
+      </div>
+      <!-- Linux -->
+      <div class="platform-card">
+        <h3><span class="platform-icon">&#9783;</span> Linux</h3>
+        <ul id="platform-linux">
+          <li class="loading">Loading...</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Fallback (visible by default for no-JS; JS hides it on success) -->
+    <section class="download-fallback" id="download-fallback">
+      <div class="fallback-box">
+        <p>Could not load release information automatically.</p>
+        <a href="https://github.com/minhoyoo-iotrust/WAIaaS/releases?q=desktop-v">GitHub Releases&#xC5D0;&#xC11C; &#xC9C1;&#xC811; &#xB2E4;&#xC6B4;&#xB85C;&#xB4DC;</a>
+      </div>
+    </section>
+
+    <!-- Alternative Install Methods -->
+    <section class="download-alt">
+      <h2>Alternative Install Methods</h2>
+      <div class="alt-methods">
+        <div class="alt-method">
+          <h3>npm (CLI)</h3>
+          <div class="code-block" id="code-npm">npm install -g @waiaas/cli
+waiaas start<button class="copy-btn" onclick="copyCode('code-npm')">copy</button></div>
+        </div>
+        <div class="alt-method">
+          <h3>Docker</h3>
+          <div class="code-block" id="code-docker">docker run -d \
+  -p 127.0.0.1:3100:3100 \
+  -v waiaas-data:/data \
+  waiaas/daemon<button class="copy-btn" onclick="copyCode('code-docker')">copy</button></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>WAIaaS is open source software. Built for AI agents that need secure wallet access.</p>
+    </div>
+  </footer>
+
+  <script>
+    // --- OS Detection (DL-02) ---
+    function detectOS() {
+      if (navigator.userAgentData && navigator.userAgentData.platform) {
+        var p = navigator.userAgentData.platform.toLowerCase();
+        if (p.includes('mac')) return 'macos';
+        if (p.includes('win')) return 'windows';
+        if (p.includes('linux')) return 'linux';
+      }
+      var ua = navigator.userAgent.toLowerCase();
+      if (ua.includes('mac')) return 'macos';
+      if (ua.includes('win')) return 'windows';
+      if (ua.includes('linux')) return 'linux';
+      return 'unknown';
+    }
+
+    var OS_META = {
+      macos:   { label: 'macOS',   icon: '\u{F8FF}',  pattern: '_aarch64.dmg',    altLabel: 'Apple Silicon .dmg' },
+      windows: { label: 'Windows', icon: '\u229E',     pattern: '_x64-setup.exe',  altLabel: 'Installer .exe' },
+      linux:   { label: 'Linux',   icon: '\u2617',     pattern: '_amd64.AppImage', altLabel: 'AppImage' },
+      unknown: { label: 'Desktop', icon: '\u2B07',     pattern: null,              altLabel: '' }
+    };
+
+    var PLATFORM_ASSETS = {
+      macos:   ['_aarch64.dmg', '_x64.dmg'],
+      windows: ['_x64-setup.exe', '_x64_en-US.msi'],
+      linux:   ['_amd64.AppImage', '_amd64.deb']
+    };
+
+    var ASSET_LABELS = {
+      '_aarch64.dmg':     'Apple Silicon (.dmg)',
+      '_x64.dmg':         'Intel (.dmg)',
+      '_x64-setup.exe':   'Installer (.exe)',
+      '_x64_en-US.msi':   'MSI Package (.msi)',
+      '_amd64.AppImage':  'AppImage',
+      '_amd64.deb':       'Debian (.deb)'
+    };
+
+    // --- GitHub Releases API with 5-min TTL cache (DL-03/DL-04/DL-06) ---
+    var CACHE_KEY = 'waiaas_desktop_release';
+    var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+    function fetchLatestRelease() {
+      // Check localStorage cache first
+      try {
+        var cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          var parsed = JSON.parse(cached);
+          if (Date.now() - parsed.timestamp < CACHE_TTL) {
+            return Promise.resolve(parsed.data);
+          }
+        }
+      } catch (e) { /* ignore localStorage errors */ }
+
+      return fetch('https://api.github.com/repos/minhoyoo-iotrust/WAIaaS/releases')
+        .then(function(res) {
+          if (!res.ok) throw new Error('GitHub API ' + res.status);
+          return res.json();
+        })
+        .then(function(releases) {
+          var desktopRelease = releases.find(function(r) {
+            return r.tag_name.startsWith('desktop-v') && !r.prerelease && !r.draft;
+          });
+          if (!desktopRelease) throw new Error('No desktop release found');
+          // Cache the result
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+              data: desktopRelease,
+              timestamp: Date.now()
+            }));
+          } catch (e) { /* ignore */ }
+          return desktopRelease;
+        });
+    }
+
+    // --- Helpers ---
+    function formatSize(bytes) {
+      if (!bytes) return '';
+      var mb = (bytes / (1024 * 1024)).toFixed(1);
+      return mb + ' MB';
+    }
+
+    function formatDate(isoStr) {
+      if (!isoStr) return '';
+      return isoStr.split('T')[0];
+    }
+
+    function extractVersion(tagName) {
+      return tagName.replace('desktop-v', 'v');
+    }
+
+    function findAsset(assets, suffix) {
+      return assets.find(function(a) { return a.name.endsWith(suffix); });
+    }
+
+    // --- Render ---
+    function renderRelease(release, os) {
+      var meta = OS_META[os] || OS_META.unknown;
+      var version = extractVersion(release.tag_name);
+      var date = formatDate(release.published_at);
+      var assets = release.assets;
+
+      // Update detected OS text
+      if (os !== 'unknown') {
+        document.getElementById('detected-os').innerHTML =
+          'Detected: <span>' + meta.label + '</span>';
+      } else {
+        document.getElementById('detected-os').textContent =
+          'Select your platform below';
+      }
+
+      // Primary CTA
+      var primaryAsset = meta.pattern ? findAsset(assets, meta.pattern) : null;
+      var ctaBtn = document.getElementById('cta-btn');
+      var ctaIcon = document.getElementById('cta-icon');
+      var ctaText = document.getElementById('cta-text');
+      var ctaMeta = document.getElementById('cta-meta');
+
+      if (primaryAsset) {
+        ctaBtn.href = primaryAsset.browser_download_url;
+        ctaIcon.textContent = meta.icon;
+        ctaText.textContent = 'Download for ' + meta.label;
+        ctaMeta.textContent = version + '  \u00B7  ' + meta.altLabel + '  \u00B7  ' + formatSize(primaryAsset.size);
+      } else {
+        // No primary asset: point to GitHub releases
+        ctaBtn.href = 'https://github.com/minhoyoo-iotrust/WAIaaS/releases/tag/' + release.tag_name;
+        ctaIcon.textContent = '\u2B07';
+        ctaText.textContent = 'View Downloads';
+        ctaMeta.textContent = version;
+      }
+
+      // Version meta line
+      document.getElementById('download-meta').innerHTML =
+        '<span class="version">' + version + '</span>' +
+        '<span class="release-date">' + date + '</span>' +
+        '<span class="github-link">\u00B7 <a href="https://github.com/minhoyoo-iotrust/WAIaaS/releases/tag/' + release.tag_name + '">View on GitHub</a></span>';
+
+      // Platform cards
+      var platforms = ['macos', 'windows', 'linux'];
+      for (var i = 0; i < platforms.length; i++) {
+        var plat = platforms[i];
+        var suffixes = PLATFORM_ASSETS[plat];
+        var ul = document.getElementById('platform-' + plat);
+        ul.innerHTML = '';
+        for (var j = 0; j < suffixes.length; j++) {
+          var asset = findAsset(assets, suffixes[j]);
+          var li = document.createElement('li');
+          if (asset) {
+            var a = document.createElement('a');
+            a.href = asset.browser_download_url;
+            a.innerHTML = '<span>' + ASSET_LABELS[suffixes[j]] + '</span><span class="file-size">' + formatSize(asset.size) + '</span>';
+            li.appendChild(a);
+          } else {
+            li.innerHTML = '<span style="color:var(--text-dim)">' + ASSET_LABELS[suffixes[j]] + ' (not available)</span>';
+          }
+          ul.appendChild(li);
+        }
+      }
+
+      // Show dynamic content, hide fallback
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('download-fallback').style.display = 'none';
+      document.getElementById('download-primary').style.display = 'block';
+      document.getElementById('download-meta').style.display = 'block';
+      document.getElementById('download-secondary').style.display = 'grid';
+    }
+
+    function showFallback() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('download-primary').style.display = 'none';
+      document.getElementById('download-meta').style.display = 'none';
+      document.getElementById('download-secondary').style.display = 'none';
+      document.getElementById('download-fallback').style.display = 'block';
+      document.getElementById('detected-os').textContent = '';
+    }
+
+    // --- Copy button ---
+    function copyCode(id) {
+      var el = document.getElementById(id);
+      // Get text content excluding the copy button
+      var text = el.textContent.replace('copy', '').trim();
+      navigator.clipboard.writeText(text).then(function() {
+        var btn = el.querySelector('.copy-btn');
+        btn.textContent = 'copied!';
+        setTimeout(function() { btn.textContent = 'copy'; }, 2000);
+      });
+    }
+
+    // --- Init ---
+    (function() {
+      var os = detectOS();
+
+      // Hide fallback initially (JS is enabled)
+      document.getElementById('download-fallback').style.display = 'none';
+
+      fetchLatestRelease()
+        .then(function(release) {
+          renderRelease(release, os);
+        })
+        .catch(function(err) {
+          console.error('Failed to fetch release:', err);
+          showFallback();
+        });
+    })();
+  </script>
+
+</body>
+</html>

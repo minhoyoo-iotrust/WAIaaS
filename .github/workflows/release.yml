@@ -350,12 +350,28 @@ jobs:
           readme-filepath: ./docker/README.md
           short-description: "Self-hosted Wallet-as-a-Service daemon for AI Agents"
 
-  # Gate 2: Manual approval deploy -- npm publish with OIDC + provenance
-  deploy:
+  # Gate 2: Manual approval -- single gate for npm deploy + desktop build
+  approval-gate:
     runs-on: ubuntu-latest
     needs: [test, chain-integration, platform, publish-check, docker-publish, docker-publish-push-relay]
     if: github.event_name == 'release'
     environment: production
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Extract version
+        id: version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Approved deployment for version ${VERSION}"
+
+  # npm publish with OIDC + provenance
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [approval-gate]
+    if: github.event_name == 'release'
     permissions:
       contents: write
       id-token: write
@@ -480,3 +496,12 @@ jobs:
           else
             echo "Prerelease mode already active, no changes needed"
           fi
+
+  # Desktop app build (parallel with deploy after Gate 2)
+  trigger-desktop:
+    needs: [approval-gate]
+    if: github.event_name == 'release'
+    uses: ./.github/workflows/desktop-release.yml
+    with:
+      version: ${{ needs.approval-gate.outputs.version }}
+    secrets: inherit

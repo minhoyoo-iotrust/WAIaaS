@@ -1,187 +1,180 @@
 # Project Research Summary
 
-**Project:** WAIaaS Desktop App (m33-02 Implementation)
-**Domain:** Tauri 2 desktop wrapper for existing Node.js daemon + Preact Admin Web UI
-**Researched:** 2026-03-31
-**Confidence:** MEDIUM-HIGH
+**Project:** WAIaaS Desktop App Distribution Channels (m33-03)
+**Domain:** Desktop App Distribution (Download Page, Homebrew Cask, Installation Guide)
+**Researched:** 2026-04-01
+**Confidence:** HIGH
 
 ## Executive Summary
 
-WAIaaS Desktop is a daemon-management desktop app following a well-established pattern (IPFS Desktop, Docker Desktop): a native shell wraps a background service and exposes its web UI in an embedded WebView. The key architectural decision, locked in v33.0 design doc 39, is to reuse the existing Preact 10.x Admin Web UI directly in a Tauri 2 WebView instead of building a separate React UI. This is the correct call — IPFS Desktop proves it works in production, and it eliminates an entire UI maintenance surface. The Tauri 2 stack (Rust backend, system WebView, Node.js SEA sidecar) delivers a ~15-30MB binary versus Electron's 150MB+, which is a meaningful UX advantage for a self-hosted product.
+WAIaaS Desktop (Tauri 2 app, already shipped as v33.2) needs a distribution layer: a download page users can discover, a macOS Homebrew Cask channel developers expect, and an installation guide covering OS-specific security dialogs. These are well-understood problems with established patterns. The core implementation challenge is not technical complexity but correctness in edge cases — particularly the GitHub Releases API filtering (two release tracks coexist: npm releases via release-please and desktop releases via `desktop-release.yml`), Homebrew Cask naming and SHA256 integrity, and OS-specific security bypass instructions that differ between macOS versions.
 
-The recommended implementation path is straightforward for everything except two areas. First, the Node.js SEA native addon packaging (sodium-native, better-sqlite3) is the highest technical risk: these C++ addons must be compiled on each target platform in CI and cannot be cross-compiled. This must be proven in Phase 1 before anything else proceeds. Second, WalletConnect (@reown/appkit) in a Tauri WebView has no confirmed production reports and requires a Phase 0 spike to determine Go/No-Go before committing to the implementation. All other components — Tauri sidecar management, IPC bridge, system tray, auto-updater — are well-documented with HIGH-confidence official sources.
+The recommended approach is a hand-crafted static HTML download page with build-time or client-side (with localStorage cache) GitHub API integration, a self-hosted Homebrew Cask tap (`minhoyoo-iotrust/homebrew-waiaas`), CI-automated formula updates via `repository_dispatch`, and an installation guide in the existing `docs/admin-manual/` pipeline. No new npm dependencies are required. The site's existing pattern — `site/index.html` as a manually managed HTML file outside the `build.mjs` markdown pipeline — is extended to `site/download/index.html`. All three deliverables integrate cleanly with existing infrastructure, and `pages.yml` deploys everything automatically since it watches the entire `site/` directory.
 
-The three risks that require deliberate mitigation are: (1) CSP conflict between the daemon's strict `connect-src 'self'` headers and Tauri's IPC protocols, which silently breaks all Desktop-specific features; (2) orphan sidecar processes from force-quit that cause SQLite contention on relaunch; and (3) macOS notarization requiring the `com.apple.security.cs.allow-jit` entitlement, which is a Tauri-specific trap that causes post-notarization crashes even when signing succeeds. These are all preventable with known countermeasures and must be addressed in the phases where they first appear.
+The primary risk is the two-release-track problem: the download page must filter GitHub Releases by `desktop-v*` tag prefix or it will show npm tarball artifacts to users. Secondary risks are Homebrew SHA256 race conditions (assets must be fully published before checksum computation), macOS Sequoia Gatekeeper bypass changes (the right-click/open method no longer works on macOS 15+), and PAT expiration silently breaking Cask auto-updates. All risks have clear mitigations that must be built in from the start.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Tauri 2.10.x is the correct and only desktop framework for this project. The stack is aligned around four plugins: `tauri-plugin-shell` for sidecar process management, `tauri-plugin-updater` for auto-update via GitHub Releases, `tauri-plugin-process` for app exit/relaunch, and `tauri-plugin-notification` for OS-native alerts. All Tauri crate and npm package versions must be kept synchronized at the same minor version — this is a hard operational rule enforced by `npm run tauri add`.
-
-For the sidecar binary, Node.js 22 SEA with `--experimental-sea-config` + postject is the only viable approach (the newer `--build-sea` flag requires Node 25.5+). The CI build pipeline must compile native addons on each target platform (not cross-compile), using `prebuildify` prebuilds for better-sqlite3 and sodium-native. WalletConnect uses `@reown/appkit` vanilla JS (Web Components via Lit) — the React-specific modules must never be imported to avoid JSX conflicts with Preact. CI/CD uses `tauri-apps/tauri-action@v0` which handles multi-platform builds, code signing, notarization, and GitHub Release artifact generation.
+The entire feature set requires zero new npm dependencies. The download page is a standalone hand-crafted HTML file (`site/download/index.html`) using inline vanilla JS (~50 lines) for OS detection and GitHub API fetching. The Homebrew Cask tap is a separate GitHub repository (`minhoyoo-iotrust/homebrew-waiaas/`) containing only Ruby and YAML files. CI automation extends the existing `desktop-release.yml` workflow with a new `update-homebrew` job. The installation guide uses the existing `docs/admin-manual/` + `site/build.mjs` pipeline without any modification.
 
 **Core technologies:**
-- Tauri 2.10.x + Rust stable: Desktop shell with Rust backend — only Tauri 2 provides system tray, IPC, sidecar, updater in a ~10MB binary; Electron was already rejected in v33.0
-- `tauri-plugin-shell` ^2.3.5: Sidecar spawn/kill/stdout-parsing — essential for SidecarManager; the `Command.sidecar()` API is the only supported way to manage child processes
-- Node.js 22 SEA + esbuild + postject: Daemon packaging as single binary — official Node.js approach; `@yao-pkg/pkg` and nexe are abandoned
-- `@reown/appkit` ^1.8.19 (vanilla JS): WalletConnect QR pairing — framework-agnostic, Web Components render in Preact; Phase 0 spike required for Tauri WebView validation
-- `tauri-apps/tauri-action@v0`: CI/CD multi-platform build matrix — handles Apple notarization, Windows signing, GitHub Release creation, `latest.json` for updater
+- Vanilla JS inline script with `navigator.userAgentData?.platform` + `navigator.userAgent` fallback — OS detection without libraries; 3-tier fallback covers Chrome/Edge (modern API), Firefox/Safari (UA string), unknown (show all platforms); ~15 lines, no UAParser.js needed
+- GitHub REST API v3 `/repos/.../releases` — fetch desktop release assets; must filter `tag_name.startsWith('desktop-v')`, never use `/releases/latest` which returns npm releases
+- Homebrew Cask DSL (Ruby), Homebrew 5.x — macOS `.dmg` distribution via separate tap repo; `on_arm`/`on_intel` dual-arch blocks, `auto_updates true`, `depends_on macos: ">= :catalina"`, `zap trash:` for clean uninstall
+- `actions/github-script@v7` + `repository_dispatch` / `peter-evans/repository-dispatch@v3` — CI cross-repo automation from `desktop-release.yml` to tap repo; PAT with `contents:write` on tap repo required
+- `shasum --algorithm 256` / `sha256sum` (Ubuntu runner) — SHA256 computation after full `.dmg` download for Cask formula; must follow redirects, compute from actual file not redirect URL
 
 ### Expected Features
 
-The feature set divides cleanly into table stakes (what a daemon-management desktop app must have), differentiators (what sets this apart), and anti-features (what explicitly not to build).
+**Must have (table stakes):**
+- Download page with OS auto-detection — primary CTA shows the right binary for the visitor's OS; Apple Silicon shown as recommended for macOS
+- GitHub Releases API integration showing current version — users expect "latest" without stale links; filter `desktop-v*` tags client-side
+- All-platforms download table below the primary CTA — users with wrong detection or multiple machines need manual selection
+- Homebrew Cask tap (`homebrew-waiaas` repo + formula) — macOS developers treat `brew install --cask` as primary method; Homebrew strips quarantine attribute automatically, bypassing Gatekeeper
+- CI-automated Cask formula updates on every `desktop-v*` release — manual updates break trust; formula must stay in sync
+- Desktop installation guide (`docs/admin-manual/desktop-installation.md`) — step-by-step for macOS (including Sequoia), Windows (SmartScreen), Linux (AppImage FUSE/chmod), Setup Wizard walkthrough
+- Nav link to Download page in `site/template.html` — every page on waiaas.ai links to download
 
-**Must have (table stakes, ship as v0.1.0):**
-- Sidecar lifecycle (start/stop/crash-detect/auto-restart) — core value proposition of the wrapper
-- System tray with 3-color status indicator — every daemon-management app provides this (IPFS Desktop, Docker Desktop)
-- Dynamic port allocation with splash-then-navigate — prevents port conflicts; already designed in doc 39
-- Admin Web UI in WebView — zero new UI code; all existing admin features available immediately
-- IPC bridge (7 typed commands) — enables all Desktop-specific features
-- Orphan process cleanup on launch — prevents SQLite contention from previous force-quits
-- Desktop environment detection (`isDesktop()`) — gates all Desktop-only code paths
+**Should have (differentiators):**
+- CRT-themed download page consistent with site aesthetic — brand cohesion reinforces self-hosted security positioning
+- Auto-update status indicator on download page — "Automatic updates included via Ed25519 signature verification" note; reduces anxiety
+- Release notes link per version — transparency for security-conscious users
+- Alternative install methods section — Homebrew vs direct download vs npm/Docker daemon-only
+- SUBMISSION_KIT desktop channel entries — distribution tracking completeness
 
-**Should have (phase 3, v0.2.0):**
-- Setup Wizard (5 steps) — non-technical users need guided first-run onboarding
-- WalletConnect QR pairing — high-value differentiator, contingent on Phase 0 spike result
-- Sidecar status card on dashboard — low-cost IPC-backed health display
-
-**Must have for public distribution (phase 4):**
-- Auto-update with Tauri updater + GitHub Releases — security requirement for a crypto app
-- Cross-platform CI + code signing — macOS notarization is mandatory (Gatekeeper blocks unsigned apps)
-
-**Defer to post-v33.2:**
-- Native OS notifications (D2), launch at startup (D4), log viewer (D5), universal macOS binary (D6)
+**Defer (v2+):**
+- Apple notarization + code signing — requires Apple Developer Program ($99/yr) and CI complexity; document Gatekeeper bypass in guide instead
+- Windows EV code signing — $300-500/yr; document SmartScreen bypass instead
+- Winget/Chocolatey/Scoop packages — add when Windows user base justifies maintenance overhead
+- Snap/Flatpak packages — add when Linux user base requests them
+- Homebrew core submission (`homebrew/homebrew-cask`) — requires Apple notarization as prerequisite; too much maintenance overhead for current scale
 
 ### Architecture Approach
 
-The architecture is a three-layer sandwich: Rust backend (SidecarManager + IPC Commands + SystemTray), WebView (Admin Web UI from daemon's localhost), and Sidecar process (Node.js SEA binary). The critical integration point is that the WebView loads an external URL (`http://localhost:{dynamic_port}/admin`) — not Tauri-served assets — which requires explicit `remote.urls` capability configuration to enable IPC `invoke()`. Desktop-only frontend code lives in `packages/admin/src/desktop/` and is gated by four independent tree-shaking layers (dynamic import, optional peer deps, build constant, CI bundle check) to keep WalletConnect's ~200KB+ out of browser builds.
+Three new components integrate with existing infrastructure, each with a clear boundary. The download page is a standalone HTML file (not processed by `build.mjs`) that fetches from the public GitHub Releases API and renders OS-specific download buttons. The Homebrew Cask tap is a separate repository updated automatically by a new CI job added to `desktop-release.yml`. The installation guide is a Markdown file in `docs/admin-manual/` that `site/build.mjs` converts to HTML automatically — zero pipeline changes needed. The existing `pages.yml` workflow deploys everything because it watches the entire `site/` directory.
 
 **Major components:**
-1. `SidecarManager` (Rust, `sidecar/manager.rs`) — 7-state machine (Starting/PortDiscovery/HealthCheck/Running/Stopping/Stopped/Crashed) that spawns the SEA binary, parses stdout for `WAIAAS_PORT={port}`, polls `/health` every 5s, and implements exponential-backoff crash restart
-2. IPC Commands (`commands/mod.rs`) — 7 typed Tauri commands (`start_daemon`, `stop_daemon`, `restart_daemon`, `get_sidecar_status`, `get_daemon_logs`, `send_notification`, `quit_app`); boundary rule: IPC is only for native-only operations, all wallet/tx/policy ops use the existing HTTP API
-3. Desktop Extensions (`packages/admin/src/desktop/`) — `tauri-bridge.ts` typed invoke wrappers, `setup-wizard.tsx`, `wallet-connect.tsx`, `desktop-status.tsx`, `useDaemon` hook; all conditionally loaded via `isDesktop()` guard
-4. SEA Build Pipeline (`scripts/build-sea.ts`) — esbuild bundles daemon to `.cjs` (native addons external), SEA config with assets, postject injection, per-platform target-triple suffix for Tauri sidecar resolution
-5. CI/CD (`desktop-release.yml`) — `tauri-action@v0` 5-target matrix (macOS arm64/x64, Linux x64, Windows x64), `desktop-v*` tag trigger independent from npm release tags
+1. `site/download/index.html` — standalone static HTML + inline JS; OS detection via `navigator.userAgentData` with UA fallback; GitHub Releases API filtered for `desktop-v*` tags; CRT theme reused from `template.html`; deployed by `pages.yml` automatically
+2. `minhoyoo-iotrust/homebrew-waiaas` repo — separate GitHub repository with `Casks/w/waiaas-desktop.rb`; dual-arch formula using `on_arm`/`on_intel` blocks; `README.md` with install instructions
+3. `desktop-release.yml` `update-homebrew` job — triggers after `publish-release` completes; downloads macOS DMGs, computes SHA256, updates formula via `sed`, commits to tap repo using `HOMEBREW_TAP_TOKEN` PAT
+4. `docs/admin-manual/desktop-installation.md` — 10th admin manual file; processed by existing `build.mjs` pipeline; 7 sections covering system requirements, install methods, Gatekeeper (macOS 14 vs 15+), SmartScreen, AppImage FUSE, Setup Wizard, auto-update
+
+**Modified files (minimal surface):**
+- `site/template.html` — add Download link to nav-links (affects all build-generated pages)
+- `site/index.html` — add Download Desktop CTA section
+- `.github/workflows/desktop-release.yml` — add `update-homebrew` job after `publish-release`
+- `site/build.mjs` — add `/download/` static URL entry in `generateSitemap()` (1 line)
+- `site/distribution/SUBMISSION_KIT.md` — add desktop channel entries
 
 ### Critical Pitfalls
 
-1. **SEA native addon binary mismatch** — sodium-native and better-sqlite3 `.node` files must be compiled on each target platform in CI; never cross-compile. Set `useCodeCache: false` and `useSnapshot: false`. Smoke-test `./waiaas-daemon --version` per platform before Tauri packaging. Pin Node.js version across all CI runners to prevent ABI mismatch.
+1. **Two release tracks: never use `/releases/latest`** — that endpoint returns the most recent release across ALL tags, which is typically an npm package release (`waiaas-2.13.0-rc`), not a desktop release. Must fetch `/releases` (or `/releases?per_page=10`) and filter `tag_name.startsWith('desktop-v') && !r.draft && !r.prerelease`. This applies to both the download page JS and the CI formula update job.
 
-2. **Orphan sidecar processes on force-quit** — implement PID lockfile + port file health check in SidecarManager startup sequence (`check_existing() -> kill_stale() -> spawn_new()`). On Windows, use `CreateJobObject` with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` — this is the only reliable cleanup mechanism on Windows since SIGKILL does not propagate to child processes.
+2. **Homebrew SHA256 race condition** — the `publish-release` job in `desktop-release.yml` must fully complete before the `update-homebrew` job starts. Use `needs: publish-release` in the job definition. Then download the actual `.dmg` file (follow redirects) and compute `sha256sum` locally — never from a redirect URL or CDN partial download. Add a 30-second sleep or retry loop (3 attempts) for CDN propagation delay. A wrong checksum causes `brew install --cask` to fail for every user.
 
-3. **CSP conflict blocking Tauri IPC** — the daemon's existing `connect-src 'self'` blocks Tauri's `ipc:` protocol. Define Desktop CSP override in `tauri.conf.json` `security.csp` (not in HTTP response headers) to add `ipc: http://ipc.localhost` to `connect-src` and `script-src`. HTTP CSP headers remain strict for browser users. Never disable CSP globally.
+3. **macOS Sequoia Gatekeeper: right-click bypass removed** — macOS 15 (Sequoia) removed the Control-click / right-click "Open" bypass method that all guides describe. Installation guide must have a Sequoia-specific section: System Settings → Privacy & Security → scroll to bottom → "Open Anyway" button → confirm with admin password. Omitting this means all macOS 15+ users on unsigned builds hit an invisible barrier.
 
-4. **macOS notarization crash from missing JIT entitlement** — Tauri WKWebView requires JIT compilation. Without `com.apple.security.cs.allow-jit` in `entitlements.plist`, the app passes notarization but crashes on launch. Include all three entitlements: `allow-jit`, `allow-unsigned-executable-memory`, `disable-library-validation`. Use App Store Connect API key (not Apple ID password) for CI notarization.
+4. **GitHub API rate limiting on the download page** — 60 unauthenticated req/hr per IP. Shared corporate networks or cloud IP ranges exhaust this immediately. Preferred mitigation: build-time embedding in `site/build.mjs` using `GITHUB_TOKEN` (5,000 req/hr in CI). If client-side fetch is used: cache API response in `localStorage` with 1-hour TTL, and always show a static fallback link to the GitHub Releases page when the API is unreachable.
 
-5. **Tauri updater Ed25519 key loss** — private key loss permanently bricks the auto-update channel with no recovery path. Generate with `tauri signer generate`, store in two independent locations (GitHub Secrets + encrypted backup), and verify a complete update cycle (check/download/verify/install) before first release.
+5. **PAT expiration silently breaks Cask auto-updates** — fine-grained PATs have mandatory expiration (default 90 days). The CI failure is silent unless workflow run monitoring is in place. Mitigation: use a GitHub App installation token (no expiration) instead of a PAT. If PAT is used, set 1-year expiration and add a calendar reminder; monitor `desktop-release.yml` run results.
 
 ## Implications for Roadmap
 
-Based on research, dependencies, and risk ordering, 5 phases are recommended:
+Based on research, 5 phases are suggested with clear dependency ordering:
 
-### Phase 0: WalletConnect Spike (Go/No-Go)
-**Rationale:** @reown/appkit in a Tauri WebView has zero confirmed production reports (LOW confidence). A spike run in Phase 0 gates the entire Phase 3 WalletConnect feature. If it fails, Phase 3 scope shrinks to Plan B (raw WebSocket) or defers WC entirely. Running the spike first prevents wasted implementation effort and avoids late-phase replanning. This is the only feature requiring a spike.
-**Delivers:** Go/No-Go decision on `@reown/appkit` in WebKit/WebView2 Tauri WebView. Spike validates: (1) `<w3m-modal>` Web Component renders, (2) WebSocket to `wss://relay.walletconnect.com` connects through CSP, (3) QR scan + SIWS/SIWE flow completes.
-**Addresses:** D1 (WalletConnect QR pairing)
-**Avoids:** IG-2 (WebSocket CSP blocking), TD-1 (localStorage loss on port change — must be evaluated during spike)
+### Phase 1: Homebrew Cask Tap Repository
+**Rationale:** No dependencies on other phases; fully independent. Creating the tap repo first removes the blocking dependency for Phase 3. Must be created before any CI automation can push formula updates to it.
+**Delivers:** `minhoyoo-iotrust/homebrew-waiaas` GitHub repository with `Casks/w/waiaas-desktop.rb` (placeholder SHA256), `README.md` with `brew tap` and `brew install --cask` instructions
+**Addresses:** Homebrew Cask table-stakes feature; macOS primary install channel
+**Avoids:** Cask naming collision pitfall — run `brew search waiaas` and `brew search waiaas-desktop` before committing; use `waiaas-desktop` as cask name; verify `brew audit --cask` passes on initial formula
 
-### Phase 1: Tauri Shell + Sidecar Manager
-**Rationale:** This is the dependency foundation for everything else. Admin Web UI cannot load until the sidecar is running. System tray cannot reflect status until the state machine exists. IPC bridge cannot function until Tauri project structure exists. The SEA build pipeline and native addon packaging are the highest-risk technical unknowns and must be proven before any UI work begins. This phase also establishes the security baseline (minimal capabilities, localhost bind, sidecar hash verification) from the start.
-**Delivers:** Working Tauri app that spawns WAIaaS daemon SEA binary, discovers dynamic port from stdout, navigates WebView to `http://localhost:{port}/admin`, shows 3-color system tray, and handles orphan process cleanup on launch.
-**Addresses:** T1 (sidecar lifecycle), T2 (system tray), T3 (dynamic port), T9 (orphan cleanup)
-**Uses:** Tauri 2.10.x, tauri-plugin-shell, Node.js SEA + esbuild + postject, CI platform matrix
-**Avoids:** Pitfall 1 (SEA native addon mismatch — CI matrix per platform), Pitfall 2 (orphan processes — PID lockfile + Windows Job Objects), SM-4 (IPC over-exposure — minimal capabilities from day 1), SM-5 (daemon binds 0.0.0.0 — force `--host=127.0.0.1` in sidecar spawn args)
+### Phase 2: Desktop Installation Guide
+**Rationale:** Independent of Phase 1 and 4; can be written with knowledge of what the Homebrew Cask install command will be. Should precede the download page so the guide URL is stable when the download page links to it.
+**Delivers:** `docs/admin-manual/desktop-installation.md` — 7 sections: system requirements (macOS 10.15+/Windows 10+/Linux WebKit2GTK), install methods (Homebrew Cask first, then direct download), Gatekeeper bypass split between macOS 14 and macOS 15+, SmartScreen bypass with step descriptions, AppImage `chmod +x` + `libfuse2` dependency, 5-step Setup Wizard walkthrough, auto-update explanation, troubleshooting, uninstall
+**Addresses:** Table-stakes installation guide; Sequoia Gatekeeper pitfall; SmartScreen pitfall; Linux AppImage FUSE pitfall
+**Avoids:** Using single Gatekeeper bypass instructions that only work on macOS 14 and earlier
 
-### Phase 2: IPC Bridge + Admin Web UI Integration
-**Rationale:** IPC bridge depends on Phase 1 (Tauri structure exists). CSP adjustment, tree-shaking layers, and `isDesktop()` detection depend on the WebView loading. Desktop extensions directory must be established before Phase 3 adds WalletConnect and the wizard. This phase sets the architectural boundary: IPC is native-only, HTTP API handles everything else. The 4-layer tree-shaking CI gate must be in place before any desktop module is added.
-**Delivers:** Type-safe `tauri-bridge.ts` with 7 IPC commands, `isDesktop()` detection, 4-layer tree-shaking (dynamic import + optional deps + build constant + CI bundle check), CSP corrected for Tauri IPC, sidecar status card on dashboard.
-**Addresses:** T4 (Admin WebView), T8 (IPC bridge), T10 (desktop detection), D3 (status card)
-**Implements:** Desktop Extensions architecture (`packages/admin/src/desktop/`), IPC Commands (`commands/mod.rs`), `remote.urls` capability config
-**Avoids:** Pitfall 3 (CSP conflict — tauri.conf.json override), PT-1 (desktop code leaking — CI bundle check), IG-3 (invoke() error swallowing — typed tauriInvoke wrapper), IG-4 (IPC/HTTP boundary — establish rule in this phase), SM-3 (CSP relaxation not affecting browser users)
+### Phase 3: CI Formula Auto-Update
+**Rationale:** Depends on Phase 1 (tap repo must exist to accept CI pushes). Can proceed immediately after Phase 1. Ensures the Cask formula is updated within minutes of every desktop release — this must be in place before the first real release after this milestone.
+**Delivers:** `update-homebrew` job added to `.github/workflows/desktop-release.yml` with `needs: publish-release`; `HOMEBREW_TAP_TOKEN` secret configured on main repo; authentication strategy decided (PAT vs GitHub App); `brew audit --cask` verification step in CI
+**Uses:** `peter-evans/repository-dispatch@v3` or inline `gh` API call; `sha256sum` on Ubuntu runner; `sed` formula update pattern
+**Avoids:** SHA256 race condition pitfall — `needs: publish-release` sequencing + CDN delay retry; PAT expiration pitfall — choose GitHub App or set 1-year PAT with monitoring; using `GITHUB_TOKEN` which cannot write to other repos
 
-### Phase 3: Setup Wizard + WalletConnect
-**Rationale:** Depends on Phase 0 spike result (WC Go/No-Go) and Phase 2 IPC bridge (wizard uses IPC for first-run detection). The wizard is the onboarding surface for non-technical users — it must come before distribution CI because it affects the install experience. WalletConnect scope is conditional: if Phase 0 returns Go, implement Plan A (@reown/appkit); if No-Go, implement Plan B (raw WC Relay WebSocket) or defer.
-**Delivers:** 5-step Setup Wizard (master password / chain selection / wallet creation / owner / done), WalletConnect QR pairing page (Plan A or B), port pinning strategy for localStorage stability.
-**Addresses:** T5 (setup wizard), D1 (WalletConnect) — contingent on Phase 0
-**Avoids:** TD-1 (localStorage wiped on port change — implement port pinning in this phase)
+### Phase 4: Download Page + Navigation Update
+**Rationale:** Depends on Phase 2 (installation guide URL must exist to link to). This is the user-facing integration phase. The `template.html` nav change affects all build-generated pages and should be done simultaneously with the download page.
+**Delivers:** `site/download/index.html` with OS detection, `desktop-v*`-filtered GitHub Releases API, all-platforms table, version display, checksum link, Homebrew Cask install command, link to installation guide; `site/template.html` with Download link in nav; `site/index.html` with Download CTA; `site/build.mjs` with `/download/` sitemap entry
+**Addresses:** Download page table-stakes; OS detection pitfall (show both macOS architectures, Apple Silicon as default recommendation, always show all-platforms fallback); two-release-track pitfall (filter `desktop-v*`); rate-limiting pitfall (localStorage cache + static fallback link)
+**Avoids:** Using `/releases/latest`; showing npm release artifacts on download page; client-side-only API call with no fallback when rate-limited
 
-### Phase 4: CI/CD + Distribution + Auto-Update
-**Rationale:** Distribution must come last because it requires all prior phases to be testable. Signing keys and notarization entitlements must be proven against a complete app, not a stub. Auto-updater must be tested end-to-end (check/download/verify/install/relaunch) before any public release. macOS notarization pipeline typically requires iteration — it should not be the final task on a deadline.
-**Delivers:** `desktop-release.yml` with tauri-action@v0 5-target build matrix, Ed25519 updater keypair generated and backed up, macOS notarization with correct entitlements, HTTPS-only updater endpoint, Windows OV signing (optional), update check on launch + periodic check, `latest.json` endpoint from GitHub Releases.
-**Addresses:** T6 (auto-update), T7 (cross-platform distribution)
-**Uses:** tauri-apps/tauri-action@v0, Apple Developer ID certificate, App Store Connect API key
-**Avoids:** Pitfall 4 (notarization JIT crash — entitlements.plist), Pitfall 5 (updater key loss — dual backup + cycle test), SM-1 (updater MITM — HTTPS-only URL + downgrade protection), TD-3 (SmartScreen cold start — OV cert + manual portal submission)
+### Phase 5: SUBMISSION_KIT Update + Final Verification
+**Rationale:** Terminal phase. All three deliverables must have stable URLs before documenting them. Verification checklist confirms end-to-end correctness across all distribution channels.
+**Delivers:** `site/distribution/SUBMISSION_KIT.md` updated with desktop distribution channel entries (download page URL, Homebrew tap install command, installation guide URL); end-to-end verification checklist run
+**Addresses:** Distribution tracking completeness; "looks done but isn't" verification
 
 ### Phase Ordering Rationale
 
-- Phase 0 before Phase 3 eliminates the highest-uncertainty feature before committing to its implementation.
-- Phase 1 before Phase 2 because IPC bridge requires the Tauri project structure to exist and the SEA pipeline to be proven.
-- Phase 2 before Phase 3 because the 4-layer tree-shaking architecture and `packages/admin/src/desktop/` directory must exist before adding WalletConnect (~200KB) and the wizard.
-- Phase 4 last because notarization requires a shippable binary, and the updater requires a complete app to test against.
-- Security baseline (minimal capabilities, localhost bind, sidecar hash) is established in Phase 1, not deferred — this is intentional to avoid retrofitting security into a working system.
+- Phase 1 before Phase 3: CI cannot push commits to a tap repo that does not exist
+- Phase 2 before Phase 4: Download page links to the installation guide — the guide must have a stable URL first
+- Phase 1 and Phase 2 can run in parallel: they have no mutual dependency
+- Phase 3 after Phase 1: The formula update CI needs the tap repo as its push target
+- Phase 4 is the integration point: all upstream deliverables (guide URL, tap repo, install command) must be ready
+- Phase 5 is terminal: meaningful only after all channels are functional and verifiable
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 1:** Node.js SEA + native addon asset extraction via `process.dlopen()` from temp files — few production reports with complex addons (sodium-native + better-sqlite3 simultaneously). Needs CI matrix validation per platform before declaring done.
-- **Phase 4:** Apple Developer ID / notarization workflow for CI — certificate import into temporary keychain, App Store Connect API key setup, test-the-signed-artifact step. Community guides exist but this is environment-specific.
+Phases needing close attention during planning:
+- **Phase 3 (CI Formula Auto-Update):** Authentication strategy (PAT vs GitHub App) is a one-time decision with long-term operational consequences. Fine-grained PAT expiration has caused silent breakage in many projects. GitHub App requires one-time App registration but never expires. This should be explicitly decided in Phase 3 planning, not deferred.
+- **Phase 4 (Download Page):** Actual asset filename patterns from `tauri-action` must be verified against a real release before writing final asset-matching logic. Research assumes `WAIaaS-Desktop_*.dmg`, `WAIaaS-Desktop_*.msi`, `WAIaaS-Desktop_*.AppImage` based on `productName` in `tauri.conf.json` and `createUpdaterArtifacts: "v1Compatible"`. Final regex must match actual filenames from a build log.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Tauri shell + sidecar):** Official Tauri 2 sidecar docs are comprehensive. State machine and stdout-parsing patterns are well-documented. Confidence HIGH.
-- **Phase 2 (IPC bridge):** Tauri 2 IPC (`invoke()`) is well-documented. `remote.urls` capability pattern confirmed via GitHub issues. Confidence HIGH.
-- **Phase 4 (CI matrix, tauri-action):** `tauri-apps/tauri-action@v0` is the official CI action with comprehensive docs and community guides. Confidence HIGH.
+Phases with standard patterns (minimal additional research needed):
+- **Phase 1 (Homebrew Cask Tap):** Cask DSL is well-documented. `on_arm`/`on_intel` dual-arch blocks stable since Homebrew 3.6, current version 5.1.0. Only verification needed: `brew audit --cask` run before shipping.
+- **Phase 2 (Installation Guide):** Standard documentation writing. All technical content (Gatekeeper, SmartScreen, AppImage) is known from research.
+- **Phase 5 (SUBMISSION_KIT):** Pure documentation update, no technical uncertainty.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Tauri 2.10.x, tauri-action, SEA basics — all verified from official docs. Only postject (alpha) and @reown/appkit in WebView are MEDIUM/LOW |
-| Features | HIGH | Feature set is clear and directly modeled on IPFS Desktop + Docker Desktop patterns. No ambiguity in what to build |
-| Architecture | HIGH | Official Tauri 2 docs cover every component. `remote.urls` capability for external URL IPC confirmed via GitHub issues. State machine patterns standard |
-| Pitfalls | HIGH | SEA native addon mismatch, zombie processes, CSP conflict, macOS entitlements — all confirmed from official docs and community issue trackers with specific issue numbers |
+| Stack | HIGH | All components verified against official docs (Homebrew Cask Cookbook, MDN, GitHub REST API). Existing codebase inspected directly. Zero new npm dependencies required. |
+| Features | HIGH | Competitor analysis (Warp, Cursor, Zed) confirms industry-standard expectations. Homebrew Cask and download page are well-established patterns. |
+| Architecture | HIGH | Three new components have clear boundaries and precedents in existing codebase (`site/index.html` as manual HTML precedent, `repository_dispatch` pattern documented by multiple community sources). |
+| Pitfalls | HIGH | Key pitfalls (two-release-track API filter, SHA256 race condition, Sequoia Gatekeeper change) verified against real GitHub issues, Apple documentation, and Homebrew CI discussions with concrete examples. |
 
-**Overall confidence:** MEDIUM-HIGH
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **@reown/appkit in Tauri WebView:** No confirmed production reports. Must be validated in Phase 0 spike before any implementation commitment. Fallback plan (raw WebSocket to WC Relay) must be specified in Phase 3 planning.
-- **postject stability on macOS ARM64 CI:** postject is marked going-unmaintained (replaced by `--build-sea` in Node 25.5+, still alpha at 1.0.0-alpha.6). Should monitor for issues on `macos-latest` (ARM) runners. If postject fails, upgrading CI to Node 25.5+ and switching to `--build-sea` is the clean exit path — document this as a contingency.
-- **SEA assets + dlopen for all three addons:** Few reports of simultaneously loading sodium-native + better-sqlite3 via SEA assets. CI smoke test (`./waiaas-daemon --version` + basic DB write) per platform is the validation gate. Approach B (ship `.node` files alongside binary) is the documented fallback.
-- **WalletConnect localStorage stability across port changes:** TD-1 confirmed as real issue. Port-pinning strategy (save preferred port on first launch, try it on restart) must be designed in Phase 3. Evaluate `tauri-plugin-store` as alternative WC session storage if port changes prove unavoidable.
-- **Windows code signing with OV certificate HSM requirement:** Since June 2023, OV certificates require HSM (Azure Key Vault minimum). EV certificates avoid SmartScreen cold-start but cost $300-500/year. Decision on Windows signing tier should be made before Phase 4.
+- **Actual tauri-action asset filenames:** Research assumes `WAIaaS-Desktop_*` patterns based on `productName: "WAIaaS Desktop"` in `tauri.conf.json` and `createUpdaterArtifacts: "v1Compatible"`. Must be verified against a real build log or dry-run CI output before finalizing the Cask formula URL pattern and download page asset-matching regex. This is a P1 verification task in Phase 3 and Phase 4.
+
+- **Apple signing secret availability:** `desktop-release.yml` references `APPLE_CERTIFICATE`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` secrets. If these are unset or invalid, all macOS builds are unsigned and every macOS user encounters Gatekeeper. Installation guide content branches based on whether signing is active (signed = no warning, unsigned = Gatekeeper bypass instructions needed). Verify secret availability before writing Phase 2 guide content.
+
+- **GitHub App vs PAT for cross-repo CI:** Research recommends GitHub App for operational reliability (no expiration) but PAT is simpler to set up initially. This decision must be made explicitly in Phase 3 planning — it is not a detail to decide during implementation.
 
 ## Sources
 
-### Primary (HIGH confidence — official documentation)
-- [Tauri 2.0 Stable Release](https://v2.tauri.app/blog/tauri-20/) — stability baseline, Oct 2024
-- [Tauri Node.js Sidecar Guide](https://v2.tauri.app/learn/sidecar-nodejs/) — SEA binary tutorial, sidecar spawn
-- [Tauri Shell Plugin](https://v2.tauri.app/plugin/shell/) — `Command.sidecar()`, stdout parsing, permissions
-- [Tauri Updater Plugin](https://v2.tauri.app/plugin/updater/) — key management, latest.json, update cycle
-- [Tauri GitHub Actions Guide](https://v2.tauri.app/distribute/pipelines/github/) — tauri-action@v0 workflow
-- [Tauri macOS Code Signing Docs](https://v2.tauri.app/distribute/sign/macos/) — notarization, entitlements, JIT crash
-- [Tauri 2 Calling Rust](https://v2.tauri.app/develop/calling-rust/) — IPC command patterns
-- [Tauri 2 Capability Reference](https://v2.tauri.app/reference/acl/capability/) — remote.urls for external URL IPC
-- [Node.js SEA Documentation](https://nodejs.org/api/single-executable-applications.html) — assets, dlopen, caveats
-- [GitHub Issue #5088: __TAURI__ injection on remote URLs](https://github.com/tauri-apps/tauri/issues/5088) — confirms IPC on localhost URL
-- [@tauri-apps/cli npm v2.10.1](https://www.npmjs.com/package/@tauri-apps/cli) — version confirmation
-- [tauri-apps/tauri-action GitHub](https://github.com/tauri-apps/tauri-action) — CI action reference
+### Primary (HIGH confidence)
+- [Homebrew Cask Cookbook](https://docs.brew.sh/Cask-Cookbook) — DSL stanza order, `on_arm`/`on_intel`, `auto_updates`, `zap`, `depends_on`
+- [Homebrew Taps Documentation](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap) — tap naming convention, `brew tap`, repo structure
+- [Homebrew 5.1.0 Release Notes](https://brew.sh/2026/03/10/homebrew-5.1.0/) — current version, DSL compatibility confirmed
+- [GitHub REST API: Releases](https://docs.github.com/en/rest/releases/releases) — response structure, `assets[].browser_download_url`, rate limits
+- [GitHub REST API Rate Limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) — 60 req/hr unauthenticated, 5,000 req/hr with GITHUB_TOKEN in CI
+- [MDN: Navigator.userAgentData](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/userAgentData) — modern OS detection API, Chrome 90+ / Edge 90+ support
+- [Apple: Open a Mac app from an unknown developer](https://support.apple.com/en-us/102445) — Gatekeeper bypass procedures including macOS 15 (Sequoia) Privacy & Security flow
+- Existing codebase direct inspection: `desktop-release.yml`, `pages.yml`, `site/build.mjs`, `site/index.html`, `site/template.html`, `apps/desktop/src-tauri/tauri.conf.json`
 
-### Secondary (MEDIUM confidence — community, validated patterns)
-- [Reown AppKit Overview](https://docs.reown.com/appkit/overview) — vanilla JS mode, Web Components
-- [Reown AppKit Web Examples](https://github.com/reown-com/appkit-web-examples) — vanilla JS initialization patterns
-- [Evil Martians: Rust + Tauri + Sidecar](https://evilmartians.com/chronicles/making-desktop-apps-with-revved-up-potential-rust-tauri-sidecar) — production sidecar patterns
-- [Ship Tauri v2 Code Signing Guide](https://dev.to/tomtomdu73/ship-your-tauri-v2-app-like-a-pro-code-signing-for-macos-and-windows-part-12-3o9n) — CI signing workflow
-- [Ship Tauri v2 GitHub Actions Guide](https://dev.to/tomtomdu73/ship-your-tauri-v2-app-like-a-pro-github-actions-and-release-automation-part-22-2ef7) — release automation
-- [Improving SEA Building (Joyee Cheung)](https://joyeecheung.github.io/blog/2026/01/26/improving-single-executable-application-building-for-node-js/) — postject deprecation context
-- [IPFS Desktop](https://github.com/ipfs/ipfs-desktop) — comparable daemon-wrapper architecture (5.8k stars)
-- [Tauri issue #5611](https://github.com/tauri-apps/tauri/issues/5611), [#1896](https://github.com/tauri-apps/tauri/issues/1896) — zombie process documentation
-- [Tauri issue #896](https://github.com/tauri-apps/tauri/issues/896), [#10981](https://github.com/tauri-apps/tauri/issues/10981) — localStorage port-origin loss
+### Secondary (MEDIUM confidence)
+- [Simon Willison: Auto-maintaining Homebrew formulas with GitHub Actions](https://til.simonwillison.net/homebrew/auto-formulas-github-actions) — `repository_dispatch` CI pattern for tap updates
+- [josh.fail: Automate updating custom Homebrew formulae](https://josh.fail/2023/automate-updating-custom-homebrew-formulae-with-github-actions/) — alternative cross-repo CI approaches
+- [BuiltFast: Automating Homebrew Tap Updates](https://builtfast.dev/blog/automating-homebrew-tap-updates-with-github-actions/) — `sed`-based formula update pattern
+- [Homebrew SHA256 Checksum Mismatch Issues](https://github.com/Homebrew/homebrew-cask/issues/41993) — CDN propagation race condition root causes
+- [macOS Sequoia Gatekeeper Changes](https://www.techbloat.com/macos-sequoia-bypassing-gatekeeper-to-install-unsigned-apps.html) — right-click bypass removal in macOS 15
+- [Windows SmartScreen Bypass Guide](https://www.fortect.com/windows-optimization-tips/windows-defender-smartscreen-prevented-an-unrecognized-app-from-starting-warning/) — "More info → Run anyway" user-facing instructions
 
-### Tertiary (LOW confidence — needs Phase 0 validation)
-- @reown/appkit rendering in Tauri WebKit/WebView2 — no confirmed production reports; Phase 0 spike required
-- SEA assets + simultaneous dlopen for sodium-native + better-sqlite3 — limited real-world reports; CI matrix validation required
+### Tertiary (LOW confidence — needs validation)
+- tauri-action asset naming patterns — inferred from `tauri.conf.json` `productName: "WAIaaS Desktop"` + `createUpdaterArtifacts: "v1Compatible"`; must be validated against actual CI build output before finalizing formula URLs and download page asset-matching logic
 
 ---
-*Research completed: 2026-03-31*
+*Research completed: 2026-04-01*
 *Ready for roadmap: yes*

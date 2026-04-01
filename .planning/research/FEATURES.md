@@ -1,182 +1,283 @@
-# Feature Landscape: Tauri Desktop App
+# Feature Research
 
-**Domain:** Desktop wrapper for wallet daemon management (self-hosted WAIaaS)
-**Researched:** 2026-03-31
-**Comparable Products:** IPFS Desktop (Electron + Kubo daemon), Docker Desktop (daemon GUI), Ledger Live (desktop wallet), Exodus (desktop wallet)
+**Domain:** Desktop App Distribution Channels (Download Page, Homebrew Cask, Installation Guide)
+**Researched:** 2026-04-01
+**Confidence:** HIGH
 
----
+## Feature Landscape
 
-## Table Stakes
+### Table Stakes (Users Expect These)
 
-Features users expect from a desktop daemon-management app. Missing = product feels incomplete or untrustworthy.
+Features users assume exist. Missing these = product feels incomplete.
 
-| # | Feature | Why Expected | Complexity | Dependencies | Notes |
-|---|---------|--------------|------------|--------------|-------|
-| T1 | Sidecar lifecycle (start/stop/restart) | Core purpose of the desktop wrapper. IPFS Desktop, Docker Desktop all do this. Users expect the daemon to start automatically and be controllable | Med | Node.js SEA build pipeline | Crash detection + auto-restart + graceful shutdown (SIGTERM 5s -> SIGKILL). Already specified in m33-02 |
-| T2 | System tray icon with status | Every daemon management app (IPFS Desktop, Docker Desktop, Syncthing) lives in the tray. Users expect at-a-glance daemon health | Low | Tauri tray-icon feature | 3-color (green/amber/red) + context menu (Open/Pause/Resume/Quit). Standard pattern |
-| T3 | Dynamic port allocation | Avoids port conflicts when users run multiple services. IPFS Desktop handles this transparently | Med | TCP bind(0) + stdout/tempfile protocol | Already designed in doc 39. Splash -> navigate() transition essential |
-| T4 | Admin Web UI in WebView | The entire reason for the desktop app -- full admin functionality without opening a browser | Low | Existing Admin Web UI (Preact 10.x) | WebView loads `http://localhost:{port}/admin`. Zero new UI code for existing pages |
-| T5 | Setup Wizard (first-run) | Non-technical users need guided onboarding. Crypto wallets (Exodus, Phantom desktop) all have first-run wizards. Without one, users face a blank dashboard with no wallets | Med | Master auth API, wallet creation API, chain adapters | 5 steps: master password -> chain selection -> wallet creation -> owner (skippable) -> done. Keep minimal -- research shows 5 steps is the upper bound before user drop-off |
-| T6 | Auto-update mechanism | Desktop apps that don't auto-update become security liabilities. Every modern desktop app (VS Code, Brave, Docker Desktop) does this | Med | Tauri updater plugin, GitHub Releases, signing keys | Tauri built-in updater with mandatory signature verification. `latest.json` from GitHub Releases. Check on launch + periodic |
-| T7 | Cross-platform distribution (macOS/Win/Linux) | Users expect native installers for their OS. DMG+notarized for macOS, MSI/NSIS for Windows, AppImage/deb for Linux | High | tauri-action CI, Apple Developer ID, Windows code signing (optional) | macOS notarization is mandatory (Gatekeeper blocks unsigned apps). Windows signing is optional but reduces SmartScreen warnings |
-| T8 | IPC bridge (WebView <-> Rust backend) | Desktop-specific features (sidecar status, native notifications) require communication between WebView and native layer | Med | Tauri invoke() API | 7 commands: start/stop/restart_daemon, get_sidecar_status, get_daemon_logs, send_notification, quit_app |
-| T9 | Orphan process cleanup | Users will force-kill the app. Orphaned daemon processes waste resources and lock ports | Med | Process management in Rust | IPFS Desktop and Docker Desktop both handle this. PID file + port-based detection + cleanup on launch |
-| T10 | Desktop environment detection | Admin Web UI must know it's running in Desktop (vs browser) to show/hide features | Low | `window.__TAURI_INTERNALS__` | Module-level caching, SSR-safe. Already designed |
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Download page with OS auto-detection | Every desktop app site recommends the right binary for the visitor's OS | MEDIUM | Client-side JS on static site. Use `navigator.userAgentData?.platform` (Chrome/Edge) with `navigator.platform`/`navigator.userAgent` regex fallback for Safari/Firefox. Detect macOS(arm/intel), Windows, Linux. Primary CTA button shows detected OS, secondary links show all platforms |
+| GitHub Releases API integration | Users expect "latest version" to always be current without manual page updates | LOW | `fetch('https://api.github.com/repos/{owner}/{repo}/releases')` client-side, filter for `desktop-v*` tags. Rate limit: 60 req/hr unauthenticated (sufficient). Cannot use `/releases/latest` because it returns latest across ALL tags (including npm releases) |
+| All-platforms download table | Users who detect wrongly (or use multiple OS) need manual selection | LOW | Static HTML table below auto-detect CTA. Columns: OS, Architecture, Format, Link. Formats: macOS .dmg (arm64/x64), Windows .msi (x64), Linux .AppImage + .deb (x64) |
+| Homebrew Cask tap for macOS | macOS developers expect `brew install --cask` as primary install method | MEDIUM | Separate repo `homebrew-waiaas`. Cask formula in `Casks/waiaas-desktop.rb`. Key benefit: `brew install --cask` strips quarantine attribute automatically, bypassing Gatekeeper for unsigned apps |
+| CI-automated Cask formula updates | Formula must stay in sync with releases; manual updates break trust | MEDIUM | `repository_dispatch` from `desktop-release.yml` to `homebrew-waiaas` repo. Update version + SHA256 on new `desktop-v*` tag. More reliable than scheduled `brew livecheck` |
+| Desktop installation guide | Users need OS-specific step-by-step instructions for first install | LOW | `docs/admin-manual/desktop-installation.md` (10th admin manual file). Cover: download methods, install, Setup Wizard walkthrough, Gatekeeper/SmartScreen bypass, troubleshooting, upgrade path |
+| Version display on download page | Users need to know what version they're downloading | LOW | Extracted from GitHub Releases API `tag_name`. Display as "v0.1.0" next to download buttons |
+| Checksum verification instructions | Security-conscious users want to verify download integrity | LOW | SHA256 checksums from GitHub release assets. Display on download page or link to release notes |
 
----
+### Differentiators (Competitive Advantage)
 
-## Differentiators
+Features that set the product apart. Not required, but valuable.
 
-Features that set product apart. Not expected by default, but make the product notably better.
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| CRT-themed download page consistent with site | Brand cohesion; terminal/hacker aesthetic reinforces "self-hosted security" positioning | LOW | Reuse existing CRT theme CSS from `template.html`. Download page is hand-crafted HTML in `site/download/index.html` with inline JS for OS detection + GitHub API fetch |
+| Alternative install methods section | Power users appreciate choice (Homebrew vs direct download vs npm/Docker daemon-only) | LOW | Section on download page: `brew install --cask waiaas/waiaas/waiaas-desktop` for macOS, direct download for all OS, plus note about existing npm/Docker daemon-only install |
+| Release notes link per version | Transparency builds trust for security software | LOW | Link to GitHub Release page: `https://github.com/{owner}/{repo}/releases/tag/desktop-v{version}` |
+| Auto-update status indicator | Desktop app already has Ed25519 auto-update; mentioning this reduces anxiety | LOW | Text note: "Automatic updates included. After install, WAIaaS Desktop checks for updates and applies them automatically with Ed25519 signature verification." |
+| Nav link to Download page | Site navigation should include Download as primary action | LOW | Add `[Download]` link to `template.html` nav alongside GitHub/npm/Docker/Blog/Docs. Every page on waiaas.ai then links to download |
+| SUBMISSION_KIT Desktop channel entries | Distribution tracking completeness for SEO/discovery | LOW | Add Desktop App entries to existing `site/distribution/SUBMISSION_KIT.md`: download page URL, Homebrew tap URL, installation guide URL |
 
-| # | Feature | Value Proposition | Complexity | Dependencies | Notes |
-|---|---------|-------------------|------------|--------------|-------|
-| D1 | WalletConnect QR pairing in Desktop | Owner approval without Telegram or external browser. Scan QR from mobile wallet (MetaMask/Phantom) directly in the app. No comparable daemon-management tool offers this | High | @reown/appkit (Plan A) or WC Relay WebSocket (Plan B) | Phase 0 spike needed for Go/No-Go. Tauri WebView compatibility is the primary risk. This is the only feature requiring a spike |
-| D2 | Native OS notifications for daemon events | Toast/banner notifications for pending approvals, kill switch triggers, low balance alerts -- without keeping the app open | Low | Tauri notification plugin | Bridges existing daemon notification events to OS-level notifications. Much better than relying on Telegram |
-| D3 | Sidecar status card on Dashboard | At-a-glance daemon health (uptime, memory, port, version) integrated into the familiar dashboard UI | Low | IPC get_sidecar_status | Small but noticeable quality-of-life improvement over browser-only admin |
-| D4 | Launch at system startup | Daemon always running without user intervention. IPFS Desktop and Docker Desktop both offer this | Low | Tauri autostart plugin | OS-specific (launchd on macOS, registry on Windows, systemd/XDG on Linux) |
-| D5 | Log viewer (daemon stdout/stderr) | Troubleshoot without terminal. See real-time daemon output in the UI | Med | IPC get_daemon_logs, streaming | Useful for debugging. IPFS Desktop exposes logs via web UI. Could pipe sidecar stdout to a ring buffer in Rust |
-| D6 | Universal binary for macOS (arm64+x64) | Single download works on both Apple Silicon and Intel Macs | Low | tauri-action target config | User-facing simplicity. Apple strongly encourages universal binaries |
+### Anti-Features (Commonly Requested, Often Problematic)
 
----
+Features that seem good but create problems.
 
-## Anti-Features
-
-Features to explicitly NOT build. Tempting but wrong for this project.
-
-| # | Anti-Feature | Why Avoid | What to Do Instead |
-|---|--------------|-----------|-------------------|
-| A1 | Separate React/Vue UI for Desktop | Doubles maintenance, breaks feature parity, introduces desync bugs. This was the original doc 39 v0.5 design -- correctly abandoned in v33.0 | Reuse Admin Web UI (Preact 10.x) via WebView. Desktop-only modules in `packages/admin/src/desktop/` with dynamic import + tree-shaking |
-| A2 | Embedded database viewer/editor | SQLite direct manipulation bypasses the API layer, creates data corruption risk, and violates the security model | Existing Admin Web UI pages for all CRUD operations. If debugging is needed, export backup via CLI |
-| A3 | Built-in terminal/CLI emulator | Scope creep. Desktop app is for GUI users. CLI users already have the terminal | Document CLI commands in admin manual. Link to docs from Settings page |
-| A4 | Custom window chrome / frameless window | Breaks OS conventions, accessibility, and platform-specific behaviors (traffic lights on macOS, snap on Windows). Tauri's default native chrome is correct | Use Tauri default window decorations. Consistent with OS expectations |
-| A5 | Multi-instance management | Managing multiple daemon instances adds enormous complexity for a niche use case | Single instance per app. Advanced users use Docker/CLI for multi-instance |
-| A6 | Mobile companion app | Mobile is an entirely different platform with different patterns (push notifications, biometrics, background services). Telegram Bot + Push Relay already handle mobile Owner approval | Continue using Telegram Bot and Wallet Apps (via Push Relay) for mobile Owner interactions |
-| A7 | P2P networking / direct wallet-to-wallet | Out of scope for a daemon management wrapper. This is a different product category | Stay focused: Desktop = GUI wrapper for the daemon's existing REST API |
-| A8 | Browser extension | Different distribution channel, different security model, different codebase. Don't conflate | Desktop app talks to localhost daemon. Browser extension would require a separate project |
-
----
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Server-side OS detection | More accurate than client-side JS | WAIaaS site is static (GitHub Pages). No server. SSR adds hosting cost for marginal improvement | Client-side detection with graceful fallback to all-platforms table |
+| Apple notarization + code signing | Removes Gatekeeper warnings entirely | Requires Apple Developer Program ($99/yr), provisioning profiles, hardened runtime config. Significant ongoing maintenance for open-source project | Document Gatekeeper bypass in install guide (`xattr -cr` or right-click Open). Homebrew Cask strips quarantine automatically |
+| Windows code signing | Removes SmartScreen warning | Requires EV code signing certificate ($200-500/yr), hardware token. High cost for current scale | Document SmartScreen bypass in install guide. SmartScreen learns from download volume over time |
+| Homebrew core submission | Being in homebrew/homebrew-cask gives wider reach | Requires Apple notarization as prerequisite for official cask repo. High maintenance from Homebrew CI + PR review process | Self-hosted tap (`homebrew-waiaas`) provides same `brew install --cask` UX with full control |
+| Winget / Chocolatey / Scoop packages | Windows package manager support | Each has its own submission/maintenance overhead. Low priority until Windows user base is established | Direct .msi download + manual install docs. Add package managers later based on demand |
+| Linux Snap / Flatpak packages | Containerized Linux distribution | Additional build targets and maintenance. AppImage + .deb already cover primary use cases | AppImage is universal, .deb covers Debian/Ubuntu. Add Snap/Flatpak based on demand |
+| Download analytics / telemetry | Know download counts per platform | Privacy concern for security-focused product. Adds server-side complexity | Use GitHub release asset download counts (public API) for analytics without custom telemetry |
+| CDN-hosted binaries | Faster downloads globally | GitHub Releases already serves via GitHub CDN. Additional CDN adds cost and sync complexity | GitHub Releases CDN is sufficient for current scale |
 
 ## Feature Dependencies
 
 ```
-T10 (Desktop detection) ---|
-                           |--> T4 (Admin WebView load)
-T3 (Dynamic port)---------|
-                           |--> T1 (Sidecar lifecycle)
+[Download Page]
+    |-- requires --> [GitHub Releases CI] (EXISTS: desktop-release.yml)
+    |-- requires --> [Site Build Pipeline] (EXISTS: site/build.mjs + pages.yml)
+    |-- enhances --> [Nav Link in template.html]
 
-T1 (Sidecar lifecycle) --> T2 (System tray)
-T1 (Sidecar lifecycle) --> T8 (IPC bridge)
-T8 (IPC bridge) ---------> D3 (Sidecar status card)
-T8 (IPC bridge) ---------> D5 (Log viewer)
+[Homebrew Cask Tap]
+    |-- requires --> [GitHub Releases CI] (EXISTS)
+    |-- requires --> [homebrew-waiaas repo] (NEW: separate GitHub repo)
+    |-- requires --> [CI formula auto-update] (NEW: workflow)
 
-T5 (Setup Wizard) depends on:
-  - T4 (Admin WebView) -- renders inside WebView
-  - T8 (IPC bridge) -- detects first-run state
-  - D1 (WalletConnect) -- step 4 Owner connection (optional, skippable)
+[Desktop Installation Guide]
+    |-- requires --> [Download Page URL] (to link to)
+    |-- requires --> [Homebrew Cask Tap] (to document brew install)
+    |-- enhances --> [Download Page] (linked from download page)
 
-D1 (WalletConnect) depends on:
-  - Phase 0 spike result (Go/No-Go)
-  - T10 (Desktop detection) -- only shown in Desktop
-
-T6 (Auto-update) depends on:
-  - T7 (Cross-platform distribution) -- needs CI pipeline first
-  - Tauri updater signing keys generated
-
-T7 (Distribution) depends on:
-  - T1 (Sidecar) -- binary must be built
-  - macOS Developer ID certificate
+[SUBMISSION_KIT Update]
+    |-- requires --> [Download Page]
+    |-- requires --> [Homebrew Cask Tap]
+    |-- requires --> [Desktop Installation Guide]
 ```
 
----
+### Dependency Notes
 
-## MVP Recommendation
+- **Download Page requires GitHub Releases CI:** Download URLs come from GitHub Releases API. The `desktop-release.yml` workflow already publishes to GitHub Releases with proper asset naming across 4 targets (macOS arm64/x64, Windows x64, Linux x64).
+- **Homebrew Cask requires separate repo:** Homebrew taps must be standalone repos named `homebrew-{name}`. The main WAIaaS repo cannot serve as the tap. Repo name: `minhoyoo-iotrust/homebrew-waiaas`.
+- **CI formula auto-update requires cross-repo coordination:** When `desktop-release.yml` publishes a new release, the Cask formula in `homebrew-waiaas` must be updated with new version + SHA256. Use `repository_dispatch` event from main repo to tap repo (requires PAT or fine-grained token with `contents:write` on tap repo).
+- **Installation Guide should be last:** It documents all methods, so both Download Page and Homebrew Cask should be functional before writing the guide.
+- **SUBMISSION_KIT is terminal:** Updates only after all three deliverables have stable URLs.
 
-### Must Have (Phase 1-2, ship as "Desktop App v0.1.0")
+## MVP Definition
 
-1. **T1** Sidecar lifecycle -- the core value proposition
-2. **T2** System tray -- minimum viable daemon management UX
-3. **T3** Dynamic port -- prevents user-facing port conflicts
-4. **T4** Admin WebView load -- access all existing features
-5. **T8** IPC bridge -- enables all Desktop-specific features
-6. **T9** Orphan process cleanup -- prevents port leaks
-7. **T10** Desktop detection -- gates Desktop-only code paths
+### Launch With (v1)
 
-### Should Have (Phase 3, "v0.2.0")
+Minimum viable product for this milestone.
 
-8. **T5** Setup Wizard -- critical for non-technical users
-9. **D1** WalletConnect QR -- high-value differentiator (contingent on Phase 0 spike)
-10. **D3** Sidecar status card -- low-cost, visible improvement
+- [x] Download page with OS auto-detection + GitHub Releases API integration -- core deliverable
+- [x] All-platforms download table as fallback below CTA -- essential for misdetected OS
+- [x] Homebrew Cask tap (`homebrew-waiaas` repo + Cask formula) -- primary macOS channel
+- [x] CI auto-update for Cask formula on new desktop release -- prevents staleness
+- [x] Desktop installation guide (`docs/admin-manual/desktop-installation.md`) -- step-by-step instructions
+- [x] Nav link to Download page in `template.html` -- discoverability from every site page
+- [x] SUBMISSION_KIT Desktop entries -- distribution tracking
 
-### Must Have for Public Distribution (Phase 4)
+### Add After Validation (v1.x)
 
-11. **T6** Auto-update -- security requirement for any desktop app managing crypto
-12. **T7** Cross-platform CI + code signing -- macOS notarization is mandatory
+Features to add once core is working.
 
-### Defer to Post-v33.2
+- [ ] Architecture-specific macOS detection (Apple Silicon vs Intel CTA) -- after confirming both .dmg variants build reliably
+- [ ] Release changelog inline on download page -- when release cadence stabilizes
+- [ ] Build-from-source instructions -- when developer community requests it
 
-13. **D2** Native OS notifications -- nice-to-have, Telegram already covers alerts
-14. **D4** Launch at system startup -- low priority, manual launch is acceptable initially
-15. **D5** Log viewer -- debugging aid, not essential for v1
-16. **D6** Universal macOS binary -- can start with separate arm64/x64, merge later
+### Future Consideration (v2+)
 
----
+Features to defer until product-market fit is established.
+
+- [ ] Apple notarization + code signing -- when budget allows ($99/yr + CI complexity)
+- [ ] Windows code signing -- when Windows user base justifies cost ($200-500/yr)
+- [ ] Winget/Chocolatey/Scoop packages -- when Windows download volume is significant
+- [ ] Snap/Flatpak packages -- when Linux user base requests them
+- [ ] Homebrew core submission -- requires Apple notarization first
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Risk | Complexity | Priority |
-|---------|-----------|-------------------|------------|----------|
-| T1 Sidecar lifecycle | Critical | Med (SEA cross-compile) | Med | P0 |
-| T2 System tray | High | Low | Low | P0 |
-| T3 Dynamic port | High | Low (designed) | Med | P0 |
-| T4 Admin WebView | Critical | Low (reuse) | Low | P0 |
-| T5 Setup Wizard | High | Low | Med | P1 |
-| T6 Auto-update | Critical | Med (signing keys) | Med | P1 |
-| T7 Distribution CI | Critical | High (code signing) | High | P1 |
-| T8 IPC bridge | High | Low | Med | P0 |
-| T9 Orphan cleanup | High | Med | Med | P0 |
-| T10 Desktop detection | High | Low | Low | P0 |
-| D1 WalletConnect | Med-High | **High** (WebView compat) | High | P1 (spike first) |
-| D2 Native notifications | Med | Low | Low | P2 |
-| D3 Status card | Med | Low | Low | P1 |
-| D4 Auto-start | Low | Low | Low | P2 |
-| D5 Log viewer | Low | Med | Med | P2 |
-| D6 Universal binary | Low | Low | Low | P2 |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Download page (OS detect + GitHub API) | HIGH | MEDIUM | P1 |
+| Homebrew Cask tap + CI auto-update | HIGH | MEDIUM | P1 |
+| Desktop installation guide | HIGH | LOW | P1 |
+| Nav link in template.html | MEDIUM | LOW | P1 |
+| SUBMISSION_KIT update | LOW | LOW | P1 |
+| CRT theme consistency on download page | MEDIUM | LOW | P1 |
+| Checksum display/link | MEDIUM | LOW | P2 |
+| Alternative install methods section | MEDIUM | LOW | P2 |
+| Architecture-specific macOS CTA | MEDIUM | MEDIUM | P2 |
+| Apple notarization | HIGH | HIGH | P3 |
+| Windows code signing | MEDIUM | HIGH | P3 |
 
----
+**Priority key:**
+- P1: Must have for this milestone
+- P2: Should have, add when possible
+- P3: Nice to have, future consideration
 
-## Competitor Analysis: Desktop Daemon Wrappers
+## Competitor Feature Analysis
 
-| Feature | IPFS Desktop | Docker Desktop | Ledger Live | WAIaaS Desktop (planned) |
-|---------|-------------|---------------|-------------|-------------------------|
-| Framework | Electron | Electron | Electron | Tauri 2 (Rust) |
-| Daemon management | Yes (Kubo) | Yes (Docker Engine) | N/A (direct USB) | Yes (Node.js SEA sidecar) |
-| System tray | Yes (menubar) | Yes (whale icon) | No | Yes (3-color status) |
-| Setup wizard | Auto-config | Yes (4 steps) | Yes (3 steps) | Yes (5 steps) |
-| Auto-update | Yes (electron-updater) | Yes | Yes | Yes (Tauri updater) |
-| WalletConnect | N/A | N/A | Yes (built-in) | Yes (Desktop-only) |
-| Code signing | Yes (notarized) | Yes (notarized) | Yes (notarized) | Planned (macOS + optional Win) |
-| Bundle size | ~120MB | ~600MB | ~200MB | ~15-30MB (Tauri advantage) |
-| Web UI reuse | Yes (IPFS Web UI) | No (custom UI) | No (custom UI) | Yes (Admin Web UI) |
+| Feature | Warp (terminal) | Cursor (editor) | Zed (editor) | Our Approach |
+|---------|-----------------|-----------------|--------------|--------------|
+| Download page OS detect | Yes, primary CTA per OS | Yes, auto-detect + fallback | Yes, OS-specific buttons | Client-side JS, primary CTA + all-platform table |
+| Homebrew Cask | Yes, official tap | Yes, official tap | Yes, in homebrew-cask core | Self-hosted tap (homebrew-waiaas) |
+| Installation guide | Integrated in docs | Integrated in docs | GitHub wiki | `docs/admin-manual/` consistent with existing structure |
+| Code signing | Yes (Apple + Windows) | Yes (Apple + Windows) | Yes (Apple) | Deferred; document bypass in install guide |
+| Auto-update | Yes | Yes | Yes | Already built (Tauri updater + Ed25519) |
+| Multiple architectures | arm64 + x64 | arm64 + x64 | arm64 + x64 | arm64 + x64 macOS, x64 Windows + Linux |
+| Package managers | Homebrew | Homebrew | Homebrew | Homebrew Cask (self-hosted tap) |
 
-**Key insight from IPFS Desktop:** Reusing an existing web UI (IPFS Web UI) inside a desktop wrapper is a proven, production-validated pattern. IPFS Desktop bundles the web UI as a separate dependency and loads it in Electron. WAIaaS does the same via WebView loading localhost, which is architecturally cleaner (single source of truth for UI code).
+## Implementation Notes
 
----
+### Download Page Technical Design
+
+Hand-crafted HTML file at `site/download/index.html` (not markdown-generated) because it needs client-side JavaScript for OS detection and dynamic GitHub API content.
+
+**OS Detection (2026 best practice):**
+```javascript
+function detectOS() {
+  // Modern API (Chrome 90+, Edge 90+)
+  const platform = navigator.userAgentData?.platform;
+  if (platform) {
+    if (platform === 'macOS') return 'macos';
+    if (platform === 'Windows') return 'windows';
+    if (platform === 'Linux') return 'linux';
+  }
+  // Fallback for Safari, Firefox
+  const ua = navigator.userAgent;
+  if (/Mac/i.test(ua)) return 'macos';
+  if (/Win/i.test(ua)) return 'windows';
+  if (/Linux/i.test(ua)) return 'linux';
+  return 'unknown';
+}
+```
+
+**GitHub API for desktop-specific releases:**
+```javascript
+// Cannot use /releases/latest -- returns latest across ALL tags (npm + desktop)
+// Must filter for desktop-v* tags specifically
+const releases = await fetch(
+  'https://api.github.com/repos/minhoyoo-iotrust/WAIaaS/releases'
+).then(r => r.json());
+const latest = releases.find(r => r.tag_name.startsWith('desktop-v') && !r.draft && !r.prerelease);
+```
+
+**Asset filename patterns (from desktop-release.yml matrix):**
+- macOS arm64: `WAIaaS-Desktop_*.dmg` (aarch64-apple-darwin target)
+- macOS x64: `WAIaaS-Desktop_*.dmg` (x86_64-apple-darwin target)
+- Windows: `WAIaaS-Desktop_*.msi` (x86_64-pc-windows-msvc target)
+- Linux: `WAIaaS-Desktop_*.AppImage` + `WAIaaS-Desktop_*.deb` (x86_64-unknown-linux-gnu)
+
+### Homebrew Cask Formula Structure
+
+```ruby
+cask "waiaas-desktop" do
+  version "0.1.0"
+
+  on_arm do
+    sha256 "PLACEHOLDER_ARM64_SHA256"
+    url "https://github.com/minhoyoo-iotrust/WAIaaS/releases/download/desktop-v#{version}/WAIaaS-Desktop_#{version}_aarch64.dmg"
+  end
+
+  on_intel do
+    sha256 "PLACEHOLDER_X64_SHA256"
+    url "https://github.com/minhoyoo-iotrust/WAIaaS/releases/download/desktop-v#{version}/WAIaaS-Desktop_#{version}_x64.dmg"
+  end
+
+  name "WAIaaS Desktop"
+  desc "Self-hosted wallet daemon for AI agents"
+  homepage "https://waiaas.ai"
+
+  app "WAIaaS Desktop.app"
+
+  zap trash: [
+    "~/Library/Application Support/dev.waiaas.desktop",
+    "~/Library/Caches/dev.waiaas.desktop",
+  ]
+end
+```
+
+**Tap repo structure:**
+```
+homebrew-waiaas/
+  Casks/
+    waiaas-desktop.rb
+  .github/
+    workflows/
+      update-cask.yml    # triggered by repository_dispatch
+  README.md
+```
+
+**Install command:** `brew install --cask waiaas/waiaas/waiaas-desktop`
+
+### CI Auto-Update Flow
+
+1. `desktop-release.yml` publishes release to GitHub Releases (already exists)
+2. After publish, add `repository_dispatch` step:
+   ```yaml
+   - name: Notify Homebrew tap
+     uses: peter-evans/repository-dispatch@v3
+     with:
+       token: ${{ secrets.TAP_REPO_TOKEN }}
+       repository: minhoyoo-iotrust/homebrew-waiaas
+       event-type: update-cask
+       client-payload: '{"version": "${{ steps.version.outputs.version }}"}'
+   ```
+3. `homebrew-waiaas` workflow receives event, downloads assets, computes SHA256, updates Cask formula, commits and pushes
+
+### Installation Guide Structure
+
+`docs/admin-manual/desktop-installation.md` with front-matter for site build:
+- Section 1: System requirements (macOS 10.15+, Windows 10+, Linux with WebKit2GTK)
+- Section 2: Installation methods (Homebrew Cask for macOS, direct download for all OS)
+- Section 3: Gatekeeper bypass (macOS: right-click Open or `xattr -cr`), SmartScreen bypass (Windows)
+- Section 4: Setup Wizard walkthrough (5 steps)
+- Section 5: Troubleshooting (port conflicts, sidecar won't start, update issues)
+- Section 6: Upgrading (auto-update mechanism, manual upgrade, Homebrew upgrade)
+- Section 7: Uninstalling
+
+### Download Page Integration with Site
+
+The download page is NOT processed by `site/build.mjs` (markdown-to-HTML pipeline). It's a standalone HTML file that:
+- Copies CRT theme CSS inline from `template.html`
+- Has its own `<script>` for OS detection + GitHub API
+- Follows same nav structure (logo + nav links)
+- Deployed alongside other site assets via `pages.yml`
+- Added to `sitemap.xml` generation in `build.mjs` (hardcoded entry)
+- Needs `[Download]` nav link added to `template.html`
 
 ## Sources
 
-- [Tauri 2 Node.js Sidecar Guide](https://v2.tauri.app/learn/sidecar-nodejs/) -- HIGH confidence (official docs)
-- [Tauri 2 Embedding External Binaries](https://v2.tauri.app/develop/sidecar/) -- HIGH confidence (official docs)
-- [Tauri 2 Updater Plugin](https://v2.tauri.app/plugin/updater/) -- HIGH confidence (official docs)
-- [Tauri 2 System Tray](https://v2.tauri.app/learn/system-tray/) -- HIGH confidence (official docs)
-- [Tauri 2 macOS Code Signing](https://v2.tauri.app/distribute/sign/macos/) -- HIGH confidence (official docs)
-- [Tauri 2 GitHub Pipelines](https://v2.tauri.app/distribute/pipelines/github/) -- HIGH confidence (official docs)
-- [tauri-action GitHub Repository](https://github.com/tauri-apps/tauri-action) -- HIGH confidence (official)
-- [IPFS Desktop](https://github.com/ipfs/ipfs-desktop) -- HIGH confidence (comparable product, 5.8k stars)
-- [Sidecar Lifecycle Management Plugin Request](https://github.com/tauri-apps/plugins-workspace/issues/3062) -- MEDIUM confidence (community request, not shipped)
-- [Ship Tauri v2: Code Signing](https://dev.to/tomtomdu73/ship-your-tauri-v2-app-like-a-pro-code-signing-for-macos-and-windows-part-12-3o9n) -- MEDIUM confidence (community guide)
-- [Ship Tauri v2: GitHub Actions](https://dev.to/tomtomdu73/ship-your-tauri-v2-app-like-a-pro-github-actions-and-release-automation-part-22-2ef7) -- MEDIUM confidence (community guide)
-- [Evil Martians: Tauri + Sidecar](https://evilmartians.com/chronicles/making-desktop-apps-with-revved-up-potential-rust-tauri-sidecar) -- MEDIUM confidence (production experience)
-- [Reown AppKit Overview](https://reown.com/blog/walletconnect-modal-vs-web3modal-differences-for-d) -- MEDIUM confidence (official Reown blog, but no Tauri-specific info)
-- [Wizard UI Pattern Guide](https://www.eleken.co/blog-posts/wizard-ui-pattern-explained) -- MEDIUM confidence (UX patterns)
-- [Tauri Updater GitHub Discussion](https://github.com/orgs/tauri-apps/discussions/10206) -- MEDIUM confidence (community discussion)
+- [Homebrew: How to Create and Maintain a Tap](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap) -- HIGH confidence
+- [Homebrew: Adding Software to Homebrew](https://docs.brew.sh/Adding-Software-to-Homebrew) -- HIGH confidence
+- [Simon Willison: Auto-updating Homebrew formulas with GitHub Actions](https://til.simonwillison.net/homebrew/auto-formulas-github-actions) -- MEDIUM confidence
+- [josh.fail: Automate updating custom Homebrew formulae](https://josh.fail/2023/automate-updating-custom-homebrew-formulae-with-github-actions/) -- MEDIUM confidence
+- [Homebrew Bump Cask GitHub Action](https://github.com/marketplace/actions/homebrew-bump-cask) -- MEDIUM confidence
+- [MDN: NavigatorUAData API](https://developer.mozilla.org/en-US/docs/Web/API/NavigatorUAData) -- HIGH confidence
+- [30 Seconds of Code: Browser OS Detection](https://www.30secondsofcode.org/js/s/browser-os-detection/) -- MEDIUM confidence
+- [Tauri v2: Distribute](https://v2.tauri.app/distribute/) -- HIGH confidence
+- [GitHub REST API: Release Assets](https://docs.github.com/en/rest/releases/assets) -- HIGH confidence
+- [Homebrew Discussion: Auto-Update Tap Formula](https://github.com/orgs/Homebrew/discussions/2558) -- MEDIUM confidence
+
+---
+*Feature research for: Desktop App Distribution Channels*
+*Researched: 2026-04-01*

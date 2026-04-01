@@ -1,487 +1,315 @@
-# Domain Pitfalls: Tauri Desktop App for WAIaaS
+# Pitfalls Research
 
-**Domain:** Tauri 2 Desktop wrapper over existing Preact Admin Web UI + Node.js SEA sidecar
-**Researched:** 2026-03-31
-**Confidence:** HIGH (Tauri v2 official docs verified, community issues cross-referenced, project CSP code inspected)
-
----
+**Domain:** Desktop App Distribution Channels (Download Page + Homebrew Cask + Installation Guide)
+**Researched:** 2026-04-01
+**Confidence:** HIGH
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, broken releases, or security vulnerabilities.
+### Pitfall 1: GitHub Releases API Rate Limiting on Download Page
 
-### Pitfall 1: Node.js SEA Native Addon Binary Mismatch
+**What goes wrong:**
+Download page uses unauthenticated GitHub Releases API (`api.github.com/repos/.../releases/latest`) to fetch asset URLs. Unauthenticated requests are limited to 60 requests/hour per IP. A popular page or corporate network sharing a single IP exhausts the limit quickly, leaving visitors with a broken download page showing no versions or links.
 
-**What goes wrong:** `sodium-native` and `better-sqlite3` are C++ native addons compiled for a specific platform/arch/Node.js ABI. When the SEA binary is built on macOS arm64 and distributed to Windows x64, the bundled `.node` files crash with `ERR_DLOPEN_FAILED`. Node.js SEA does NOT make native modules cross-platform portable -- the addon binaries must match the target platform exactly.
+**Why it happens:**
+Client-side JS calling the API directly from the browser. Each page load = 1 API call. No caching layer between user and GitHub.
 
-**Why it happens:** SEA bundles JavaScript into the Node.js binary but native addons require platform-specific `.node` shared libraries. The `process.dlopen()` tempfile workaround (write `.node` asset to temp, load at runtime) only works if the binary was compiled for that exact OS/arch/ABI combination. Setting `useCodeCache: true` or `useSnapshot: true` in SEA config generates platform-specific data that silently produces corrupted binaries on other platforms.
+**How to avoid:**
+1. Build-time approach (recommended): Fetch release data during `site/build.mjs` and embed asset URLs directly in the HTML. Re-build on `desktop-release.yml` publish event or daily cron (already have `schedule` in pages.yml).
+2. If client-side is needed: Cache the API response in localStorage with a 1-hour TTL. Show hardcoded fallback URLs (direct GitHub release page link) when API fails.
+3. Never call `api.github.com` on every page load without a cache.
 
-**Consequences:** App crashes on startup on any platform where the native addon wasn't compiled. Users see cryptic `ERR_DLOPEN_FAILED` or `MODULE_NOT_FOUND` errors. Worst case: better-sqlite3 partially loads and corrupts the wallet database.
+**Warning signs:**
+- Download page shows "loading..." indefinitely on some networks
+- Console shows 403 from `api.github.com` with `X-RateLimit-Remaining: 0`
 
-**Prevention:**
-1. CI build matrix MUST compile native addons on each target platform (macOS arm64, macOS x64, Windows x64, Linux x64) -- never cross-compile native addons.
-2. Use `prebuildify` to bundle prebuilt binaries for all targets, then SEA config includes the correct `.node` file per platform.
-3. Set `useCodeCache: false` and `useSnapshot: false` in SEA config -- these are platform-specific and cause silent failures on other platforms.
-4. Smoke test: after SEA build, run `./waiaas-sea --version` on each target platform in CI before packaging into Tauri sidecar.
-5. Pin Node.js version across all CI runners -- ABI mismatch between Node.js 22.x patch versions has caused better-sqlite3 failures ([#1384](https://github.com/WiseLibs/better-sqlite3/issues/1384)).
-
-**Detection:** CI green on one OS but crashes on others. `Error: The module was compiled against a different Node.js version` in daemon logs. Binary works in dev but fails after Tauri packaging.
-
-**Phase mapping:** Phase 1 (Tauri Shell + Sidecar Manager) -- must be resolved before any other phase can test end-to-end.
-
-**Confidence:** HIGH -- documented Node.js SEA limitation + better-sqlite3 ABI issues widely reported.
+**Phase to address:**
+Download Page phase -- implement build-time asset URL embedding from the start.
 
 ---
 
-### Pitfall 2: Sidecar Zombie Processes on App Crash/Force-Quit
+### Pitfall 2: Homebrew Cask SHA256 Checksum Race Condition
 
-**What goes wrong:** When the Tauri app crashes, is force-quit (Force Quit on macOS, Task Manager on Windows), or the OS kills it (OOM), the sidecar daemon process keeps running. On next launch, a second daemon starts -- now two daemons compete for the SQLite database, causing `SQLITE_BUSY` or data corruption.
+**What goes wrong:**
+CI workflow updates the Cask formula with a SHA256 hash computed from a GitHub Release asset, but the asset is not yet fully propagated when the hash is computed. Or worse, the CI runs before `publish-release` job finishes (draft release assets have different URLs than published ones). The Cask formula ships with a wrong checksum, and `brew install --cask` fails for every user.
 
-**Why it happens:** Tauri's `RunEvent::Exit` hook only fires on graceful shutdown. Force-kill sends SIGKILL to the Tauri process without running cleanup. Windows is especially problematic -- it doesn't have Unix-style process groups, so child processes aren't automatically terminated when the parent dies. Tauri's shell plugin spawns the sidecar but doesn't use Windows Job Objects for automatic cleanup.
+**Why it happens:**
+The `desktop-release.yml` workflow has three jobs: `create-release` (draft) -> `build-tauri` (upload assets) -> `publish-release` (undraft). A Cask update CI triggered on `release.published` event might fire before assets are fully available via the public download URL, or GitHub CDN caching causes transient checksum mismatches.
 
-**Consequences:** Orphaned daemon processes consuming CPU/memory. Multiple daemons writing to same SQLite DB. Port conflicts if the old daemon holds the allocated port. Users must manually kill processes via Task Manager/Activity Monitor.
+**How to avoid:**
+1. Trigger Cask update workflow only after `publish-release` job completes, using `workflow_run` event on `desktop-release.yml` with `conclusion: success`.
+2. In the Cask update job: download the actual `.dmg`/`.zip` asset, compute `shasum -a 256` locally, then write that hash into the formula.
+3. Add a verification step: `brew audit --cask` on the generated formula before committing.
+4. Add a 30-second sleep or retry loop (max 3 attempts) before downloading, to handle CDN propagation delay.
 
-**Prevention:**
-1. **PID lockfile**: Daemon writes PID to `{data_dir}/daemon.pid` on startup, checks+kills stale process on start.
-2. **Port file health check**: On startup, read `{data_dir}/daemon.port`, try `GET /v1/health` on that port. If a daemon is already running and healthy, connect to it instead of spawning a new one.
-3. **Windows Job Objects**: In Rust Sidecar Manager, use `CreateJobObject` with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` to auto-terminate sidecar when parent exits. This is the ONLY reliable cleanup mechanism on Windows.
-4. **Sidecar Manager startup sequence**: `check_existing() -> kill_stale() -> cleanup_port_file() -> spawn_new() -> verify_health()`.
-5. **SQLite WAL mode**: Already used, but add `PRAGMA busy_timeout=5000` to handle brief contention during the kill-and-restart window.
+**Warning signs:**
+- `brew install --cask waiaas` fails with "SHA256 mismatch" within hours of a new release
+- Cask update CI completes but `shasum` value differs from manual download
 
-**Detection:** Users report "port already in use" errors on app restart. Two `waiaas` processes visible in task manager. `SQLITE_BUSY` errors in daemon logs.
-
-**Phase mapping:** Phase 1 (Sidecar Manager) -- PID lockfile + stale process cleanup must be in initial implementation.
-
-**Confidence:** HIGH -- multiple Tauri issues: [#5611](https://github.com/tauri-apps/tauri/issues/5611), [#1896](https://github.com/tauri-apps/tauri/issues/1896), [#3273](https://github.com/tauri-apps/tauri/discussions/3273).
-
----
-
-### Pitfall 3: CSP Conflict Between Daemon HTTP Headers and Tauri WebView
-
-**What goes wrong:** The daemon serves Admin UI with strict CSP headers (`default-src 'none'; script-src 'self'; connect-src 'self'`). When the Tauri WebView loads `http://localhost:{port}/admin`, two CSP problems arise:
-
-1. **IPC blocked**: Tauri's `invoke()` uses `ipc:` and `http://ipc.localhost` protocols. `connect-src 'self'` only allows the daemon's HTTP origin. All IPC calls fail silently.
-2. **Tauri bridge scripts blocked**: Tauri injects inline scripts for the IPC bridge that violate `script-src 'self'`. Console shows `Refused to execute inline script`.
-
-**Why it happens:** The existing CSP (`packages/daemon/src/api/middleware/csp.ts`) was designed for browser-only access where all scripts and connections originate from the same HTTP origin. Tauri WebView has a dual-origin model: HTTP content from the daemon + IPC scripts from Tauri's native layer. Tauri auto-injects CSP nonces for bundled assets (when CSP is in `tauri.conf.json`) but does NOT modify `connect-src` when CSP comes from HTTP response headers.
-
-**Consequences:** Admin UI appears to load but all Desktop-specific features (Sidecar status, Setup Wizard IPC, quit_app) are silently broken. Works in `tauri dev` (which may bypass CSP) but breaks in production `tauri build`.
-
-**Prevention:**
-1. **Preferred approach**: Define Desktop CSP in `tauri.conf.json` `security.csp` which overrides HTTP CSP headers for the WebView. Leave HTTP CSP headers for browser access unchanged:
-   ```json
-   {
-     "security": {
-       "csp": "default-src 'self' ipc: http://ipc.localhost; script-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://ipfs.io https://cloudflare-ipfs.com; font-src 'self'"
-     }
-   }
-   ```
-2. **Alternative**: Conditional CSP in daemon middleware, detecting Desktop requests via custom header:
-   ```typescript
-   const isDesktopRequest = c.req.header('X-Tauri-Desktop') === 'true';
-   const cspValue = isDesktopRequest ? DESKTOP_CSP_VALUE : BROWSER_CSP_VALUE;
-   ```
-3. **Never** disable CSP entirely or set `default-src *` -- that defeats security for all users.
-
-**Detection:** Desktop app loads Admin UI but IPC commands return `undefined` or throw. Console shows CSP violation warnings. Works in `tauri dev` but fails after `tauri build`.
-
-**Phase mapping:** Phase 2 (IPC Bridge) -- CSP must be adjusted when IPC commands are first tested in production build.
-
-**Confidence:** HIGH -- verified from actual CSP implementation in `packages/daemon/src/api/middleware/csp.ts`.
+**Phase to address:**
+Homebrew Cask phase -- build the CI pipeline with retry + verification from day 1.
 
 ---
 
-### Pitfall 4: macOS Code Signing + Notarization Pipeline Failures
+### Pitfall 3: macOS Sequoia Gatekeeper Bypass Instructions Are Outdated
 
-**What goes wrong:** macOS Catalina+ requires both code signing AND notarization for apps to run without Gatekeeper warnings. Missing or incorrect entitlements cause the app to crash on launch AFTER notarization (not before). The crash is post-notarization specific because notarization enables Hardened Runtime which restricts JIT compilation -- and Tauri's WKWebView requires JIT for JavaScript execution.
+**What goes wrong:**
+Installation guide tells users to "right-click and Open" to bypass Gatekeeper, but macOS Sequoia (15.0+) removed the Control-click/right-click bypass method. Users on Sequoia follow the guide, it does not work, and they cannot install the app. Support load spikes.
 
-**Why it happens:** Tauri uses WKWebView which requires JIT compilation. Without the `com.apple.security.cs.allow-jit` entitlement, the app passes notarization but crashes at runtime when the WebView tries to JIT-compile JavaScript. This is a Tauri-specific trap that doesn't exist in Electron (which bundles its own Chromium). Additionally, notarization takes 2-5 minutes per build and can timeout silently in CI.
+**Why it happens:**
+Most online guides and even Apple's own older docs describe the pre-Sequoia method. Developers test on their own machines (often with Gatekeeper disabled) and never encounter the issue.
 
-**Consequences:** CI builds succeed, notarization succeeds, but the .dmg crashes immediately on user's machine. Users see "WAIaaS Desktop quit unexpectedly" with zero actionable error.
+**How to avoid:**
+1. Document the Sequoia-specific flow: System Settings -> Privacy & Security -> scroll to bottom -> "Open Anyway" button -> confirm with admin password.
+2. Version-gate the instructions: detect macOS version in the guide or provide separate sections for "macOS 14 and earlier" vs "macOS 15 (Sequoia) and later".
+3. Long-term: invest in Apple Developer ID signing + notarization (secrets already in desktop-release.yml: `APPLE_CERTIFICATE`, `APPLE_ID`, etc.) to eliminate the Gatekeeper warning entirely.
 
-**Prevention:**
-1. **Entitlements file** (`entitlements.plist`) must include:
-   ```xml
-   <key>com.apple.security.cs.allow-jit</key><true/>
-   <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
-   <key>com.apple.security.cs.disable-library-validation</key><true/>
-   ```
-2. Use App Store Connect API key (not Apple ID password) for notarization in CI -- avoids 2FA issues and timeout problems.
-3. Store signing certificate as base64-encoded CI secret, import into a temporary keychain during build. Delete keychain after build.
-4. **Test the signed+notarized artifact**, not just the unsigned build. CI should download the .dmg, mount it, and verify the app launches.
-5. A free Apple Developer account CANNOT notarize -- a paid $99/year Apple Developer Program membership is required.
+**Warning signs:**
+- User reports of "app is damaged" or "cannot be opened" specifically from macOS 15+ users
+- The `APPLE_CERTIFICATE` secret is empty/unset in GitHub Actions (meaning builds are unsigned)
 
-**Detection:** App works fine in development and unsigned builds. After CI builds with signing, macOS users report crash on launch. No error in Tauri logs -- crash happens at the OS level before the app's code runs.
-
-**Phase mapping:** Phase 4 (GitHub Releases CI) -- signing must be configured and tested before first public release.
-
-**Confidence:** HIGH -- documented in [Tauri macOS signing docs](https://v2.tauri.app/distribute/sign/macos/) and [DEV community guide](https://dev.to/tomtomdu73/ship-your-tauri-v2-app-like-a-pro-code-signing-for-macos-and-windows-part-12-3o9n).
+**Phase to address:**
+Installation Guide phase -- must verify whether Apple signing secrets are configured; guide content depends on this.
 
 ---
 
-### Pitfall 5: Tauri Updater Key Loss = Bricked Update Channel
+### Pitfall 4: OS Detection Misidentifies Platform or Architecture
 
-**What goes wrong:** Tauri's built-in updater uses Ed25519 signature verification that CANNOT be disabled. The public key is compiled into the app binary at build time. If the private signing key is lost, no further updates can be delivered to existing installations -- users must manually download and reinstall. There is no key rotation mechanism.
+**What goes wrong:**
+Download page detects user's OS via `navigator.userAgent` or `navigator.platform` but shows wrong download. Common failures: (1) Apple Silicon Mac shown x86_64 download, (2) Linux ARM shown x86_64 `.deb`, (3) Chromebook detected as Linux when it cannot run native apps, (4) iPad with desktop Safari detected as macOS.
 
-**Why it happens:** The signing key is generated once during initial Tauri setup (`tauri signer generate`). Unlike code signing certificates (which have institutional recovery), Tauri's updater key is a standalone Ed25519 keypair with no recovery path. The private key must be in environment variables during CI builds -- `.env` files do NOT work with the Tauri signer.
+**Why it happens:**
+`navigator.platform` is deprecated and unreliable. `navigator.userAgent` does not distinguish ARM vs x86 on macOS (Apple intentionally hides this). `navigator.userAgentData` (User-Agent Client Hints) is not available on Firefox/Safari.
 
-**Consequences:** Permanent inability to push updates to existing users. Complete loss of the auto-update channel. All users must be notified to manually reinstall.
+**How to avoid:**
+1. Use `navigator.userAgentData?.platform` with fallback to `navigator.platform` for OS detection.
+2. For macOS: do NOT attempt ARM vs x86 detection -- show both download links (aarch64 + x86_64) with aarch64 as the default/recommended since Apple Silicon is now dominant.
+3. Always show a "All downloads" section below the auto-detected recommendation so users can self-correct.
+4. Show the detected OS prominently ("Detected: macOS") so users notice if it is wrong.
 
-**Prevention:**
-1. Generate key with `tauri signer generate -w ~/.tauri/waiaas.key`.
-2. Store private key in **two** independent secure locations (e.g., GitHub Secrets + encrypted backup in team password manager).
-3. Store public key in `tauri.conf.json` and document it in the repo.
-4. **Test key recovery** during initial setup -- simulate restoring from backup, build with restored key, and verify a full update cycle (check -> download -> verify -> install).
-5. NEVER store the private key in the repo, in `.env` files, or in any unencrypted location.
-6. Document the key's fingerprint so you can verify which key is in use.
+**Warning signs:**
+- Users downloading wrong architecture and getting "this app is not supported on your Mac" errors
+- Analytics showing macOS users downloading Linux builds
 
-**Detection:** Cannot be detected until the key is needed and missing. By then it's too late.
-
-**Phase mapping:** Phase 4 (Auto-updater) -- key must be generated, backed up, and tested before first release.
-
-**Confidence:** HIGH -- explicitly stated in [Tauri updater docs](https://v2.tauri.app/plugin/updater/).
+**Phase to address:**
+Download Page phase -- OS detection logic must be tested across browsers.
 
 ---
+
+### Pitfall 5: Homebrew Cask Naming Collision with Official Tap
+
+**What goes wrong:**
+The Cask name in your custom tap (`homebrew-waiaas`) collides with an existing formula/cask in `homebrew-core` or `homebrew-cask`. Users cannot install it, or worse, install the wrong package.
+
+**Why it happens:**
+Unlike formulae, Homebrew casks must have globally unique names. Developers pick a common name without checking the official repos first. Homebrew 5.0+ also changed tap behavior -- `homebrew/cask` is no longer a separate tap but integrated into core.
+
+**How to avoid:**
+1. Before creating the cask: run `brew search waiaas` and `brew info waiaas` to verify no conflicts.
+2. Use the full qualified name pattern: `waiaas-desktop` (not just `waiaas`).
+3. Test installation via `brew install minhoyoo-iotrust/waiaas/waiaas-desktop` (fully qualified tap path).
+4. Document both `brew tap minhoyoo-iotrust/waiaas && brew install --cask waiaas-desktop` and the one-liner form.
+
+**Warning signs:**
+- `brew audit --cask` reports naming conflicts
+- `brew install --cask waiaas` installs something unexpected
+
+**Phase to address:**
+Homebrew Cask phase -- verify naming before writing the formula.
+
+---
+
+### Pitfall 6: Windows SmartScreen Reputation Gate Blocks Installation
+
+**What goes wrong:**
+Windows shows "Windows protected your PC" / "SmartScreen prevented an unrecognized app from starting" with no obvious way to proceed. The "Run anyway" button is hidden behind "More info" click. Many non-technical users give up at this point.
+
+**Why it happens:**
+Windows SmartScreen uses a reputation-based system. New/unsigned executables have zero reputation. Even with standard code signing, SmartScreen warnings persist until the binary accumulates enough "reputation" (enough users have run it). Only EV (Extended Validation) code signing certificates get immediate SmartScreen bypass.
+
+**How to avoid:**
+1. Installation guide must include clear screenshots of the SmartScreen dialog with step-by-step: "Click More info -> Click Run anyway".
+2. Explain the file properties "Unblock" checkbox method as an alternative (right-click -> Properties -> General -> Unblock).
+3. Long-term: get an EV code signing certificate (~$300-500/year) for instant SmartScreen trust.
+4. Include the note that this warning is normal for new open-source software and does not indicate malware.
+
+**Warning signs:**
+- Windows users reporting they cannot install the app
+- Download stats show Windows downloads but zero Windows usage
+
+**Phase to address:**
+Installation Guide phase -- SmartScreen bypass instructions with screenshots are mandatory.
+
+---
+
+### Pitfall 7: Download Page Breaks When GitHub Release Has No Desktop Assets
+
+**What goes wrong:**
+Client-side JS fetches `/releases/latest` but the latest release is for the npm package (not desktop), returning assets with names like `waiaas-2.13.0.tgz` instead of `.dmg`/`.msi`/`.AppImage`. Download page shows wrong links or no links.
+
+**Why it happens:**
+The project has two release tracks: npm releases via release-please and desktop releases via `desktop-release.yml`. `GET /releases/latest` returns the most recent non-draft, non-prerelease release regardless of which track created it. The desktop release uses `desktop-v*` tags, but the API does not filter by tag prefix.
+
+**How to avoid:**
+1. Do NOT use `/releases/latest`. Instead, use `/releases` and filter client-side (or at build time) for releases whose `tag_name` starts with `desktop-v`.
+2. Build-time approach: `site/build.mjs` fetches releases, filters for `desktop-v*` tags, picks the latest, embeds the asset URLs.
+3. Add a hardcoded fallback URL pattern: `https://github.com/.../releases/tag/desktop-v0.1.0` as a "manual download" link.
+
+**Warning signs:**
+- Download page shows npm tarball links instead of desktop installers
+- Page shows "No downloads available" after an npm release
+
+**Phase to address:**
+Download Page phase -- critical design decision, must filter by tag prefix.
+
+---
+
+### Pitfall 8: Cross-Repo PAT Rotation Breaks Cask Auto-Update
+
+**What goes wrong:**
+Homebrew Cask auto-update CI uses a Personal Access Token (PAT) to push to the `homebrew-waiaas` repo from the main repo's workflow. The PAT expires (default 90 days for fine-grained tokens), and Cask updates silently stop. New desktop releases ship but the Cask formula stays on the old version indefinitely.
+
+**Why it happens:**
+Fine-grained PATs have mandatory expiration. Classic PATs can be set to never expire but are being deprecated. The CI failure is silent unless you monitor workflow runs.
+
+**How to avoid:**
+1. Use a GitHub App installation token instead of a PAT -- GitHub Apps do not expire and have granular permissions.
+2. If using PAT: set a 1-year expiration, add a calendar reminder, and add a CI health check that runs monthly to verify the PAT is still valid.
+3. Alternative: use `repository_dispatch` event from the main repo to trigger a workflow in the tap repo (both using `GITHUB_TOKEN`, no PAT needed if the tap repo has its own workflow that self-updates).
+4. Monitor: add a Slack/email notification on workflow failure in the tap repo.
+
+**Warning signs:**
+- Cask formula version is 2+ releases behind
+- `desktop-release.yml` succeeds but tap repo has no recent commits
+- GitHub Actions shows "Resource not accessible by integration" errors
+
+**Phase to address:**
+Homebrew Cask phase -- authentication strategy must be decided upfront.
+
+---
+
+### Pitfall 9: Linux Installation Guide Omits AppImage Permissions and FUSE
+
+**What goes wrong:**
+Users download the `.AppImage` file but it does not run because it lacks execute permission. Or they double-click it in a file manager and nothing happens because their desktop environment does not know how to handle AppImage files.
+
+**Why it happens:**
+Downloaded files on Linux do not have execute permission by default. AppImage is not universally integrated into Linux desktop environments. FUSE (required for AppImage) may not be installed on some distros (Ubuntu 22.04+ removed `libfuse2` from default install).
+
+**How to avoid:**
+1. Installation guide must include: `chmod +x WAIaaS-Desktop*.AppImage && ./WAIaaS-Desktop*.AppImage`
+2. Document FUSE dependency: `sudo apt install libfuse2` for Ubuntu/Debian.
+3. Provide alternative: extract-and-run method (`--appimage-extract` flag) for systems without FUSE.
+4. Consider also providing `.deb` package if Tauri supports it (it does -- check `tauri.conf.json` bundle targets).
+
+**Warning signs:**
+- Linux users reporting "Permission denied" or "cannot execute binary file"
+- Users reporting the AppImage opens but crashes immediately (FUSE missing)
+
+**Phase to address:**
+Installation Guide phase -- Linux section needs FUSE and permissions coverage.
 
 ## Technical Debt Patterns
 
-### TD-1: WalletConnect localStorage Wiped on Port Change
-
-**What goes wrong:** WalletConnect SDK stores session data in `localStorage`. Because the daemon uses dynamic port allocation (`--port=0`), each app launch may get a different port. The WebView treats `localhost:3847` and `localhost:4912` as different origins with separate `localStorage` -- all WalletConnect sessions are lost on restart.
-
-**Why it happens:** Web same-origin policy treats different ports as different origins. Dynamic ports mean the origin changes every launch. This is confirmed by [Tauri issue #896](https://github.com/tauri-apps/tauri/issues/896) -- localStorage data is lost when the server runs on a different port.
-
-**Consequences:** Users must re-scan WalletConnect QR code every time they restart the desktop app. Owner connection state is lost. Severely degrades the Desktop UX advantage.
-
-**Prevention:**
-1. **Pin the port after first launch**: Save the port to `{data_dir}/daemon.port.preferred` on first successful start. On subsequent launches, try that port first; only fall back to `--port=0` if it's occupied.
-2. **Alternative**: Use Tauri's `tauri-plugin-store` for WalletConnect session persistence instead of browser `localStorage`. Intercept WalletConnect's storage adapter with a custom implementation backed by Tauri filesystem.
-3. **Alternative**: Store WalletConnect session server-side in the daemon DB and restore it on reconnect.
-
-**Phase mapping:** Phase 0 (WalletConnect Spike) must evaluate this. Phase 3 (WalletConnect integration) must solve it.
-
-**Confidence:** HIGH -- confirmed by Tauri issues [#896](https://github.com/tauri-apps/tauri/issues/896) and [#10981](https://github.com/tauri-apps/tauri/issues/10981). Additionally, on Linux, localStorage doesn't sync between multiple WebView windows and only one window's data is saved on exit.
-
-### TD-2: Crash Restart Loop Without Backoff
-
-**What goes wrong:** Sidecar Manager detects daemon crash and immediately restarts. If the crash is deterministic (corrupted DB, invalid config, missing native addon), this creates a tight restart loop consuming 100% CPU. The system tray icon rapidly flickers between states.
-
-**Prevention:** Exponential backoff: 1s -> 2s -> 4s, max 3 retries in 60 seconds. After max retries, show error dialog to user with (a) last 50 lines of daemon logs, (b) "Open data directory" button, (c) "Retry" button. Set tray icon to red/error state.
-
-**Phase mapping:** Phase 1 (Sidecar Manager).
-
-### TD-3: Windows SmartScreen Reputation Cold Start
-
-**What goes wrong:** Even with OV code signing, new apps start with zero SmartScreen reputation. Users see "Windows protected your PC" warning -- most non-technical users interpret this as malware and refuse to install. Since June 2023, OV certificates must be stored on HSM (Azure Key Vault minimum) and are NOT exported as `.pfx` files.
-
-**Prevention:**
-- EV certificates get instant SmartScreen reputation but cost $300-500/year and require HSM.
-- After first release with OV cert, submit signed binary to [Microsoft's malware analysis portal](https://www.microsoft.com/en-us/wdsi/filesubmission).
-- Document the SmartScreen bypass in installation guide ("Click More Info -> Run Anyway").
-- SmartScreen reputation builds over time as more users install -- no shortcut.
-
-**Phase mapping:** Phase 4 (CI/release) -- post-release action item.
-
-### TD-4: Single Vite Build for Both Browser and Desktop
-
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Single Vite build for both browser and desktop | Simpler build config | Desktop deps leak into browser bundle, larger downloads | Never -- use build-time `__DESKTOP__` flag from day one |
-| `core:default` Tauri capabilities | Fast prototyping | Over-exposed IPC surface, security audit failure | Development only, must be restricted before any beta |
-| Hardcoded daemon port in WebView URL | Avoids port negotiation | Port collision, localStorage loss | Never -- use dynamic port with pinning strategy |
-| Skip Linux WebKitGTK testing | Faster release | Linux users report layout bugs, lose trust | Only if Linux is explicitly unsupported |
-
----
+| Client-side GitHub API calls instead of build-time embedding | Faster initial implementation | Rate limiting, loading states, error handling complexity | Never for production -- always prefer build-time |
+| Hardcoded download URLs instead of API integration | No API dependency | Manual updates on every release, stale links | Only as fallback, never as primary |
+| Single PAT for cross-repo CI | Quick to set up | Expiration risk, rotation burden, security surface | MVP only -- migrate to GitHub App within 1 milestone |
+| Skipping Apple notarization | No Apple Developer account cost ($99/year) | Every macOS user sees Gatekeeper warning | Acceptable for initial launch, plan to add within 3 months |
+| Single architecture macOS download | Simpler OS detection | Rosetta 2 performance penalty for Apple Silicon users | Never -- both architectures already built in CI |
 
 ## Integration Gotchas
 
-### IG-1: WebView CSS Rendering Differences Across OS
-
-**What goes wrong:** Admin Web UI renders correctly in Chrome but breaks in Tauri WebView. macOS uses WKWebView (WebKit/Safari engine), Windows uses WebView2 (Chromium), Linux uses WebKitGTK (often outdated WebKit). CSS that works on Windows (Chromium) produces different results on macOS/Linux (WebKit).
-
-**Specific risks for WAIaaS Admin UI:**
-- `backdrop-filter: blur()` -- unsupported or buggy in older WebKitGTK
-- CSS Grid `subgrid` -- WebKitGTK lags behind Chrome
-- `scrollbar-gutter` -- different behavior per engine
-- `color-mix()` -- WebKitGTK may not support it depending on distro version
-- `:has()` selector -- limited WebKitGTK support
-- CRT theme custom properties -- may render differently
-- Font rendering -- WebKit and Chromium use different font rasterizers
-
-**Prevention:**
-1. Test on all 3 OS early (Phase 1, not Phase 4).
-2. Use CSS feature queries (`@supports`) for progressive enhancement.
-3. Target lowest common denominator: WebKitGTK on Ubuntu 22.04 LTS (ships WebKitGTK ~4.12, circa 2022).
-4. Add `data-platform` attribute to `<html>` for platform-specific CSS overrides.
-5. Document minimum OS versions: macOS 13+, Windows 10+, Ubuntu 22.04+.
-
-**Phase mapping:** Phase 1 (first WebView load) -- catch early when fixing is cheapest.
-
-### IG-2: `connect-src 'self'` Blocks WebSocket for WalletConnect
-
-**What goes wrong:** WalletConnect v2 uses WebSocket connections to `wss://relay.walletconnect.com`. The daemon's CSP `connect-src 'self'` blocks these connections. The WebSocket handshake fails silently, and WalletConnect shows "Connection failed" with no useful error.
-
-**Prevention:** When serving to Desktop WebView (via `tauri.conf.json` CSP or conditional middleware), add:
-```
-connect-src 'self' ipc: http://ipc.localhost wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.web3modal.com https://*.walletconnect.com
-```
-
-**Phase mapping:** Phase 0 (WalletConnect Spike) -- must be discovered and documented during spike.
-
-### IG-3: Tauri IPC `invoke()` Error Swallowing
-
-**What goes wrong:** `invoke()` returns a Promise that rejects with a **string** (not an Error object). If `tauri-bridge.ts` uses `try/catch` with `(e as Error).message`, it gets `undefined` because the error is a plain string. The error appears caught but the diagnostic message is lost.
-
-**Prevention:** In `tauri-bridge.ts`, always handle invoke errors as `unknown`:
-```typescript
-export async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  try {
-    return await invoke<T>(cmd, args);
-  } catch (e) {
-    throw new Error(typeof e === 'string' ? e : String(e));
-  }
-}
-```
-
-**Phase mapping:** Phase 2 (IPC Bridge).
-
-### IG-4: Tauri IPC Duplicates HTTP API Surface
-
-**What goes wrong:** Developers create IPC commands for operations that already work via the HTTP API (e.g., `invoke('create_wallet')` when `POST /v1/wallets` works fine from the WebView). This creates a parallel API surface that must be maintained, tested, and kept in sync.
-
-**Prevention:** IPC commands should ONLY be for native-only operations that cannot be done via HTTP:
-- `start_daemon`, `stop_daemon`, `restart_daemon` -- process management
-- `get_sidecar_status` -- Rust-side state
-- `get_daemon_logs` -- filesystem access
-- `send_notification` -- OS native notifications
-- `quit_app` -- Tauri process lifecycle
-
-All wallet/transaction/policy/session operations use the existing HTTP API client, same as browser mode.
-
-**Phase mapping:** Phase 2 (IPC Bridge design) -- establish the boundary before implementation.
-
-### IG-5: Vite HMR + Tauri Dev Server Startup Race
-
-**What goes wrong:** `tauri dev` starts the Rust backend which immediately opens the WebView pointing to Vite's dev URL. If Vite hasn't finished starting, the WebView loads a connection-refused page. Additionally, Vite's file watcher includes `src-tauri/target/` by default, causing 45-second startup delays and spurious reloads when Rust recompiles.
-
-**Prevention:**
-1. Configure Vite: `server: { watch: { ignored: ['**/src-tauri/**'] } }`
-2. Use `beforeDevCommand` with a port-check script that waits for Vite.
-3. Document dev workflow: `pnpm dev:admin` (browser only) vs `pnpm dev:desktop` (Tauri + Vite).
-
-**Phase mapping:** Phase 1 (Development Workflow Setup).
-
----
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| GitHub Releases API | Using `/releases/latest` which returns npm releases | Filter `/releases` by `tag_name` prefix `desktop-v` |
+| GitHub Releases API | Not handling draft/prerelease releases | Filter `draft: false, prerelease: false` explicitly |
+| Homebrew Cask formula | Computing SHA256 from redirect URL instead of final download URL | Follow redirects, download full file, then compute hash |
+| Homebrew Cask CI | Using `GITHUB_TOKEN` which cannot access other repos | Use PAT with `contents:write` on tap repo, or GitHub App |
+| GitHub Pages build | Not triggering rebuild when desktop release publishes | Add `repository_dispatch` or `workflow_run` trigger to `pages.yml` |
+| `site/build.mjs` | Fetching release data without auth (60 req/hour limit in CI) | Use `GITHUB_TOKEN` in build environment (5,000 req/hour) |
 
 ## Performance Traps
 
-### PT-1: Desktop Code Leaking into Browser Bundle (Tree-Shaking Failure)
-
-**What goes wrong:** Despite `dynamic import()` guards, Vite/Rollup bundles Desktop-only modules (`@reown/appkit` ~500KB+, `@tauri-apps/api`, WalletConnect SDK) into the browser production build. Browser users download megabytes of unused code that also fails at runtime (referencing `window.__TAURI_INTERNALS__`).
-
-**Why it happens:**
-1. A developer adds a top-level `import { invoke } from '@tauri-apps/api/core'` in a shared file.
-2. Barrel files (`desktop/index.ts`) re-export everything, defeating tree-shaking.
-3. Side effects in Desktop modules (e.g., `@reown/appkit` initializes on import) prevent dead code elimination.
-4. Vite's dynamic import analysis may follow `import()` paths eagerly in certain configurations ([#14145](https://github.com/vitejs/vite/issues/14145)).
-
-**Prevention (4-layer strategy from design doc 39):**
-1. **Layer 1 - Dynamic import**: All `desktop/` imports use `await import('./desktop/...')` inside `isDesktop()` guards. ESLint `no-restricted-imports` rule blocks static imports from `desktop/`.
-2. **Layer 2 - Optional peer deps**: `@tauri-apps/api`, `@reown/appkit` are `optionalDependencies` in `packages/admin/package.json`, not `dependencies`.
-3. **Layer 3 - Build constant**: `define: { __DESKTOP__: false }` for browser builds. Desktop-only code wrapped in `if (__DESKTOP__)` is dead-code-eliminated.
-4. **Layer 4 - CI verification**: Post-build script checks browser bundle for Desktop code:
-   ```bash
-   if grep -r "@tauri-apps\|__TAURI__\|@reown/appkit\|walletconnect" dist/admin/assets/*.js; then
-     echo "FAIL: Desktop code leaked into browser bundle"
-     exit 1
-   fi
-   ```
-
-**Detection:** Browser bundle size increases from ~200KB to 700KB+. Console errors about `window.__TAURI_INTERNALS__` in browser.
-
-**Phase mapping:** Phase 2 (when Desktop modules are first added). Layer 4 CI gate in Phase 4.
-
-### PT-2: Sidecar Binary Size Bloat
-
-**What goes wrong:** Node.js SEA binary = Node.js runtime (~40MB) + bundled JS + native addons. Tauri shell (~10-15MB) + WebView is separate. Total app: 80-150MB per platform. Users expect desktop apps to be <50MB.
-
-**Prevention:**
-1. `esbuild --minify --tree-shaking=true` for JS bundle before SEA packaging.
-2. `strip` the SEA binary on Linux/macOS to remove debug symbols.
-3. Consider UPX compression (test for Windows antivirus false positives).
-4. Document expected size in release notes to set user expectations.
-5. Use Tauri's resource system for JS bundle if delta updates are needed.
-
-**Phase mapping:** Phase 1 (SEA build pipeline) -- measure early.
-
-### PT-3: WebView Full-Page Reload on Sidecar Restart
-
-**What goes wrong:** When the daemon restarts (crash recovery, manual restart via IPC), the WebView loses its entire state because the HTTP server goes down briefly. Users see a blank page for 3-5 seconds, then the app reloads from scratch, losing form state, navigation position, etc.
-
-**Prevention:** API client with reconnection logic: detect `ECONNREFUSED`, show loading overlay (not blank page), retry health check every 500ms, restore previous route when daemon is back. The splash page should only be used on initial startup, not on reconnection.
-
-**Phase mapping:** Phase 2 (WebView navigation logic).
-
----
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Client-side API call on page load | 200ms+ delay before download links appear, flash of empty content | Build-time embedding | Immediately for users on slow networks |
+| Large asset listing (all platforms in one API call) | Slow page render if release has 10+ assets | Filter and parse at build time, embed only needed URLs | When release has many artifacts |
+| No CDN caching for static site | Slow page loads from GitHub Pages in Asia/Pacific | Use Cloudflare or similar CDN in front | With international users |
 
 ## Security Mistakes
 
-### SM-1: Updater MITM via HTTP Endpoint
-
-**What goes wrong:** A misconfigured endpoint URL (typo `http://` instead of `https://`) allows MITM of the `latest.json` update manifest. The attacker can serve a malicious `latest.json` pointing to their binary. Tauri's signature verification catches tampered binaries, but an attacker could serve an older vulnerable version that passes signature verification (downgrade attack).
-
-**Prevention:**
-1. Hard-code HTTPS-only URL in `tauri.conf.json` updater config.
-2. Pin to GitHub Releases URL (`https://github.com/OWNER/REPO/releases/latest/download/latest.json`) -- GitHub enforces HTTPS.
-3. Implement version downgrade protection: updater refuses to install a version older than current.
-
-**Phase mapping:** Phase 4 (Updater configuration).
-
-### SM-2: Sidecar Binary Not Verified Before Launch
-
-**What goes wrong:** If an attacker replaces the sidecar binary in an unprotected install directory (especially on Linux where AppImage extraction is writable), the Tauri app launches the malicious binary with user permissions.
-
-**Prevention:**
-1. Compute SHA-256 hash of sidecar at build time, embed in Rust code.
-2. Verify hash before spawning the sidecar process.
-3. On macOS/Windows, code signing provides this guarantee (OS verifies bundle integrity). On Linux, manual hash verification is necessary since [AppImage does not validate signatures](https://v2.tauri.app/distribute/sign/linux/).
-
-**Phase mapping:** Phase 1 (Sidecar Manager).
-
-### SM-3: Desktop CSP Relaxation Exposes Browser Users
-
-**What goes wrong:** When relaxing CSP for Tauri WebView (adding `wss://relay.walletconnect.com`, `'unsafe-inline'`), the relaxed CSP accidentally applies to browser users too, widening the attack surface for XSS.
-
-**Prevention:** CSP relaxation must be Desktop-only:
-- **Best**: Use `tauri.conf.json` `security.csp` which only affects the WebView. HTTP CSP headers in daemon middleware remain strict for browser access.
-- **Alternative**: Conditional CSP in middleware with Desktop detection header.
-
-**Phase mapping:** Phase 2 (CSP adjustment).
-
-### SM-4: IPC Command Over-Exposure
-
-**What goes wrong:** Developers grant blanket `core:default` or `shell:default` Tauri capabilities during development. Since the WebView loads from `http://localhost`, any XSS payload can invoke Tauri commands (filesystem access, shell execution, etc.) that bypass HTTP authentication.
-
-**Prevention:**
-1. Define minimal capabilities in `src-tauri/capabilities/`: only the 7 defined IPC commands + `notification:default` + `updater:default`.
-2. No `shell:execute` ever -- every native operation is a typed Rust command with Serde input validation.
-3. CI audit: parse `capabilities/*.json` and fail if any `*:default` permission is present in production config.
-
-**Phase mapping:** Phase 1 (Tauri project setup).
-
-### SM-5: Daemon Binds to 0.0.0.0 in Desktop Mode
-
-**What goes wrong:** If the daemon's sidecar inherits a config with `host = "0.0.0.0"`, anyone on the local network can access the wallet daemon. Desktop users assume "local app" means "safe", but network-accessible daemon + masterAuth password brute-force = wallet compromise.
-
-**Prevention:** Sidecar Manager must always pass `--host=127.0.0.1` when spawning the daemon, regardless of config.toml. Validate in Rust before spawning.
-
-**Phase mapping:** Phase 1 (Sidecar Manager).
-
----
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Storing PAT as plain text in workflow file | Token leak, unauthorized access to tap repo | Use GitHub Secrets, rotate regularly |
+| Download page linking to HTTP (not HTTPS) URLs | Man-in-the-middle binary swap | Always use HTTPS links, verify GitHub URLs |
+| Not displaying checksums on download page | Users cannot verify download integrity | Show SHA256 for each asset on the download page |
+| Homebrew formula using `url` without `verified:` | Homebrew audit warning, trust issue | Add `url "...", verified: "github.com/..."` pattern |
 
 ## UX Pitfalls
 
-### UX-1: Splash Screen Stuck on Sidecar Failure
-
-**What goes wrong:** The WebView shows `tauri://localhost/splash.html` while waiting for the sidecar. If the sidecar fails (port conflict, corrupted binary, missing permissions), the splash stays forever. No error, no way to diagnose.
-
-**Prevention:**
-1. 15-second timeout on splash screen.
-2. After timeout, show error panel with: (a) failure reason, (b) last 50 lines of daemon logs, (c) "Retry" button, (d) "Open data directory" button.
-3. Splash HTML is bundled in Tauri (not served by daemon), so it works even when daemon is down.
-
-**Phase mapping:** Phase 1 (splash + navigation).
-
-### UX-2: System Tray Icon Invisible on Dark/Light Theme
-
-**What goes wrong:** Green/orange/red status icons designed for light backgrounds are invisible on macOS dark mode (dark menu bar). Or vice versa.
-
-**Prevention:** Use `SystemTray::with_icon_as_template(true)` on macOS to let the OS handle light/dark adaptation. For Windows/Linux, provide two icon sets and detect theme. Test on both dark and light mode during development.
-
-**Phase mapping:** Phase 2 (System Tray).
-
-### UX-3: Window Close Kills the Daemon
-
-**What goes wrong:** User clicks the window close button expecting to minimize. Instead, the daemon shuts down, killing in-progress transactions and incoming TX monitoring.
-
-**Prevention:** Minimize to system tray on close (with first-time notification explaining behavior). Explicit "Quit" in tray menu -> `quit_app` IPC -> daemon graceful shutdown -> app exit. Check for pending transactions before quit, warn user.
-
-**Phase mapping:** Phase 2 (System Tray + Window lifecycle).
-
-### UX-4: Setup Wizard Re-Triggers After Daemon Reset
-
-**What goes wrong:** Wizard checks if daemon is configured (master password set, wallet exists). If user resets daemon (delete DB), wizard re-triggers for experienced users who don't need it.
-
-**Prevention:** Add "Skip Wizard" button on first screen. Store wizard-complete state in Tauri's plugin-store (Desktop-side), not solely in daemon state.
-
-**Phase mapping:** Phase 3 (Setup Wizard).
-
-### UX-5: Auto-Update Interrupts Active Operations
-
-**What goes wrong:** Update triggers while a transaction is in DELAY state or pending Owner approval. The daemon shuts down mid-operation, the transaction is lost or stuck.
-
-**Prevention:** Before applying update, query `GET /v1/transactions?status=PENDING,DELAY,AWAITING_APPROVAL`. If any exist, show warning dialog and defer update. Let user choose "Update Now" (acknowledging risk) or "Update Later".
-
-**Phase mapping:** Phase 4 (Auto-updater UX).
-
----
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Only showing auto-detected OS download | Wrong OS detected = user stuck | Show detected OS prominently + "All platforms" section below |
+| Gatekeeper/SmartScreen instructions without screenshots | Users cannot follow text-only instructions for security dialogs | Include actual screenshots of each OS security dialog |
+| Download starts immediately without confirmation | Confusing, may trigger browser download warnings | Show download button, let user click to start |
+| No version number shown on download page | Users do not know if they have the latest | Show version number, release date, and changelog link |
+| Installation guide assumes command-line familiarity | Desktop app users may not use terminal | Provide both GUI and CLI instructions for each step |
 
 ## "Looks Done But Isn't" Checklist
 
-| Item | Looks done when... | Actually done when... |
-|------|--------------------|-----------------------|
-| SEA binary builds | CI compiles on one platform | CI compiles AND smoke-tests on all 3 platforms with native addon load verification |
-| Sidecar lifecycle | Daemon starts when app opens | Daemon starts, survives app crash, cleans up zombies on next launch, handles port conflicts, has backoff on crash loop |
-| WalletConnect | QR code appears in WebView | QR works, session persists across restarts (port change doesn't lose localStorage), CSP allows WebSocket, relay connection stable |
-| Tree-shaking | `@tauri-apps/api` is in dynamic import | CI bundle analysis confirms zero Desktop code in browser build (Layer 4 gate passes) |
-| Code signing | macOS build doesn't show unsigned warning | macOS notarized + entitlements correct (no JIT crash), Windows signed + SmartScreen submitted |
-| Auto-updater | Update downloads and installs | Update verifies signature, refuses downgrades, key backed up in 2 locations, pending TX check before update |
-| CSP compatibility | Admin UI loads in WebView | Admin UI loads AND IPC works AND WalletConnect WebSocket connects AND browser CSP is unchanged |
-| System tray | Tray icon shows green | Icons visible in light mode, dark mode, high-DPI, all 3 OS, minimize-to-tray works |
-| Dynamic port | Daemon starts on random port | WebView navigates to correct port, port pinned for subsequent launches, port file cleaned on exit |
+- [ ] **Download page:** Often missing fallback for API failure -- verify page works with GitHub API blocked
+- [ ] **Download page:** Often missing version display -- verify version number and date are shown
+- [ ] **Download page:** Often missing checksum display -- verify SHA256 hashes are shown for security-conscious users
+- [ ] **Homebrew Cask:** Often missing `brew audit --cask` validation -- verify formula passes audit in CI
+- [ ] **Homebrew Cask:** Often missing uninstall stanza -- verify `brew uninstall --cask` cleans up completely (app bundle, preferences, sidecar binary)
+- [ ] **Homebrew Cask:** Often missing `zap` stanza -- verify deep uninstall removes all app data
+- [ ] **Installation guide:** Often missing Sequoia-specific Gatekeeper instructions -- verify guide covers macOS 15+
+- [ ] **Installation guide:** Often missing FUSE requirement for Linux AppImage -- verify `libfuse2` is documented
+- [ ] **Installation guide:** Often missing auto-update verification -- verify guide explains how to check for updates within the app
+- [ ] **CI pipeline:** Often missing rebuild trigger for download page on new release -- verify pages.yml triggers on desktop release
 
----
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Wrong SHA256 in Cask formula | LOW | Push corrected formula to tap repo, users re-run `brew install` |
+| Rate-limited download page | LOW | Switch to build-time embedding, redeploy site |
+| Outdated Gatekeeper instructions | LOW | Update guide markdown, rebuild site |
+| Naming collision in Homebrew | MEDIUM | Rename cask (breaking change for existing users), update all docs |
+| PAT expiration breaks Cask CI | LOW | Generate new PAT, update secret, trigger manual workflow run |
+| Wrong OS detection logic | LOW | Fix JS detection code, redeploy site |
+| Download page showing npm releases | MEDIUM | Implement tag prefix filter, rebuild site, add regression test |
 
 ## Pitfall-to-Phase Mapping
 
-| Phase | Likely Pitfalls | Mitigation |
-|-------|----------------|------------|
-| **Phase 0: WalletConnect Spike** | TD-1 (localStorage wiped on port change), IG-2 (CSP blocks WebSocket) | Test with pinned port. Document CSP requirements. Evaluate Tauri plugin-store as storage adapter |
-| **Phase 1: Tauri Shell + Sidecar** | Pitfall 1 (native addon binary mismatch), Pitfall 2 (zombie processes), PT-2 (binary bloat), SM-2 (binary tampering), SM-4 (IPC over-exposure), SM-5 (0.0.0.0 binding), UX-1 (stuck splash), IG-5 (dev startup race), TD-2 (crash loop) | CI matrix build per platform, PID lockfile + Job Objects, hash verification, minimal capabilities, 127.0.0.1 enforcement, splash timeout, Vite watcher exclusion, exponential backoff |
-| **Phase 2: IPC + System Tray** | Pitfall 3 (CSP conflict), IG-3 (invoke error swallowing), IG-4 (IPC duplicates HTTP), PT-1 (bundle leak), PT-3 (reload on restart), SM-3 (CSP exposes browser), UX-2 (tray icon theme), UX-3 (close kills daemon) | Tauri.conf.json CSP, error normalization, IPC-only-for-native rule, ESLint guard + build flag, reconnection logic, tray template icon, minimize-to-tray |
-| **Phase 3: Wizard + WalletConnect** | TD-1 (localStorage loss), IG-1 (CSS differences), UX-4 (wizard re-trigger) | Port pinning or Tauri store adapter, CSS @supports + platform testing, skip button + Desktop-side state |
-| **Phase 4: CI + Updater** | Pitfall 4 (macOS notarization crash), Pitfall 5 (key loss), TD-3 (SmartScreen), SM-1 (MITM), PT-1 Layer 4 (CI bundle gate), UX-5 (update interrupts TX) | Entitlements file, key backup x2, SmartScreen submission, HTTPS-only endpoint, bundle string grep, pending TX check |
-
----
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| GitHub API rate limiting | Download Page | Page loads correctly with API mocked as unavailable |
+| SHA256 race condition | Homebrew Cask | `brew install --cask` succeeds immediately after release publish |
+| Sequoia Gatekeeper change | Installation Guide | Guide has macOS 15+ specific section with correct steps |
+| OS detection misidentification | Download Page | Test on Safari(macOS), Chrome(Windows), Firefox(Linux), Safari(iPad) |
+| Cask naming collision | Homebrew Cask | `brew search waiaas` shows only our cask |
+| SmartScreen blocking | Installation Guide | Guide has screenshots of SmartScreen "More info" flow |
+| Wrong release track (npm vs desktop) | Download Page | Page shows desktop assets even after npm release |
+| PAT expiration | Homebrew Cask | Use GitHub App or set monitoring on PAT expiry |
+| Linux AppImage permissions | Installation Guide | Guide includes `chmod +x` and FUSE instructions |
+| Pages rebuild on release | Download Page + Homebrew Cask | New desktop release triggers `pages.yml` rebuild automatically |
 
 ## Sources
 
-- [Tauri v2 WebView Versions](https://v2.tauri.app/reference/webview-versions/) -- WebKit/WebView2/WebKitGTK engine details
-- [Tauri v2 CSP Documentation](https://v2.tauri.app/security/csp/) -- WebView CSP configuration
-- [Tauri v2 Capabilities](https://v2.tauri.app/security/capabilities/) -- permission system for IPC commands
-- [Tauri v2 macOS Code Signing](https://v2.tauri.app/distribute/sign/macos/) -- Notarization + entitlements
-- [Tauri v2 Windows Code Signing](https://v2.tauri.app/distribute/sign/windows/) -- SmartScreen + HSM requirements
-- [Tauri v2 Linux Code Signing](https://v2.tauri.app/distribute/sign/linux/) -- AppImage signature limitations
-- [Tauri v2 Updater Plugin](https://v2.tauri.app/plugin/updater/) -- Signature verification, key management
-- [Tauri v2 Sidecar with Node.js](https://v2.tauri.app/learn/sidecar-nodejs/) -- Sidecar packaging guide
-- [Tauri Sidecar Zombie Process #5611](https://github.com/tauri-apps/tauri/issues/5611) -- Windows process cleanup failure
-- [Tauri Sidecar Survives Exit #1896](https://github.com/tauri-apps/tauri/issues/1896) -- Sidecar outlives main process
-- [Tauri Kill Process Discussion #3273](https://github.com/tauri-apps/tauri/discussions/3273) -- Community process cleanup workarounds
-- [Tauri Sidecar Lifecycle Plugin Request #3062](https://github.com/tauri-apps/plugins-workspace/issues/3062) -- Production lifecycle management needs
-- [Tauri Sidecar Manager (community)](https://github.com/radical-data/tauri-sidecar-manager) -- Reference lifecycle management
-- [Tauri Cross-Platform Rendering #12311](https://github.com/tauri-apps/tauri/discussions/12311) -- CSS layout differences
-- [Tauri localStorage #896](https://github.com/tauri-apps/tauri/issues/896) -- localStorage not persisting across port changes
-- [Tauri localStorage Linux Bug #10981](https://github.com/tauri-apps/tauri/issues/10981) -- localStorage sync failure
-- [Tauri v2 Code Signing Guide](https://dev.to/tomtomdu73/ship-your-tauri-v2-app-like-a-pro-code-signing-for-macos-and-windows-part-12-3o9n) -- CI signing setup
-- [Tauri v2 Release Automation](https://dev.to/tomtomdu73/ship-your-tauri-v2-app-like-a-pro-github-actions-and-release-automation-part-22-2ef7) -- tauri-action CI pipeline
-- [Node.js SEA Documentation](https://nodejs.org/api/single-executable-applications.html) -- Native addon tempfile workaround
-- [Improving SEA Building](https://joyeecheung.github.io/blog/2026/01/26/improving-single-executable-application-building-for-node-js/) -- SEA core improvements
-- [Node.js 25.5 --build-sea](https://progosling.com/en/dev-digest/2026-01/nodejs-25-5-build-sea-single-executable) -- One-step SEA build
-- [better-sqlite3 Node 24 ABI Issue #1384](https://github.com/WiseLibs/better-sqlite3/issues/1384) -- Prebuild binary mismatch
-- [Vite Dynamic Import Tree-Shaking #14145](https://github.com/vitejs/vite/issues/14145) -- Dynamic imports not tree-shaken
-- WAIaaS `packages/daemon/src/api/middleware/csp.ts` -- Existing CSP configuration (verified locally, `connect-src 'self'`)
-- WAIaaS `internal/objectives/m33-02-desktop-app.md` -- Risk section, phase structure, architecture decisions
+- [GitHub REST API Rate Limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) -- 60 req/hour unauthenticated
+- [Homebrew Tap Documentation](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap) -- naming, audit, formula structure
+- [Homebrew 5.0.0 Release Notes](https://brew.sh/2025/11/12/homebrew-5.0.0/) -- tap changes, cask signing deprecation
+- [Homebrew 5.1.0 Release Notes](https://brew.sh/2026/03/10/homebrew-5.1.0/) -- CI baseline updates
+- [Apple Gatekeeper Documentation](https://support.apple.com/en-us/102445) -- safe app opening procedures
+- [macOS Sequoia Gatekeeper Changes](https://www.techbloat.com/macos-sequoia-bypassing-gatekeeper-to-install-unsigned-apps.html) -- right-click bypass removal
+- [Simon Willison's Homebrew Auto-Formulas](https://til.simonwillison.net/homebrew/auto-formulas-github-actions) -- CI automation pattern
+- [Automating Homebrew Tap Updates](https://builtfast.dev/blog/automating-homebrew-tap-updates-with-github-actions/) -- cross-repo workflow pattern
+- [Homebrew SHA256 Checksum Mismatch Issues](https://github.com/Homebrew/homebrew-cask/issues/41993) -- common causes
+- [Windows SmartScreen Bypass Guide](https://www.fortect.com/windows-optimization-tips/windows-defender-smartscreen-prevented-an-unrecognized-app-from-starting-warning/) -- user-facing instructions
 
 ---
-*Pitfalls research for: Tauri Desktop App (v33.2 milestone)*
-*Researched: 2026-03-31, updated with comprehensive web research*
+*Pitfalls research for: Desktop App Distribution Channels*
+*Researched: 2026-04-01*

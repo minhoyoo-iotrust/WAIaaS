@@ -222,3 +222,23 @@ AI wallet, MCP, wallet-as-a-service, self-hosted, crypto, DeFi, blockchain, AI a
 
 ### Hashtags
 #AIWallet #MCP #WalletAsAService #DeFi #AIAgents #OpenSource #SelfHosted #Crypto #Blockchain #Claude
+
+---
+
+## 8. Desktop App Distribution Channels
+
+### Download Page
+- **URL:** https://waiaas.ai/download/
+- **Features:** OS auto-detection (macOS/Windows/Linux), GitHub Releases API integration, 5-min TTL cache, fallback direct link
+- **Formats:** .dmg (macOS), .msi (Windows), .AppImage/.deb (Linux)
+- **Also shows:** npm and Docker alternative installation methods
+
+### GitHub Releases
+- **URL:** https://github.com/minhoyoo-iotrust/WAIaaS/releases
+- **Tag pattern:** `desktop-v*` (e.g., `desktop-v0.1.0`)
+- **Artifacts:** Platform-specific installers + Ed25519 signatures for auto-update
+- **CI:** `.github/workflows/desktop-release.yml` builds and publishes on tag push
+
+### Installation Guide
+- **URL:** https://waiaas.ai/docs/desktop-installation/
+- **Covers:** macOS Gatekeeper bypass (14 and Sequoia 15+), Windows SmartScreen, Linux permissions, Setup Wizard 5-step, auto-update

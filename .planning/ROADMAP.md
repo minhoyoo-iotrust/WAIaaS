@@ -10,6 +10,7 @@
 - ✅ **v32.10 에이전트 스킬 정리 + OpenClaw 플러그인** — Phases 452-455 (shipped 2026-03-18)
 - ✅ **v33.0 Desktop App 아키텍처 재설계** — Phases 456-458 (shipped 2026-03-31)
 - ✅ **v33.2 Tauri Desktop App** — Phases 459-463 (shipped 2026-04-01)
+- ✅ **v33.3 Desktop App 배포 채널 확장** — Phases 464-466 (shipped 2026-04-01)
 
 <details>
 <summary>✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Phases 432-434) — SHIPPED 2026-03-16</summary>
@@ -88,3 +89,14 @@ See `.planning/milestones/v33.0-ROADMAP.md` for full details.
 </details>
 
 See `.planning/milestones/v33.2-ROADMAP.md` for full details.
+
+<details>
+<summary>✅ v33.3 Desktop App 배포 채널 확장 (Phases 464-466) — SHIPPED 2026-04-01</summary>
+
+- [x] Phase 464: Desktop Installation Guide (1/1 plans) — completed 2026-04-01
+- [x] Phase 465: Download Page (1/1 plans) — completed 2026-04-01
+- [x] Phase 466: Site Integration & Distribution (1/1 plans) — completed 2026-04-01
+
+</details>
+
+See `.planning/milestones/v33.3-ROADMAP.md` for full details.
