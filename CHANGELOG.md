@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.13.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc...v2.13.0-rc.1) (2026-04-01)
+
+
+### Features
+
+* **465-01:** add download page with OS detection and GitHub API integration ([14c6373](https://github.com/minhoyoo-iotrust/WAIaaS/commit/14c63733ce852ac03412d0f78ab74e242462ab9b))
+* **466-01:** add Desktop App distribution channels to SUBMISSION_KIT ([48ef4ad](https://github.com/minhoyoo-iotrust/WAIaaS/commit/48ef4ad6c4020aef9b1ff12cd1d260ebd47f61cd))
+* **466-01:** add Download link to site navigation and sitemap ([d8b8efd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d8b8efdc2e1d9ffdcfdf7871bcbae7e5ccc96354))
+
+
+### Bug Fixes
+
+* add missing type field to tauri.conf.json extra-file in release-please config ([590d0dc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/590d0dc6a384ed6e61ee2fe7f9dcf48661e1293e))
+
 ## [2.13.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.12.0...v2.13.0-rc) (2026-04-01)
 
 
