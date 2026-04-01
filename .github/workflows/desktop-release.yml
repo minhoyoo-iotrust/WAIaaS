@@ -116,7 +116,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: apps/desktop
-          tauriScript: pnpm tauri
+          tauriScript: npx tauri
           args: ${{ matrix.args }}
           releaseId: ${{ needs.create-release.outputs.release_id }}
         env:
