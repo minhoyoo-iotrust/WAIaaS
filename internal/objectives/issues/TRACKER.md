@@ -14,6 +14,9 @@
 
 | ID | 유형 | 심각도 | 제목 | 마일스톤 | 상태 | 수정일 |
 |----|------|--------|------|----------|------|--------|
+| 469 | BUG | CRITICAL | MCP tools/list Zod 4 z.record() toJSONSchema 크래시 | — | OPEN | — |
+| 470 | ENHANCEMENT | MEDIUM | 릴리스 파이프라인 승인 2회 요구 | — | OPEN | — |
+| 471 | BUG | HIGH | Desktop 빌드 CI에서 workspace 패키지 dist 누락 | — | OPEN | — |
 
 ## Type Legend
 
@@ -25,9 +28,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 3
 - **PLANNED:** 0
 - **FIXED:** 467
 - **WONTFIX:** 1
-- **Total:** 469
+- **Total:** 471
 - **Archived:** 468 (001–468)
