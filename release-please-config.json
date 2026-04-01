@@ -67,6 +67,7 @@
         "packages/openclaw-plugin/package.json",
         "python-sdk/pyproject.toml",
         {
+          "type": "json",
           "path": "apps/desktop/src-tauri/tauri.conf.json",
           "jsonpath": "$.version"
         }
