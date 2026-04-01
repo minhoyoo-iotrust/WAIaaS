@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v33.3
-milestone_name: Desktop App 배포 채널 확장
-status: ready_to_plan
-stopped_at: Roadmap created
-last_updated: "2026-04-01T02:30:00.000Z"
+milestone: v32.5
+milestone_name: milestone
+status: executing
+stopped_at: Completed 464-01-PLAN.md
+last_updated: "2026-04-01T05:08:00.294Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 4
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -26,15 +26,16 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 1 of 3 (Desktop Installation Guide)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-04-01 — Roadmap created (3 phases, 16 requirements)
+Plan: 1 of 1 in current phase
+Status: Ready to execute
+Last activity: 2026-04-01
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: —
 - Total execution time: 0 hours
@@ -47,9 +48,13 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
+| Phase 464 P01 | 2min | 2 tasks | 2 files |
+
 ### Decisions
 
 (Cleared at milestone boundary — see .planning/milestones/v33.2-ROADMAP.md for archived decisions)
+
+- [Phase 464]: Separated macOS Gatekeeper bypass into macOS 14 and Sequoia 15+ subsections due to different UI flows
 
 ### Pending Todos
 
@@ -61,6 +66,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-01
-Stopped at: Roadmap created — ready to plan Phase 464
+Last session: 2026-04-01T05:08:00.290Z
+Stopped at: Completed 464-01-PLAN.md
 Resume file: None

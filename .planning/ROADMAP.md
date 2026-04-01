@@ -91,7 +91,7 @@ See `.planning/milestones/v33.2-ROADMAP.md` for full details.
 
 ## Phases
 
-- [ ] **Phase 464: Desktop Installation Guide** - OS별 설치 절차, 보안 경고 해제, Setup Wizard 안내 문서 작성
+- [x] **Phase 464: Desktop Installation Guide** - OS별 설치 절차, 보안 경고 해제, Setup Wizard 안내 문서 작성 (completed 2026-04-01)
 - [ ] **Phase 465: Download Page** - OS 자동 감지, GitHub Releases API 연동, 폴백 처리가 포함된 다운로드 페이지 구축
 - [ ] **Phase 466: Site Integration & Distribution** - 네비게이션 링크 추가, sitemap 등록, SUBMISSION_KIT 업데이트
 
@@ -110,7 +110,7 @@ See `.planning/milestones/v33.2-ROADMAP.md` for full details.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 464-01-PLAN.md — Desktop Installation Guide 작성 + admin-manual 목차 연동
+- [x] 464-01-PLAN.md — Desktop Installation Guide 작성 + admin-manual 목차 연동
 
 ### Phase 465: Download Page
 **Goal**: 사용자가 waiaas.ai/download 페이지에서 자신의 OS에 맞는 Desktop App을 다운로드할 수 있다
@@ -148,6 +148,6 @@ Phases execute in numeric order: 464 → 465 → 466
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 464. Desktop Installation Guide | 0/1 | Not started | - |
+| 464. Desktop Installation Guide | 1/1 | Complete   | 2026-04-01 |
 | 465. Download Page | 0/2 | Not started | - |
 | 466. Site Integration & Distribution | 0/1 | Not started | - |

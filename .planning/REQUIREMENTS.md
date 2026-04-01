@@ -20,13 +20,13 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Installation Guide
 
-- [ ] **IG-01**: `docs/admin-manual/desktop-installation.md`에 macOS `.dmg` 설치 절차가 문서화된다
-- [ ] **IG-02**: Windows `.msi` 설치 절차가 문서화된다
-- [ ] **IG-03**: Linux `.AppImage` / `.deb` 설치 절차가 문서화된다
-- [ ] **IG-04**: Setup Wizard 5단계(마스터 비밀번호 → 네트워크 → 지갑 → Owner → 완료) 안내가 포함된다
-- [ ] **IG-05**: macOS Gatekeeper 경고 해제(Sequoia Privacy & Security 방식), Windows SmartScreen 허용, Linux 권한 설정 트러블슈팅이 포함된다
-- [ ] **IG-06**: 자동 업데이트(Ed25519 서명 검증) 동작 설명과 수동 업그레이드 방법이 포함된다
-- [ ] **IG-07**: `docs/admin-manual/` README 목차에 desktop-installation.md가 추가된다
+- [x] **IG-01**: `docs/admin-manual/desktop-installation.md`에 macOS `.dmg` 설치 절차가 문서화된다
+- [x] **IG-02**: Windows `.msi` 설치 절차가 문서화된다
+- [x] **IG-03**: Linux `.AppImage` / `.deb` 설치 절차가 문서화된다
+- [x] **IG-04**: Setup Wizard 5단계(마스터 비밀번호 → 네트워크 → 지갑 → Owner → 완료) 안내가 포함된다
+- [x] **IG-05**: macOS Gatekeeper 경고 해제(Sequoia Privacy & Security 방식), Windows SmartScreen 허용, Linux 권한 설정 트러블슈팅이 포함된다
+- [x] **IG-06**: 자동 업데이트(Ed25519 서명 검증) 동작 설명과 수동 업그레이드 방법이 포함된다
+- [x] **IG-07**: `docs/admin-manual/` README 목차에 desktop-installation.md가 추가된다
 
 ### Distribution
 
@@ -76,13 +76,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DL-06 | Phase 465 | Pending |
 | DL-07 | Phase 465 | Pending |
 | DL-08 | Phase 466 | Pending |
-| IG-01 | Phase 464 | Pending |
-| IG-02 | Phase 464 | Pending |
-| IG-03 | Phase 464 | Pending |
-| IG-04 | Phase 464 | Pending |
-| IG-05 | Phase 464 | Pending |
-| IG-06 | Phase 464 | Pending |
-| IG-07 | Phase 464 | Pending |
+| IG-01 | Phase 464 | Complete |
+| IG-02 | Phase 464 | Complete |
+| IG-03 | Phase 464 | Complete |
+| IG-04 | Phase 464 | Complete |
+| IG-05 | Phase 464 | Complete |
+| IG-06 | Phase 464 | Complete |
+| IG-07 | Phase 464 | Complete |
 | DIST-01 | Phase 466 | Pending |
 
 **Coverage:**
