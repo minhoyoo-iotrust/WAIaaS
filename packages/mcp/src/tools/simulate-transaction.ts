@@ -30,7 +30,7 @@ export function registerSimulateTransaction(server: McpServer, apiClient: ApiCli
       }).optional().describe('Required for TOKEN_TRANSFER'),
       // CONTRACT_CALL fields
       calldata: z.string().optional().describe('Hex-encoded calldata (EVM)'),
-      abi: z.array(z.record(z.unknown())).optional().describe('ABI fragment (EVM)'),
+      abi: z.array(z.record(z.string(), z.unknown())).optional().describe('ABI fragment (EVM)'),
       value: z.string().optional().describe('Native token value in smallest units (wei for EVM). Example: "1000000000000000000" = 1 ETH'),
       programId: z.string().optional().describe('Solana program ID'),
       instructionData: z.string().optional().describe('Base64-encoded instruction data (Solana)'),
@@ -42,7 +42,7 @@ export function registerSimulateTransaction(server: McpServer, apiClient: ApiCli
       // APPROVE fields
       spender: z.string().optional().describe('Spender address (APPROVE type)'),
       // BATCH fields
-      instructions: z.array(z.record(z.unknown())).optional().describe('Batch instructions array'),
+      instructions: z.array(z.record(z.string(), z.unknown())).optional().describe('Batch instructions array'),
       // Common fields
       network: z.string().optional().describe('Target network (e.g., "polygon-mainnet" or CAIP-2 "eip155:137").'),
       wallet_id: z.string().optional().describe('Wallet ID for multi-wallet sessions'),

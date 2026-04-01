@@ -23,7 +23,7 @@ export function registerEncodeCalldata(
       walletContext?.walletName,
     ),
     {
-      abi: z.array(z.record(z.unknown())).describe('ABI fragment array for the function (JSON array of objects)'),
+      abi: z.array(z.record(z.string(), z.unknown())).describe('ABI fragment array for the function (JSON array of objects)'),
       functionName: z.string().describe('Function name to encode (e.g., "transfer", "approve")'),
       args: z.array(z.any()).optional().describe('Function arguments array (e.g., ["0xAddress", "1000000"]). Omit for zero-arg functions.'),
       wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
