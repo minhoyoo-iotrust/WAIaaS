@@ -1,5 +1,17 @@
 # Project Milestones: WAIaaS
 
+## v33.3 Desktop App 배포 채널 확장 (Shipped: 2026-04-01)
+
+**Phases completed:** 3 phases, 3 plans, 6 tasks
+
+**Key accomplishments:**
+
+- macOS/Windows/Linux Desktop App installation guide with Gatekeeper/SmartScreen bypass, 5-step Setup Wizard, and Ed25519 auto-update documentation
+- Standalone download page with OS auto-detection, GitHub Releases API integration (5-min TTL cache), platform-specific binary links, and npm/Docker alternative install methods
+- Download nav link added to all site pages via template.html, /download/ registered in sitemap.xml, Desktop App distribution channels documented in SUBMISSION_KIT
+
+---
+
 ## v33.2 Tauri Desktop App (Shipped: 2026-04-01)
 
 **Phases completed:** 5 phases, 12 plans, 20 tasks

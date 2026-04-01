@@ -8,16 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v33.3 Desktop App 배포 채널 확장
+## Previous Milestone: v33.3 Desktop App 배포 채널 확장 — SHIPPED 2026-04-01
 
-**Goal:** Tauri Desktop App의 배포 접근성을 높인다 — waiaas.ai 다운로드 페이지(OS 감지), Homebrew Cask tap, Desktop 설치 가이드
-
-**Target features:**
-- waiaas.ai 다운로드 페이지 (OS 자동 감지 + GitHub Releases API 연동, 클라이언트 사이드 JS, 대체 설치법 안내)
-- Homebrew Cask Tap (homebrew-waiaas 별도 repo, CI 자동 formula 업데이트)
-- Desktop 설치 가이드 (OS별 설치/Setup Wizard/트러블슈팅/업그레이드, docs/admin-manual/ 10번째 파일)
-- SUBMISSION_KIT.md Desktop 배포 채널 항목 추가
-- GitHub Releases CI (tauri-action 3 플랫폼 빌드) + Tauri 자동 업데이트
+OS별 Desktop App 설치 가이드(macOS Gatekeeper/Windows SmartScreen/Linux 권한, 5-step Setup Wizard, Ed25519 auto-update), OS 자동 감지 다운로드 페이지(GitHub Releases API 연동, 5분 TTL 캐시, 플랫폼별 바이너리 링크, npm/Docker 대체 설치법), 사이트 네비게이션 Download 링크 통합 + sitemap 등록 + SUBMISSION_KIT 배포 채널 업데이트. 3 phases, 3 plans, 16 requirements, 58 commits, 151 files, +34,792/-8,273 lines.
 
 ## Previous Milestone: v33.2 Tauri Desktop App — SHIPPED 2026-04-01
 
