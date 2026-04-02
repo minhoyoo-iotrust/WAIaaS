@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.13.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.5...v2.13.0-rc.6) (2026-04-02)
+
+
+### Bug Fixes
+
+* **ci:** mark desktop RC releases as prerelease on GitHub ([20eab21](https://github.com/minhoyoo-iotrust/WAIaaS/commit/20eab2192241cb2648d9247824b8665a494e56cd))
+* **ci:** mark desktop RC releases as prerelease on GitHub ([#476](https://github.com/minhoyoo-iotrust/WAIaaS/issues/476)) ([535c70f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/535c70f9ad519ab2275b76e51a90c765fd73b581))
+
 ## [2.13.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.4...v2.13.0-rc.5) (2026-04-01)
 
 
