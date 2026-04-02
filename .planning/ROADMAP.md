@@ -108,7 +108,7 @@ See `.planning/milestones/v33.3-ROADMAP.md` for full details.
 
 - [x] **Phase 467: DB Migration + Backend Service** (2 plans) - DB v61 partial unique index + WalletAppService 트랜잭션 토글 + PresetAutoSetupService 전환 (completed 2026-04-02)
 - [x] **Phase 468: SignRequestBuilder Query Transition** (1 plan) - wallet_type 기반 서명 대상 조회 전환 + preferred_wallet deprecated (completed 2026-04-02)
-- [ ] **Phase 469: Admin UI Radio Group** - wallet_type 그룹 레이아웃 + 서명 라디오 버튼 + "None" 옵션
+- [ ] **Phase 469: Admin UI Radio Group** (1 plan) - wallet_type 그룹 레이아웃 + 서명 라디오 버튼 + "None" 옵션
 
 ## Phase Details
 
@@ -142,12 +142,14 @@ Plans:
 **Goal**: 운영자가 wallet_type 그룹 내에서 서명 앱을 라디오 버튼으로 명시적으로 선택할 수 있다
 **Depends on**: Phase 468
 **Requirements**: ADM-01, ADM-02, ADM-03, ADM-04
+**Plans:** 1 plan
+Plans:
+- [ ] 469-01-PLAN.md — wallet_type 그룹 레이아웃 + 서명 라디오 버튼 + "None" 옵션
 **Success Criteria** (what must be TRUE):
   1. Human Wallet Apps 페이지에서 같은 wallet_type의 앱이 시각적 그룹으로 묶여 표시된다
   2. 서명 컨트롤이 라디오 버튼이며 그룹 내 하나만 선택 가능하다
   3. "없음" 라디오 옵션 선택으로 해당 wallet_type의 모든 앱을 signing_enabled=0으로 설정할 수 있다
   4. wallet_type에 앱이 1개만 있으면 라디오가 자동 선택 상태로 표시된다
-**Plans**: TBD
 **UI hint**: yes
 
 ## Progress
@@ -159,4 +161,4 @@ Phases execute in numeric order: 467 → 468 → 469
 |-------|----------------|--------|-----------|
 | 467. DB Migration + Backend Service | 2/2 | Complete    | 2026-04-02 |
 | 468. SignRequestBuilder Query Transition | 1/1 | Complete    | 2026-04-02 |
-| 469. Admin UI Radio Group | 0/0 | Not started | - |
+| 469. Admin UI Radio Group | 0/1 | Not started | - |
