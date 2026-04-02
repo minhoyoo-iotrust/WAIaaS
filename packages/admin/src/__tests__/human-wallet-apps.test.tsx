@@ -190,41 +190,44 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
-    expect(screen.getByText('Custom Wallet')).toBeTruthy();
+    expect(screen.getAllByText('Custom Wallet').length).toBeGreaterThan(0);
   });
 
   it('T-HWUI-06: used by wallets displayed', async () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
     expect(screen.getByText('wallet-1')).toBeTruthy();
     expect(screen.getByText('No wallets')).toBeTruthy();
   });
 
-  it('T-HWUI-04: signing toggle calls PUT', async () => {
+  it('T-HWUI-04: signing radio "None" calls PUT with signing_enabled=false', async () => {
     mockApiCalls();
     mockApiPut.mockResolvedValue({ data: {} });
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
-    const signingCheckbox = checkboxes[1] as HTMLInputElement;
-    expect(signingCheckbox.checked).toBe(true);
+    // app-1 (dcent) has signing_enabled=true, its radio should be checked
+    const app1Radio = document.querySelector('input[type="radio"][name="signing-dcent"][value="app-1"]') as HTMLInputElement;
+    expect(app1Radio).toBeTruthy();
+    expect(app1Radio.checked).toBe(true);
 
+    // Select "None" radio to disable signing
     mockApiGet.mockImplementation(async (path: string) => {
       if (path === '/v1/admin/wallet-apps') return { data: { apps: mockApps.apps.map(a => a.id === 'app-1' ? { ...a, signing_enabled: false } : a) } };
       if (path === '/v1/admin/settings') return { data: mockSettings };
       return { data: {} };
     });
 
-    fireEvent.change(signingCheckbox);
+    const noneRadio = document.querySelector('input[type="radio"][name="signing-dcent"][value="none"]') as HTMLInputElement;
+    fireEvent.click(noneRadio);
 
     await waitFor(() => {
       expect(mockApiPut).toHaveBeenCalledWith(
@@ -243,11 +246,13 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
+    // Find the alerts checkbox for app-1 (D'CENT Wallet) - it's the first alerts checkbox after the notif toggle
     const checkboxes = document.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
-    const alertsCheckbox = checkboxes[2] as HTMLInputElement;
+    // Index 0: notif-toggle, Index 1: app-1 alerts, Index 2: app-2 alerts
+    const alertsCheckbox = checkboxes[1] as HTMLInputElement;
     expect(alertsCheckbox.checked).toBe(true);
     fireEvent.change(alertsCheckbox);
 
@@ -266,7 +271,7 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('+ Register App'));
@@ -283,7 +288,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     const removeButtons = screen.getAllByText('Remove');
@@ -322,7 +327,7 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
     // D'CENT app has push_relay_url configured
     expect(screen.getByText('https://waiaas-push.dcentwallet.com')).toBeTruthy();
@@ -334,7 +339,7 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('+ Register App'));
@@ -353,7 +358,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     expect(screen.getByText('Wallet App Notifications')).toBeTruthy();
@@ -390,7 +395,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
     expect(screen.getByText(/Notifications are disabled but some apps have alerts enabled/)).toBeTruthy();
   });
@@ -399,7 +404,7 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
     const testButtons = screen.getAllByText('Test Notify');
     expect(testButtons.length).toBe(1);
@@ -411,7 +416,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('Test Notify'));
@@ -435,7 +440,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('Test Notify'));
@@ -462,7 +467,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     const testBtn = screen.getByText('Test Notify').closest('button') as HTMLButtonElement;
@@ -486,7 +491,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     const testBtn = screen.getByText('Test Notify').closest('button') as HTMLButtonElement;
@@ -497,7 +502,7 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
     // app-1 has signing_enabled=true, so Test Sign should be visible
     const testSignButtons = screen.getAllByText('Test Sign');
@@ -515,7 +520,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('Test Sign'));
@@ -544,7 +549,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     // Type owner address into the input field
@@ -573,7 +578,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('Test Sign'));
@@ -594,7 +599,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('Test Sign'));
@@ -611,7 +616,7 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     // app-1 has push_relay_url configured — should show Edit and Clear buttons
@@ -624,7 +629,7 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     // app-2 has no push_relay_url — should show "Not configured" + Set
@@ -637,7 +642,7 @@ describe('HumanWalletAppsPage', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('Edit'));
@@ -665,7 +670,7 @@ describe('HumanWalletAppsPage', () => {
     mockApiCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('+ Register App'));
@@ -705,21 +710,26 @@ describe('HumanWalletAppsPage - Radio Group', () => {
     mockMultiGroupCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Phone").length).toBeGreaterThan(0);
     });
 
     // Should have wallet_type group headers
     const headings = document.querySelectorAll('[data-testid^="group-header-"]');
     expect(headings.length).toBe(2); // dcent + custom
-    expect(screen.getByText('dcent')).toBeTruthy();
-    expect(screen.getByText('custom')).toBeTruthy();
+    // Verify group headers contain the wallet_type text
+    const dcentHeader = document.querySelector('[data-testid="group-header-dcent"]');
+    expect(dcentHeader).toBeTruthy();
+    expect(dcentHeader!.textContent).toBe('dcent');
+    const customHeader = document.querySelector('[data-testid="group-header-custom"]');
+    expect(customHeader).toBeTruthy();
+    expect(customHeader!.textContent).toBe('custom');
   });
 
   it('T-ADM-02: signing control uses radio buttons (not checkboxes)', async () => {
     mockMultiGroupCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Phone").length).toBeGreaterThan(0);
     });
 
     // Radio inputs for signing should exist
@@ -733,7 +743,7 @@ describe('HumanWalletAppsPage - Radio Group', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Phone").length).toBeGreaterThan(0);
     });
 
     // Find the "None" radio for the dcent group
@@ -763,7 +773,7 @@ describe('HumanWalletAppsPage - Radio Group', () => {
     mockMultiGroupCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Phone").length).toBeGreaterThan(0);
     });
 
     // The dcent group: app-1 radio should be checked (signing_enabled=true)
@@ -783,7 +793,7 @@ describe('HumanWalletAppsPage - Radio Group', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Phone").length).toBeGreaterThan(0);
     });
 
     // Select app-3 (D'CENT Tablet, currently signing_enabled=false)
@@ -808,7 +818,7 @@ describe('HumanWalletAppsPage - Radio Group', () => {
     mockMultiGroupCalls();
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Phone").length).toBeGreaterThan(0);
     });
 
     // dcent group should contain D'CENT Phone and D'CENT Tablet
