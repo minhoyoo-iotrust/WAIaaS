@@ -34,7 +34,7 @@ jobs:
           if [ -z "$RC_VERSION" ]; then
             echo "No RC version provided, auto-detecting latest RC..."
             RC_VERSION=$(gh release list --exclude-drafts --json tagName,isPrerelease \
-              -q '[.[] | select(.isPrerelease)] | .[0].tagName')
+              -q '[.[] | select(.isPrerelease) | select(.tagName | startswith("desktop-") | not)] | .[0].tagName')
             if [ -z "$RC_VERSION" ]; then
               echo "Error: No RC release found"
               exit 1
