@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 30 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds, hyperliquid_orders, hyperliquid_sub_accounts, polymarket_orders, polymarket_positions, polymarket_api_keys, wallet_credentials
+ * 30 tables (schema v61): wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds, hyperliquid_orders, hyperliquid_sub_accounts, polymarket_orders, polymarket_positions, polymarket_api_keys, wallet_credentials
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.

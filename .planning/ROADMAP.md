@@ -11,6 +11,7 @@
 - ✅ **v33.0 Desktop App 아키텍처 재설계** — Phases 456-458 (shipped 2026-03-31)
 - ✅ **v33.2 Tauri Desktop App** — Phases 459-463 (shipped 2026-04-01)
 - ✅ **v33.3 Desktop App 배포 채널 확장** — Phases 464-466 (shipped 2026-04-01)
+- ✅ **v33.4 서명 앱 명시적 선택** — Phases 467-469 (shipped 2026-04-02)
 
 <details>
 <summary>✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Phases 432-434) — SHIPPED 2026-03-16</summary>
@@ -100,3 +101,14 @@ See `.planning/milestones/v33.2-ROADMAP.md` for full details.
 </details>
 
 See `.planning/milestones/v33.3-ROADMAP.md` for full details.
+
+<details>
+<summary>✅ v33.4 서명 앱 명시적 선택 (Phases 467-469) — SHIPPED 2026-04-02</summary>
+
+- [x] Phase 467: DB Migration + Backend Service (2/2 plans) — completed 2026-04-02
+- [x] Phase 468: SignRequestBuilder Query Transition (1/1 plans) — completed 2026-04-02
+- [x] Phase 469: Admin UI Radio Group (1/1 plans) — completed 2026-04-02
+
+</details>
+
+See `.planning/milestones/v33.4-ROADMAP.md` for full details.

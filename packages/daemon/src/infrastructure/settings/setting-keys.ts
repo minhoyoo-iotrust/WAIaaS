@@ -190,7 +190,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'signing_sdk.enabled', category: 'signing_sdk', configPath: 'signing_sdk.enabled', defaultValue: 'false', isCredential: false, label: 'Enabled', description: 'Enable or disable this feature' },
   { key: 'signing_sdk.request_expiry_min', category: 'signing_sdk', configPath: 'signing_sdk.request_expiry_min', defaultValue: '30', isCredential: false, label: 'Request Expiry Min', description: 'Signing request expiry time in minutes' },
   { key: 'signing_sdk.preferred_channel', category: 'signing_sdk', configPath: 'signing_sdk.preferred_channel', defaultValue: 'push_relay', isCredential: false, label: 'Preferred Channel', description: 'Preferred signing notification channel (push_relay, telegram)' },
-  { key: 'signing_sdk.preferred_wallet', category: 'signing_sdk', configPath: 'signing_sdk.preferred_wallet', defaultValue: '', isCredential: false, label: 'Preferred Wallet', description: 'Preferred wallet app for signing requests' },
+  { key: 'signing_sdk.preferred_wallet', category: 'signing_sdk', configPath: 'signing_sdk.preferred_wallet', defaultValue: '', isCredential: false, label: 'Preferred Wallet', description: '[DEPRECATED] No longer used by SignRequestBuilder. Use signing_enabled column in wallet_apps.' },
   { key: 'signing_sdk.wallets', category: 'signing_sdk', configPath: 'signing_sdk.wallets', defaultValue: '[]', isCredential: false, label: 'Wallets', description: 'JSON array of configured wallet app connections' },
   { key: 'signing_sdk.notifications_enabled', category: 'signing_sdk', configPath: 'signing_sdk.notifications_enabled', defaultValue: 'true', isCredential: false, label: 'Notifications Enabled', description: 'Enable or disable this feature' },
 

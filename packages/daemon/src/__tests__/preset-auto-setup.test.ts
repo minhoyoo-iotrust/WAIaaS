@@ -57,7 +57,6 @@ function createMockSettingsService(): {
 } {
   const store = new Map<string, string>([
     ['signing_sdk.enabled', 'false'],
-    ['signing_sdk.preferred_wallet', ''],
     ['signing_sdk.preferred_channel', 'ntfy'],
     ['signing_sdk.wallets', '[]'],
   ]);
@@ -117,7 +116,7 @@ function seedWallet(sqlite: DatabaseType, walletId: string): void {
 // ---------------------------------------------------------------------------
 
 describe('PresetAutoSetupService', () => {
-  it('T-AUTO-01: normal apply — all 4 steps complete', () => {
+  it('T-AUTO-01: normal apply — all steps complete (no preferred_wallet)', () => {
     const { service } = createMockSettingsService();
     const registry = createMockRegistry();
     const autoSetup = new PresetAutoSetupService(service as any, registry as any);
@@ -128,12 +127,12 @@ describe('PresetAutoSetupService', () => {
     expect(service.set).toHaveBeenCalledWith('signing_sdk.enabled', 'true');
     // WalletLinkConfig registered
     expect(registry.registerWallet).toHaveBeenCalledWith(BUILTIN_PRESETS.dcent.walletLinkConfig);
-    // preferred_wallet set to 'dcent'
-    expect(service.set).toHaveBeenCalledWith('signing_sdk.preferred_wallet', 'dcent');
+    // preferred_wallet should NOT be set (v33.4: removed)
+    expect(service.set).not.toHaveBeenCalledWith('signing_sdk.preferred_wallet', expect.anything());
     // D'CENT uses sdk_push — preferred_channel IS set to push_relay
     expect(result.applied).toContain('signing_sdk_enabled');
     expect(result.applied).toContain('wallet_registered');
-    expect(result.applied).toContain('preferred_wallet_set');
+    expect(result.applied).not.toContain('preferred_wallet_set');
     // sdk_push sets preferred_channel to push_relay
     expect(result.applied).toContain('preferred_channel_set');
     expect(service.set).toHaveBeenCalledWith('signing_sdk.preferred_channel', 'push_relay');
@@ -153,7 +152,8 @@ describe('PresetAutoSetupService', () => {
     expect(result.applied).not.toContain('wallet_registered');
     // But other steps should still proceed
     expect(result.applied).toContain('signing_sdk_enabled');
-    expect(result.applied).toContain('preferred_wallet_set');
+    // preferred_wallet_set no longer emitted (v33.4)
+    expect(result.applied).not.toContain('preferred_wallet_set');
   });
 
   it('T-AUTO-03: failure rollback — unexpected error restores Settings snapshot', () => {
@@ -162,17 +162,17 @@ describe('PresetAutoSetupService', () => {
     const registry = createMockRegistry({ throwOnRegister: unexpectedError });
     const autoSetup = new PresetAutoSetupService(service as any, registry as any);
 
-    // Capture original values
+    // Capture original values (preferred_wallet no longer in snapshot)
     const origEnabled = store.get('signing_sdk.enabled');
-    const origWallet = store.get('signing_sdk.preferred_wallet');
     const origChannel = store.get('signing_sdk.preferred_channel');
 
     expect(() => autoSetup.apply(BUILTIN_PRESETS.dcent)).toThrow('Unexpected registry failure');
 
     // Settings should be restored to original values
     expect(store.get('signing_sdk.enabled')).toBe(origEnabled);
-    expect(store.get('signing_sdk.preferred_wallet')).toBe(origWallet);
     expect(store.get('signing_sdk.preferred_channel')).toBe(origChannel);
+    // preferred_wallet should NOT have been written
+    expect(store.has('signing_sdk.preferred_wallet')).toBe(false);
   });
 
   it('T-AUTO-04: already enabled SDK — skip step 1', () => {
@@ -180,7 +180,6 @@ describe('PresetAutoSetupService', () => {
     // Pre-set signing_sdk.enabled to 'true'
     service.get.mockImplementation((key: string) => {
       if (key === 'signing_sdk.enabled') return 'true';
-      if (key === 'signing_sdk.preferred_wallet') return '';
       if (key === 'signing_sdk.preferred_channel') return 'ntfy';
       return '';
     });
@@ -193,18 +192,20 @@ describe('PresetAutoSetupService', () => {
     expect(result.applied).not.toContain('signing_sdk_enabled');
     // Other steps should still proceed
     expect(result.applied).toContain('wallet_registered');
-    expect(result.applied).toContain('preferred_wallet_set');
+    // preferred_wallet_set no longer emitted
+    expect(result.applied).not.toContain('preferred_wallet_set');
   });
 
   // -------------------------------------------------------------------------
   // Wallet App auto-registration (v29.7)
   // -------------------------------------------------------------------------
 
-  it('T-APP-09: preset apply auto-registers wallet app when WalletAppService provided', () => {
+  it('T-APP-09: preset apply auto-registers wallet app and enables signing', () => {
     const { service } = createMockSettingsService();
     const registry = createMockRegistry();
     const walletAppService = {
-      ensureRegistered: vi.fn().mockReturnValue({ id: 'app-1', name: 'dcent', displayName: "D'CENT Wallet" }),
+      ensureRegistered: vi.fn().mockReturnValue({ id: 'app-1', name: 'dcent', displayName: "D'CENT Wallet", signingEnabled: true }),
+      update: vi.fn().mockReturnValue({ id: 'app-1', name: 'dcent', displayName: "D'CENT Wallet", signingEnabled: true }),
     };
     const autoSetup = new PresetAutoSetupService(service as any, registry as any, walletAppService as any);
 
@@ -215,14 +216,19 @@ describe('PresetAutoSetupService', () => {
       BUILTIN_PRESETS.dcent.displayName,
       { walletType: BUILTIN_PRESETS.dcent.preferredWallet },
     );
+    // After ensureRegistered, update() is called with signingEnabled=true
+    expect(walletAppService.update).toHaveBeenCalledWith('app-1', { signingEnabled: true });
     expect(result.applied).toContain('wallet_app_registered');
+    // preferred_wallet should NOT be set
+    expect(service.set).not.toHaveBeenCalledWith('signing_sdk.preferred_wallet', expect.anything());
   });
 
   it('T-APP-09b: preset apply is idempotent for wallet app', () => {
     const { service } = createMockSettingsService();
     const registry = createMockRegistry();
     const walletAppService = {
-      ensureRegistered: vi.fn().mockReturnValue({ id: 'app-1', name: 'dcent', displayName: "D'CENT Wallet" }),
+      ensureRegistered: vi.fn().mockReturnValue({ id: 'app-1', name: 'dcent', displayName: "D'CENT Wallet", signingEnabled: true }),
+      update: vi.fn().mockReturnValue({ id: 'app-1', name: 'dcent', displayName: "D'CENT Wallet", signingEnabled: true }),
     };
     const autoSetup = new PresetAutoSetupService(service as any, registry as any, walletAppService as any);
 
@@ -231,8 +237,9 @@ describe('PresetAutoSetupService', () => {
     // Second apply — should not throw
     const result2 = autoSetup.apply(BUILTIN_PRESETS.dcent);
 
-    // ensureRegistered called twice (idempotent)
+    // ensureRegistered + update called twice each (idempotent)
     expect(walletAppService.ensureRegistered).toHaveBeenCalledTimes(2);
+    expect(walletAppService.update).toHaveBeenCalledTimes(2);
     expect(result2.applied).toContain('wallet_app_registered');
   });
 
@@ -323,7 +330,6 @@ describe('PUT /v1/wallets/:id/owner auto-setup integration', () => {
   it('T-AUTO-05: wallet_type=dcent triggers auto-setup via API', async () => {
     // Verify initial state: signing SDK is disabled
     expect(settingsService.get('signing_sdk.enabled')).toBe('false');
-    expect(settingsService.get('signing_sdk.preferred_wallet')).toBe('');
 
     const res = await app.request(
       `http://${HOST}/v1/wallets/${walletId}/owner`,
@@ -349,22 +355,27 @@ describe('PUT /v1/wallets/:id/owner auto-setup integration', () => {
 
     // Verify Settings state after auto-setup
     expect(settingsService.get('signing_sdk.enabled')).toBe('true');
-    expect(settingsService.get('signing_sdk.preferred_wallet')).toBe('dcent');
+    // preferred_wallet is no longer set (v33.4) — signing is controlled by signing_enabled column
 
     // Verify WalletLinkConfig was registered (via signing_sdk.wallets JSON)
     const walletsJson = settingsService.get('signing_sdk.wallets');
     const registeredWallets = JSON.parse(walletsJson);
     expect(registeredWallets).toHaveLength(1);
     expect(registeredWallets[0].name).toBe('dcent');
+
+    // Verify wallet app has signing_enabled=1 in DB
+    const appRow = sqlite.prepare('SELECT signing_enabled FROM wallet_apps WHERE name = ?').get('dcent') as { signing_enabled: number } | undefined;
+    expect(appRow).toBeTruthy();
+    expect(appRow!.signing_enabled).toBe(1);
   });
 
   it('T-AUTO-06: auto-setup failure rolls back DB and Settings', async () => {
-    // Break the settings service so step 3 (preferred_wallet) fails
+    // Break the settings service so step 3 (preferred_channel) fails
     const origSet = settingsService.set.bind(settingsService);
     const setspy = vi.spyOn(settingsService, 'set').mockImplementation((key: string, value: string) => {
-      // Let first 2 calls through (signing_sdk.enabled, signing_sdk.wallets via registerWallet)
-      // Fail on preferred_wallet set (call 3+)
-      if (key === 'signing_sdk.preferred_wallet' && value === 'dcent') {
+      // Let first calls through (signing_sdk.enabled, signing_sdk.wallets via registerWallet)
+      // Fail on preferred_channel set
+      if (key === 'signing_sdk.preferred_channel' && value === 'push_relay') {
         throw new Error('Settings write failure');
       }
       return origSet(key, value);

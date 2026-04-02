@@ -2,6 +2,38 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v33.4 — 서명 앱 명시적 선택
+
+**Shipped:** 2026-04-02
+**Phases:** 3 | **Plans:** 4
+
+### What Was Built
+- DB v61 partial unique index로 wallet_type당 signing primary 유일성 DB 레벨 보장
+- WalletAppService exclusive signing 토글 (트랜잭션 내 자동 비활성화) + PresetAutoSetupService signing_enabled 컬럼 전환
+- SignRequestBuilder를 name 기반 3-쿼리에서 wallet_type + signing_enabled=1 단일 쿼리로 전환
+- Admin UI 서명 컨트롤을 체크박스에서 wallet_type 그룹별 라디오 버튼으로 변경 (None 옵션 포함)
+
+### What Worked
+- 3-phase 점진적 접근(DB → Service → UI)이 각 레이어 안정성 확보 후 다음 레이어로 진행 가능하게 함
+- Partial unique index가 테이블 재구축 없이 기존 데이터 무결성을 보장하는 가벼운 솔루션
+- preferred_wallet 설정 deprecated 처리가 하위 호환성 유지하면서 새 모델로 전환
+
+### What Was Inefficient
+- 작은 마일스톤이라 별도 비효율 없음 — 1 세션 완료
+
+### Patterns Established
+- Partial unique index + dedup migration 패턴 — 기존 데이터의 중복 정리 후 인덱스 적용
+- wallet_type 기반 그룹 라디오 UI 패턴 — exclusive selection을 DB constraint + UI 라디오로 이중 보장
+
+### Key Lessons
+1. signing primary 같은 exclusive 선택은 DB constraint로 보장하되, UI에서도 라디오로 시각적으로 표현해야 운영자 혼란 방지
+2. preferred_wallet 같은 설정 기반 접근보다 signing_enabled 컬럼 기반이 더 신뢰할 수 있음 — SSoT가 DB에 있어야 함
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 3 phases + 4 plans in ~1 session, 18 commits, 15 files, +1,367/-462 lines
+
 ## Milestone: v33.3 — Desktop App 배포 채널 확장
 
 **Shipped:** 2026-04-01

@@ -1,5 +1,18 @@
 # Project Milestones: WAIaaS
 
+## v33.4 서명 앱 명시적 선택 (Shipped: 2026-04-02)
+
+**Phases completed:** 3 phases, 4 plans, 8 tasks
+
+**Key accomplishments:**
+
+- Partial unique index + CHECK triggers enforce wallet_type-level signing primary uniqueness at DB level
+- Exclusive signing toggle in WalletAppService + PresetAutoSetupService migrated from preferred_wallet setting to signing_enabled column
+- SignRequestBuilder transitioned from name-based 3-query + preferred_wallet setting to wallet_type + signing_enabled=1 single DB query
+- wallet_type group layout with signing radio buttons replacing checkboxes for explicit signing app selection
+
+---
+
 ## v33.3 Desktop App 배포 채널 확장 (Shipped: 2026-04-01)
 
 **Phases completed:** 3 phases, 3 plans, 6 tasks
