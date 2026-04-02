@@ -23,6 +23,7 @@
 
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
+import { PKG_VERSION } from './server.js';
 
 const LOG_PREFIX = '[waiaas-mcp:session]';
 
@@ -317,7 +318,7 @@ export class SessionManager {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${this.token}`,
-            'User-Agent': '@waiaas/mcp/0.0.0',
+            'User-Agent': `@waiaas/mcp/${PKG_VERSION}`,
           },
           body: JSON.stringify({}),
         });

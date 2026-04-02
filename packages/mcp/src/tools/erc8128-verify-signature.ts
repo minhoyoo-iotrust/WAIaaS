@@ -24,7 +24,7 @@ export function registerErc8128VerifySignature(
     {
       method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).describe('HTTP method'),
       url: z.string().url().describe('Request URL'),
-      headers: z.record(z.string()).describe('HTTP headers from the signed request'),
+      headers: z.record(z.string(), z.string()).describe('HTTP headers from the signed request'),
       signature_input: z.string().describe('Signature-Input header value'),
       signature: z.string().describe('Signature header value'),
       content_digest: z.string().optional().describe('Content-Digest header value'),
