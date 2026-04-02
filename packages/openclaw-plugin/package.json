@@ -1,6 +1,6 @@
 {
   "name": "@waiaas/openclaw-plugin",
-  "version": "2.13.0-rc.7",
+  "version": "2.13.0-rc.8",
   "description": "WAIaaS OpenClaw plugin — AI agent wallet tools for OpenClaw Gateway",
   "keywords": [
     "openclaw",
