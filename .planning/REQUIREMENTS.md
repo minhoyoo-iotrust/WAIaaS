@@ -26,10 +26,10 @@ Requirements for milestone v33.4. Each maps to roadmap phases.
 
 ### Admin UI
 
-- [ ] **ADM-01**: Human Wallet Apps 페이지에서 같은 wallet_type의 앱을 시각적 그룹으로 묶어 표시한다
-- [ ] **ADM-02**: 서명 컨트롤을 체크박스에서 라디오 버튼으로 변경하여 그룹 내 하나만 선택 가능하게 한다
-- [ ] **ADM-03**: "없음" 라디오 옵션으로 해당 wallet_type의 모든 앱 `signing_enabled = 0` 설정이 가능하다
-- [ ] **ADM-04**: wallet_type에 앱이 1개만 있으면 라디오가 자동 선택 상태로 표시된다
+- [x] **ADM-01**: Human Wallet Apps 페이지에서 같은 wallet_type의 앱을 시각적 그룹으로 묶어 표시한다
+- [x] **ADM-02**: 서명 컨트롤을 체크박스에서 라디오 버튼으로 변경하여 그룹 내 하나만 선택 가능하게 한다
+- [x] **ADM-03**: "없음" 라디오 옵션으로 해당 wallet_type의 모든 앱 `signing_enabled = 0` 설정이 가능하다
+- [x] **ADM-04**: wallet_type에 앱이 1개만 있으면 라디오가 자동 선택 상태로 표시된다
 
 ### Testing
 
@@ -63,10 +63,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SVC-03 | Phase 467 | Complete |
 | SIG-01 | Phase 468 | Complete |
 | SIG-02 | Phase 468 | Complete |
-| ADM-01 | Phase 469 | Pending |
-| ADM-02 | Phase 469 | Pending |
-| ADM-03 | Phase 469 | Pending |
-| ADM-04 | Phase 469 | Pending |
+| ADM-01 | Phase 469 | Complete |
+| ADM-02 | Phase 469 | Complete |
+| ADM-03 | Phase 469 | Complete |
+| ADM-04 | Phase 469 | Complete |
 | TST-01 | Phase 467 | Complete |
 | TST-02 | Phase 467 | Complete |
 | TST-03 | Phase 468 | Complete |
