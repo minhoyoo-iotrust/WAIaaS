@@ -20,6 +20,7 @@
 | 472 | BUG | HIGH | Desktop SEA 빌드 esbuild 외부 모듈 resolve 실패 | — | FIXED | 2026-04-02 |
 | 473 | BUG | HIGH | Desktop 앱 동적 포트로 외부 에이전트 접속 불가 | — | FIXED | 2026-04-02 |
 | 474 | ENHANCEMENT | LOW | Desktop 앱 아이콘을 사이트 파비콘 기반으로 교체 | — | FIXED | 2026-04-02 |
+| 476 | BUG | HIGH | Desktop RC 릴리스가 prerelease로 마킹되지 않음 | — | FIXED | 2026-04-02 |
 
 ## Type Legend
 
@@ -33,7 +34,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 0
-- **FIXED:** 473
+- **FIXED:** 474
 - **WONTFIX:** 1
-- **Total:** 474
+- **Total:** 476
 - **Archived:** 468 (001–468)
