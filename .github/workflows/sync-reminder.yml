@@ -1,0 +1,35 @@
+name: Dev Sync Reminder
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  remind:
+    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'hotfix/')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post sync reminder
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                '> **Dev Sync Reminder**',
+                '',
+                'Hotfix merged to `main`. Sync to `dev` to avoid divergence:',
+                '',
+                '```bash',
+                'git checkout dev',
+                'git pull origin dev',
+                'git merge origin/main',
+                'git push origin dev',
+                '```',
+              ].join('\n'),
+            });
