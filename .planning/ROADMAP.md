@@ -106,7 +106,7 @@ See `.planning/milestones/v33.3-ROADMAP.md` for full details.
 
 **Milestone Goal:** 서명 앱 선택을 name 기반 암묵적 매칭에서 wallet_type 기반 명시적 선택으로 전환한다. DB partial unique index로 무결성을 보장하고, 서비스/쿼리 레이어를 정비하며, Admin UI를 라디오 그룹으로 갱신한다.
 
-- [ ] **Phase 467: DB Migration + Backend Service** (2 plans) - DB v61 partial unique index + WalletAppService 트랜잭션 토글 + PresetAutoSetupService 전환
+- [x] **Phase 467: DB Migration + Backend Service** (2 plans) - DB v61 partial unique index + WalletAppService 트랜잭션 토글 + PresetAutoSetupService 전환 (completed 2026-04-02)
 - [ ] **Phase 468: SignRequestBuilder Query Transition** - wallet_type 기반 서명 대상 조회 전환 + preferred_wallet deprecated
 - [ ] **Phase 469: Admin UI Radio Group** - wallet_type 그룹 레이아웃 + 서명 라디오 버튼 + "None" 옵션
 
@@ -116,10 +116,10 @@ See `.planning/milestones/v33.3-ROADMAP.md` for full details.
 **Goal**: DB 레벨에서 wallet_type당 signing primary를 최대 1개로 보장하고, 서비스 레이어가 자동으로 exclusive 토글을 수행한다
 **Depends on**: Nothing (first phase)
 **Requirements**: MIG-01, MIG-02, MIG-03, SVC-01, SVC-02, SVC-03, TST-01, TST-02
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 467-01-PLAN.md — DB v61 migration (partial unique index + CHECK triggers + dedup)
-- [ ] 467-02-PLAN.md — WalletAppService exclusive toggle + PresetAutoSetupService transition
+- [x] 467-01-PLAN.md — DB v61 migration (partial unique index + CHECK triggers + dedup)
+- [x] 467-02-PLAN.md — WalletAppService exclusive toggle + PresetAutoSetupService transition
 **Success Criteria** (what must be TRUE):
   1. DB v61 마이그레이션 실행 후 같은 wallet_type에 signing_enabled=1인 앱이 2개 이상 존재할 수 없다 (partial unique index가 거부)
   2. WalletAppService update()로 앱의 signingEnabled를 true로 변경하면 같은 wallet_type의 다른 앱이 자동으로 signing_enabled=0이 된다
@@ -155,6 +155,6 @@ Phases execute in numeric order: 467 → 468 → 469
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 467. DB Migration + Backend Service | 0/2 | Not started | - |
+| 467. DB Migration + Backend Service | 2/2 | Complete   | 2026-04-02 |
 | 468. SignRequestBuilder Query Transition | 0/0 | Not started | - |
 | 469. Admin UI Radio Group | 0/0 | Not started | - |
