@@ -4,7 +4,7 @@ milestone: v33.4
 milestone_name: 서명 앱 명시적 선택
 status: verifying
 stopped_at: Completed 469-01-PLAN.md
-last_updated: "2026-04-02T12:30:26.215Z"
+last_updated: "2026-04-02T12:30:51.420Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 3
