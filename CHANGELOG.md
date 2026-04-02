@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.13.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.6...v2.13.0-rc.7) (2026-04-02)
+
+
+### Bug Fixes
+
+* **mcp:** extract PKG_VERSION to version.ts to avoid ESM circular import ([8ab3f9f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8ab3f9f87b7265b272d5d474655bfd6eae4bde90))
+* **mcp:** resolve tools/list empty array and inject dynamic version ([#477](https://github.com/minhoyoo-iotrust/WAIaaS/issues/477), [#478](https://github.com/minhoyoo-iotrust/WAIaaS/issues/478)) ([07a41f2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/07a41f295e3592185beb278f051468a3f25817ad))
+* **mcp:** resolve tools/list empty array and inject dynamic version ([#477](https://github.com/minhoyoo-iotrust/WAIaaS/issues/477), [#478](https://github.com/minhoyoo-iotrust/WAIaaS/issues/478)) ([cffc072](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cffc072b209313ab5ff62f719df0ae3953964cc6))
+
 ## [2.13.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.5...v2.13.0-rc.6) (2026-04-02)
 
 
