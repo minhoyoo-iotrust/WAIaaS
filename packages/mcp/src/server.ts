@@ -8,12 +8,9 @@
  * and description prefixing to identify wallet in Claude Desktop.
  */
 
-import { createRequire } from 'node:module';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiClient } from './api-client.js';
-
-const require = createRequire(import.meta.url);
-export const { version: PKG_VERSION } = require('../package.json') as { version: string };
+import { PKG_VERSION } from './version.js';
 
 // Tool registrations
 import { registerSendToken } from './tools/send-token.js';

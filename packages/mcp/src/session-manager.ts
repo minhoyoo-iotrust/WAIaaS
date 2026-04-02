@@ -23,7 +23,7 @@
 
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
-import { PKG_VERSION } from './server.js';
+import { PKG_VERSION } from './version.js';
 
 const LOG_PREFIX = '[waiaas-mcp:session]';
 
