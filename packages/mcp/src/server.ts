@@ -10,6 +10,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiClient } from './api-client.js';
+import { PKG_VERSION } from './version.js';
 
 // Tool registrations
 import { registerSendToken } from './tools/send-token.js';
@@ -81,7 +82,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
 
   const server = new McpServer({
     name: serverName,
-    version: '0.0.0',
+    version: PKG_VERSION,
   });
 
   // Register 42 tools

@@ -12,8 +12,9 @@
 
 import type { CallToolResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import type { SessionManager } from './session-manager.js';
+import { PKG_VERSION } from './version.js';
 
-const USER_AGENT = '@waiaas/mcp/0.0.0';
+const USER_AGENT = `@waiaas/mcp/${PKG_VERSION}`;
 const LOG_PREFIX = '[waiaas-mcp:api]';
 
 // --- ApiResult discriminated union ---

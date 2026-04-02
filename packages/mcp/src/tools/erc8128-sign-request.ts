@@ -25,7 +25,7 @@ export function registerErc8128SignRequest(
     {
       method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).describe('HTTP method'),
       url: z.string().url().describe('Target URL to sign for'),
-      headers: z.record(z.string()).optional().describe('HTTP headers to include in signature'),
+      headers: z.record(z.string(), z.string()).optional().describe('HTTP headers to include in signature'),
       body: z.string().optional().describe('Request body (used for Content-Digest)'),
       wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
       network: z.string().optional().describe('Network ID (e.g., evm-ethereum-mainnet)'),

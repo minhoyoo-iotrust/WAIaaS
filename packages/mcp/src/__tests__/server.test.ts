@@ -66,7 +66,7 @@ describe('createMcpServer', () => {
 
     expect(McpServer).toHaveBeenCalledWith({
       name: 'waiaas-wallet',
-      version: '0.0.0',
+      version: expect.any(String),
     });
   });
 
@@ -76,7 +76,7 @@ describe('createMcpServer', () => {
 
     expect(McpServer).toHaveBeenCalledWith({
       name: 'waiaas-trading-bot',
-      version: '0.0.0',
+      version: expect.any(String),
     });
   });
 

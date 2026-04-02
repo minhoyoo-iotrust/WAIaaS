@@ -26,7 +26,7 @@ export function registerX402Fetch(
       url: z.string().url().describe('Target URL to fetch (HTTPS required)'),
       method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).optional()
         .describe('HTTP method (default: GET)'),
-      headers: z.record(z.string()).optional()
+      headers: z.record(z.string(), z.string()).optional()
         .describe('Additional HTTP headers'),
       body: z.string().optional()
         .describe('Request body string'),

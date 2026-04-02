@@ -69,7 +69,7 @@ describe('ApiClient', () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             'Authorization': 'Bearer my-secret-token',
-            'User-Agent': '@waiaas/mcp/0.0.0',
+            'User-Agent': expect.stringMatching(/^@waiaas\/mcp\//),
           }),
         }),
       );
