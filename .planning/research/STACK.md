@@ -1,250 +1,184 @@
-# Stack Research
+# Technology Stack
 
-**Domain:** Desktop App Distribution Channels (download page, Homebrew Cask, installation guide)
-**Researched:** 2026-04-01
-**Confidence:** HIGH
+**Project:** m33-04 서명 앱 명시적 선택
+**Researched:** 2026-04-02
 
-## Recommended Stack
+## Scope
 
-### Core Technologies
+이 마일스톤은 기존 스택에 **신규 라이브러리 추가 없음**. SQLite 내장 기능, better-sqlite3 기존 API, Preact 기존 패턴만 사용. 아래는 세 가지 핵심 기술 영역의 검증 결과.
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Vanilla JavaScript (inline `<script>`) | ES2020+ | Download page OS detection + GitHub API fetch | Site uses zero client-side JS currently (build-time only). Adding a bundler/framework for ~50 lines of OS detection + API call is unnecessary. Inline script in the HTML page keeps the zero-dependency philosophy. |
-| GitHub REST API (`/repos/.../releases`) | v3 | Fetch latest desktop release assets at page load | Public endpoint, no auth needed for public repos, returns `browser_download_url` + `name` per asset. Rate limit 60/hr unauthenticated is sufficient for a download page. |
-| `navigator.userAgentData.platform` + `navigator.userAgent` fallback | Web API | OS auto-detection (macOS/Windows/Linux) | `userAgentData` is the modern replacement for the deprecated `navigator.platform`. Chrome/Edge support it; Firefox/Safari need `navigator.userAgent` fallback. No library needed for 3-OS detection. |
-| Homebrew Cask DSL (Ruby) | Homebrew 5.x | macOS package distribution via `brew install --cask waiaas` | Cask is the standard for distributing macOS `.dmg`/`.app` bundles. Tap repos (`homebrew-waiaas`) are the official mechanism for third-party casks. |
-| GitHub Actions (`actions/github-script@v7`) | v7 | CI automation for Cask formula auto-update | Already used in `desktop-release.yml`. Reuse same pattern to dispatch a workflow that updates the Cask formula in the tap repo after desktop release publish. |
+## 1. SQLite Partial Unique Index
 
-### Supporting Libraries
+### 현황
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| **None needed** | - | Download page is vanilla HTML/JS | The existing `site/build.mjs` pipeline handles markdown docs. The download page is hand-crafted HTML (like `site/index.html`). No npm dependencies added. |
+프로젝트에 이미 9개 이상의 partial index(`CREATE INDEX ... WHERE`) 사용 중:
+- `idx_incoming_tx_status ON incoming_transactions(status) WHERE status = 'DETECTED'`
+- `idx_transactions_bridge_status ON transactions(bridge_status) WHERE bridge_status IS NOT NULL`
+- `idx_wallet_credentials_global_name ON wallet_credentials(name) WHERE wallet_id IS NULL`
+- 등 (v21-v30, v51-v59 마이그레이션 파일 참조)
 
-### Development Tools
+### Partial UNIQUE Index 지원
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| `shasum --algorithm 256` | Generate SHA256 for Cask formula | CI computes against each macOS `.dmg` asset after release build. Embedded in formula update workflow. |
-| `gh api repos/{owner}/{repo}/releases` | Test GitHub Releases API locally | `gh` CLI already available. Verify asset names match OS detection mapping. |
+| 항목 | 상태 | 근거 |
+|------|------|------|
+| SQLite 지원 | **YES** (3.8.0+, 2013) | SQLite 공식 문서: partial index는 `CREATE INDEX` 뿐만 아니라 `CREATE UNIQUE INDEX`에도 동일 적용 |
+| better-sqlite3 지원 | **YES** | raw SQL `exec()` 호출이므로 드라이버 제한 없음 |
+| Drizzle ORM 영향 | **없음** | 마이그레이션은 raw SQL(`sqlite.exec()`), Drizzle schema는 읽기 전용 타입 정의 |
 
-## Architecture Decisions
+### 필요한 SQL
 
-### Download Page: Hand-crafted HTML (not markdown via build pipeline)
-
-The download page needs client-side JavaScript for OS detection and GitHub API calls. The existing build pipeline (`site/build.mjs`) converts markdown to static HTML with build-time rendering and zero client-side JS. The download page breaks this pattern intentionally.
-
-**Approach:** Create `site/download/index.html` as a standalone HTML file (like `site/index.html`), reusing the CRT theme CSS (`article.css`) and CSS variables from `template.html`. The build pipeline does NOT need modification -- GitHub Pages deploys the entire `site/` directory as-is.
-
-### OS Detection: 3-tier fallback, no library
-
-```javascript
-function detectOS() {
-  // Tier 1: Modern API (Chrome 90+, Edge 90+)
-  const uad = navigator.userAgentData;
-  if (uad?.platform) {
-    if (uad.platform === 'macOS') return 'macos';
-    if (uad.platform === 'Windows') return 'windows';
-    if (uad.platform === 'Linux') return 'linux';
-  }
-  // Tier 2: Legacy (Firefox, Safari)
-  const ua = navigator.userAgent;
-  if (/Mac/.test(ua)) return 'macos';
-  if (/Win/.test(ua)) return 'windows';
-  if (/Linux/.test(ua)) return 'linux';
-  // Tier 3: Unknown -- show all platforms
-  return null;
-}
+```sql
+CREATE UNIQUE INDEX idx_wallet_apps_signing_primary
+  ON wallet_apps(wallet_type) WHERE signing_enabled = 1;
 ```
 
-No need for UAParser.js (~350KB) or similar libraries. We detect 3 OSes, not browser versions or device types.
+이 인덱스는 `wallet_type` 당 `signing_enabled = 1`인 행을 최대 1개로 제한. `signing_enabled = 0`인 행은 인덱스 대상이 아니므로 여러 개 가능.
 
-### GitHub Releases API: Client-side fetch with `desktop-v*` tag filter
+### Confidence: HIGH
 
-The desktop releases use `desktop-v*` tags (e.g., `desktop-v0.1.0`). The standard `/releases/latest` endpoint returns the most recent release across ALL tags, which may be a daemon release (e.g., `waiaas-v2.13.0-rc`).
+근거: 프로젝트에서 동일 패턴(partial index)을 이미 광범위하게 사용. UNIQUE 변형도 SQLite 3.8.0+ 표준 기능.
 
-**Solution:** Fetch `/releases?per_page=10` and filter client-side by tag prefix:
+## 2. Transaction-Safe Multi-Row Updates (better-sqlite3)
 
-```javascript
-async function fetchLatestDesktopRelease() {
-  const res = await fetch(
-    'https://api.github.com/repos/minhoyoo-iotrust/WAIaaS/releases?per_page=10'
-  );
-  const releases = await res.json();
-  return releases.find(r => r.tag_name.startsWith('desktop-v') && !r.draft && !r.prerelease);
-}
+### 현황
+
+프로젝트에 `sqlite.transaction()` 패턴이 15곳 이상 사용 중:
+- `database-policy-engine.ts:415` -- 정책 평가
+- `approval-workflow.ts:120, 187, 247, 295` -- 승인 워크플로우
+- `delay-queue.ts:156` -- 지연 큐
+- `wallets.ts:1164` -- 지갑 CRUD
+- `re-encrypt.ts:152, 215` -- 키 재암호화
+- `incoming-tx-queue.ts:96` -- 수신 TX 배치
+
+### 필요한 트랜잭션 패턴
+
+```typescript
+// WalletAppService.update() -- signing_enabled 토글 시
+const txn = this.sqlite.transaction(() => {
+  // 1. 같은 wallet_type의 다른 앱 비활성화
+  this.sqlite.prepare(
+    'UPDATE wallet_apps SET signing_enabled = 0, updated_at = ? WHERE wallet_type = ? AND id != ?'
+  ).run(now, walletType, id);
+  // 2. 대상 앱 활성화
+  this.sqlite.prepare(
+    'UPDATE wallet_apps SET signing_enabled = 1, updated_at = ? WHERE id = ?'
+  ).run(now, id);
+});
+txn();
 ```
 
-Asset name patterns produced by tauri-action (from `desktop-release.yml` build matrix):
+| 항목 | 상태 | 근거 |
+|------|------|------|
+| better-sqlite3 ^12.6.0 | 사용 중 | `packages/daemon/package.json` |
+| `db.transaction()` API | 안정적 | WAL 모드 SQLite + 동기 API = 데드락 없음 |
+| Partial unique index + transaction | **호환** | 트랜잭션 내에서 비활성화 후 활성화하면 unique 위반 없음 (순서 보장) |
 
-| Platform | Target Triple | Expected Asset Pattern |
-|----------|--------------|----------------------|
-| macOS ARM | aarch64-apple-darwin | `WAIaaS Desktop_*.dmg` (aarch64) |
-| macOS Intel | x86_64-apple-darwin | `WAIaaS Desktop_*.dmg` (x86_64) |
-| Windows | x86_64-pc-windows-msvc | `WAIaaS Desktop_*.msi` or `*.exe` |
-| Linux | x86_64-unknown-linux-gnu | `WAIaaS Desktop_*.deb` or `*.AppImage` |
+### 주의사항
 
-**Note:** Exact asset filenames must be verified after the first desktop release. The JS asset-matching logic should use substring/regex matching (e.g., `.dmg`, `.msi`, `.AppImage`) not exact filenames.
+- better-sqlite3의 `transaction()` 내 모든 statement는 **동기 실행**. async 호출 불가 (프로젝트 전체가 이 패턴을 따름).
+- 트랜잭션 내에서 `signing_enabled = 0`을 먼저 실행한 후 `signing_enabled = 1`을 설정해야 partial unique index 위반 방지.
 
-### Homebrew Cask Tap: Separate repo `homebrew-waiaas`
+### Confidence: HIGH
 
-Homebrew requires tap repos to be named `homebrew-{name}`. Users install via:
+근거: 프로젝트에서 동일 `sqlite.transaction()` 패턴을 15곳 이상에서 검증 완료.
 
-```bash
-brew tap minhoyoo-iotrust/waiaas
-brew install --cask waiaas
+## 3. Preact Radio Button Group (Admin UI)
+
+### 현황
+
+프로젝트에 이미 radio 버튼 패턴이 존재:
+- `packages/admin/src/pages/wallets.tsx:1378` -- `approval_method` 라디오 그룹
+- `packages/admin/src/__tests__/wallets-preset-dropdown.test.tsx` -- 라디오 테스트
+
+### 기존 패턴 (wallets.tsx)
+
+```tsx
+<input
+  type="radio"
+  name="approval_method"
+  value={opt.value ?? ''}
+  checked={wallet.value?.approvalMethod === opt.value}
+  onChange={() => handleApprovalMethodChange(opt.value)}
+  style={{ marginTop: '2px' }}
+/>
 ```
 
-**Cask formula structure** (`Casks/waiaas.rb`):
+### 서명 앱 라디오에 적용할 패턴
 
-```ruby
-cask "waiaas" do
-  arch arm: "aarch64", intel: "x86_64"
-
-  version "0.1.0"
-
-  on_arm do
-    sha256 "ARM_SHA256_PLACEHOLDER"
-    url "https://github.com/minhoyoo-iotrust/WAIaaS/releases/download/desktop-v#{version}/WAIaaS.Desktop_#{version}_aarch64.dmg",
-        verified: "github.com/minhoyoo-iotrust/WAIaaS/"
-  end
-
-  on_intel do
-    sha256 "INTEL_SHA256_PLACEHOLDER"
-    url "https://github.com/minhoyoo-iotrust/WAIaaS/releases/download/desktop-v#{version}/WAIaaS.Desktop_#{version}_x64.dmg",
-        verified: "github.com/minhoyoo-iotrust/WAIaaS/"
-  end
-
-  name "WAIaaS Desktop"
-  desc "Self-hosted Wallet-as-a-Service for AI Agents"
-  homepage "https://waiaas.ai"
-
-  auto_updates true
-  depends_on macos: ">= :catalina"
-
-  app "WAIaaS Desktop.app"
-
-  zap trash: [
-    "~/Library/Application Support/dev.waiaas.desktop",
-    "~/Library/Caches/dev.waiaas.desktop",
-  ]
-end
+```tsx
+// wallet_type 그룹별 name 속성으로 라디오 그룹 분리
+<input
+  type="radio"
+  name={`signing_primary_${app.walletType}`}
+  value={app.id}
+  checked={app.signingEnabled}
+  onChange={() => handleSigningToggle(app.id)}
+/>
 ```
 
-Key DSL details (from Cask Cookbook):
-- `on_arm`/`on_intel` blocks: available since Homebrew 3.6+, current is 5.1.0
-- `auto_updates true`: declares that the app self-updates (Tauri updater handles this)
-- `depends_on macos: ">= :catalina"`: matches `tauri.conf.json` minimumSystemVersion `10.15`
-- `verified:` in `url`: required when URL domain differs from `homepage`
-- `zap trash:` cleanup paths based on Tauri identifier `dev.waiaas.desktop`
+| 항목 | 상태 | 근거 |
+|------|------|------|
+| Preact 10.x radio | **표준 HTML** | Preact는 표준 DOM 이벤트 사용, React 래퍼 불필요 |
+| @preact/signals 연동 | **기존 패턴** | `useSignal` + onChange -> API 호출 -> 리패치 |
+| "없음" 옵션 | `value=""` 라디오 추가 | 전체 비활성화를 위한 옵션 |
 
-### CI Formula Auto-Update: `repository_dispatch` pattern
+### "없음" 옵션 구현
 
-After the `publish-release` job in `desktop-release.yml`, add a step that:
-1. Downloads the published macOS `.dmg` assets (both architectures)
-2. Computes SHA256 for each
-3. Dispatches a `repository_dispatch` event to the `homebrew-waiaas` repo with version + SHA256 values
+```tsx
+// 그룹 내 모든 앱의 signing_enabled = 0으로 만드는 "없음" 라디오
+<input
+  type="radio"
+  name={`signing_primary_${walletType}`}
+  value=""
+  checked={!groupApps.some(a => a.signingEnabled)}
+  onChange={() => handleSigningDisableAll(walletType)}
+/>
+```
 
-The tap repo has a receiving workflow that:
-1. Receives the dispatch payload (`version`, `sha256_arm`, `sha256_intel`)
-2. Updates `Casks/waiaas.rb` using `sed` (version + sha256 lines)
-3. Commits and pushes directly (no PR needed for own tap)
+### Confidence: HIGH
 
-**Why `repository_dispatch` over alternatives:**
-- `macauley/action-homebrew-bump-cask@v1`: designed for PRs to `homebrew/homebrew-cask` (official tap). Overkill for our own tap.
-- `NSHipster/update-homebrew-formula-action`: formula-focused (not Cask). Would need adaptation.
-- Direct `sed` in the same workflow: would require checking out a different repo, managing auth tokens. `repository_dispatch` is cleaner separation.
+근거: 동일 Preact 라디오 패턴이 wallets.tsx에서 이미 검증됨.
 
-### Installation Guide: Markdown in `docs/admin-manual/`
+## 추가 라이브러리 필요 여부
 
-The installation guide is the 10th file in `docs/admin-manual/`. It follows the existing pattern:
-- Markdown with front-matter (`title`, `description`, `date`, `section: docs`, `category: Getting Started`)
-- Built to `site/docs/{slug}/index.html` by `site/build.mjs` automatically
-- No additional tooling needed
+| 후보 | 필요 여부 | 이유 |
+|------|-----------|------|
+| UI 라디오 컴포넌트 라이브러리 | **불필요** | 표준 HTML `<input type="radio">` + 기존 CSS로 충분 |
+| ORM 마이그레이션 도구 | **불필요** | raw SQL `sqlite.exec()` 패턴 유지 |
+| 트랜잭션 매니저 | **불필요** | better-sqlite3 내장 `transaction()` |
+| 상태 관리 추가 | **불필요** | @preact/signals 기존 패턴 |
+
+## 기존 스택 (변경 없음)
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| better-sqlite3 | ^12.6.0 | SQLite 드라이버 (트랜잭션, partial unique index) |
+| drizzle-orm | ^0.45.0 | Schema 타입 정의 (마이그레이션은 raw SQL) |
+| Preact | 10.x | Admin UI (라디오 버튼 그룹) |
+| @preact/signals | 기존 | UI 상태 관리 |
+| openapi-fetch | 기존 | 타입 안전 API 클라이언트 |
 
 ## Installation
 
 ```bash
-# No new npm dependencies required.
-# The download page is vanilla HTML/JS in site/download/index.html.
-# The Cask tap is a separate repo with only Ruby + YAML files.
-# The installation guide uses the existing build pipeline.
+# 신규 패키지 설치 없음
 ```
 
-## Alternatives Considered
+## Drizzle Schema 업데이트
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| Vanilla JS OS detection (~15 lines) | UAParser.js | If you need browser version/device type detection beyond OS. We only need macOS/Windows/Linux. |
-| Client-side GitHub API fetch | Build-time API fetch in `site/build.mjs` | If rate limiting becomes an issue (60/hr unauthenticated). Build-time caches but shows stale versions until next deploy. Client-side is always current. |
-| `repository_dispatch` for Cask update | `macauley/action-homebrew-bump-cask@v1` | If submitting to the official `homebrew/homebrew-cask` tap. For our own tap, dispatch is simpler. |
-| Hand-crafted download HTML | Markdown page via build pipeline | If the page had no dynamic content. But OS detection + API calls require client-side JS, which the build pipeline does not support. |
-| Standalone `site/download/index.html` | Adding JS template support to `build.mjs` | If many more interactive pages are needed later. One page does not justify build pipeline complexity. |
+마이그레이션은 raw SQL이지만, `schema.ts`의 Drizzle 정의도 동기화 필요:
 
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| UAParser.js / Bowser / Platform.js | 100-350KB overkill for detecting 3 OSes. Adds npm dependency to a zero-dependency static site. | 15-line vanilla JS function using `navigator.userAgentData` + `navigator.userAgent` fallback. |
-| Homebrew Formula (not Cask) | Formulas are for CLI tools built from source. Casks are for macOS `.app` / `.dmg` bundles. WAIaaS Desktop is a Tauri `.app` bundle distributed as `.dmg`. | Homebrew Cask DSL in a tap repo. |
-| `brew bump-cask-pr` GitHub Action | Designed for PRs to `homebrew/homebrew-cask` official repo. Our tap is self-managed; we can commit directly. | `repository_dispatch` + direct `sed` update in tap repo workflow. |
-| React/Preact/any framework for download page | The site is static HTML with zero client-side JS. Adding a framework for one interactive page creates build complexity and breaks the site architecture. | Vanilla JS inline `<script>` block. |
-| Separate API proxy for GitHub Releases | Adds server-side complexity. The GitHub API is public and CORS-enabled for unauthenticated requests. Rate limit (60/hr per IP) is sufficient. | Direct `fetch()` from the browser to `api.github.com`. |
-| `/releases/latest` API endpoint | Returns the latest release across ALL tags (daemon + desktop). Desktop uses `desktop-v*` tags which may not be the latest overall release. | `/releases?per_page=10` with client-side `tag_name.startsWith('desktop-v')` filter. |
-
-## Stack Patterns by Variant
-
-**If the repo becomes private:**
-- GitHub API requires auth for private repos. Switch to build-time fetch in `site/build.mjs` and re-deploy on each desktop release via `workflow_dispatch` trigger on the pages workflow.
-- Cask tap would need authenticated download URLs, which Homebrew does not handle well. Host `.dmg` files on a CDN or use `brew cask` with a download strategy token.
-
-**If macOS code signing is added:**
-- Cask formula needs no changes. Homebrew handles signed `.dmg` files transparently.
-- Gatekeeper warnings disappear. The installation guide should note that unsigned builds may require "Allow Anyway" in System Preferences.
-
-**If Linux package managers (apt/snap) are added later:**
-- Download page JS needs an additional OS-to-format mapping (already extensible with the asset-matching approach).
-- Separate PPA or snap registration. Out of scope for v33.3.
-
-## Version Compatibility
-
-| Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
-| `actions/github-script@v7` | Node.js 20 runner | Already used in `desktop-release.yml`. Same version for tap dispatch. |
-| Homebrew Cask DSL (`on_arm`/`on_intel`) | Homebrew 3.6+ (current: 5.1.0) | Architecture-specific blocks stable for 3+ years. |
-| `navigator.userAgentData` | Chrome 90+, Edge 90+ | Firefox/Safari need `navigator.userAgent` fallback. Both paths covered. |
-| GitHub REST API v3 | Stable, no deprecation | Unauthenticated rate limit: 60 req/hr per IP. One call per page visit. |
-| Tauri `createUpdaterArtifacts: "v1Compatible"` | tauri-action@v0 | Asset naming follows v1 pattern. Cask URL patterns must match actual filenames. Verify after first release. |
-| `site/build.mjs` | Node.js 22 + pnpm | Installation guide markdown processed by existing pipeline. No changes needed. |
-
-## Integration Points with Existing System
-
-| Existing Component | Integration | Changes Required |
-|-------------------|-------------|-----------------|
-| `site/index.html` | Style reference | Copy CRT theme CSS variables and navigation pattern into download page. No changes to index.html. |
-| `site/article.css` | Direct link | Download page uses `<link rel="stylesheet" href="/article.css">`. No changes to CSS. |
-| `site/template.html` | Style reference | Reuse nav HTML structure for consistent navigation. No template changes. |
-| `site/build.mjs` | None | Download page is standalone HTML, not processed by build pipeline. Installation guide markdown IS processed automatically (placed in `docs/`). |
-| `site/sitemap.xml` | Manual addition | Add `<url><loc>https://waiaas.ai/download/</loc></url>`. Either extend `build.mjs` sitemap generation to detect standalone HTML files, or add manually. |
-| `.github/workflows/desktop-release.yml` | Add post-publish step | New job after `publish-release`: download macOS assets, compute SHA256, dispatch to tap repo. |
-| `.github/workflows/pages.yml` | No changes | Download page is committed as static HTML in `site/`; pages workflow deploys entire directory. |
-| `apps/desktop/src-tauri/tauri.conf.json` | Reference only | Version `0.1.0`, identifier `dev.waiaas.desktop`, minimumSystemVersion `10.15` inform Cask formula. |
-| `site/distribution/SUBMISSION_KIT.md` | Add desktop channel | Add Homebrew Cask tap + download page entries. |
+```typescript
+// schema.ts -- walletApps 테이블 정의는 변경 없음
+// partial unique index는 Drizzle schema에 표현 불필요 (런타임 DB 제약)
+// 단, 스키마 주석에 v61 인덱스 추가 정보 기록
+```
 
 ## Sources
 
-- [Homebrew Cask Cookbook](https://docs.brew.sh/Cask-Cookbook) -- Cask DSL stanza order, `on_arm`/`on_intel`, `auto_updates`, `zap`, `depends_on` (HIGH confidence)
-- [Homebrew Taps Documentation](https://docs.brew.sh/Taps) -- Tap naming convention `homebrew-{name}` (HIGH confidence)
-- [Homebrew 5.1.0 release notes](https://brew.sh/2026/03/10/homebrew-5.1.0/) -- Current Homebrew version confirming DSL compatibility (HIGH confidence)
-- [MDN: Navigator.userAgentData](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/userAgentData) -- Modern OS detection API, browser compatibility (HIGH confidence)
-- [MDN: Navigator.platform (deprecated)](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/platform) -- Deprecated but needed for Firefox/Safari fallback (HIGH confidence)
-- [GitHub REST API: Releases](https://docs.github.com/en/rest/releases/releases) -- `/repos/{owner}/{repo}/releases` response structure, `assets[].browser_download_url` (HIGH confidence)
-- [Simon Willison: Auto-maintaining Homebrew formulas with GitHub Actions](https://til.simonwillison.net/homebrew/auto-formulas-github-actions) -- CI pattern for tap auto-update via repository_dispatch (MEDIUM confidence)
-- [Automating Homebrew Tap Updates (BuiltFast)](https://builtfast.dev/blog/automating-homebrew-tap-updates-with-github-actions/) -- Alternative CI approaches (MEDIUM confidence)
-- [NSHipster/update-homebrew-formula-action](https://github.com/NSHipster/update-homebrew-formula-action) -- Formula-focused action, evaluated but not applicable to Cask (MEDIUM confidence)
-- Existing codebase: `desktop-release.yml`, `pages.yml`, `site/build.mjs`, `site/index.html`, `site/template.html`, `tauri.conf.json` -- Direct inspection (HIGH confidence)
-
----
-*Stack research for: Desktop App Distribution Channels*
-*Researched: 2026-04-01*
+- SQLite 공식 문서: Partial Indexes (https://www.sqlite.org/partialindex.html) -- SQLite 3.8.0+
+- better-sqlite3 API: `Database.transaction()` (https://github.com/WiseLibs/better-sqlite3/blob/master/docs/api.md#transactionfunction---function)
+- 프로젝트 내부: `packages/daemon/src/infrastructure/database/migrations/v21-v30.ts` (9개 partial index)
+- 프로젝트 내부: `packages/daemon/src/infrastructure/database/migrations/v51-v59.ts` (추가 partial index)
+- 프로젝트 내부: `packages/daemon/src/services/signing-sdk/wallet-app-service.ts` (WalletAppService CRUD)
+- 프로젝트 내부: `packages/admin/src/pages/wallets.tsx:1378` (Preact radio 패턴)

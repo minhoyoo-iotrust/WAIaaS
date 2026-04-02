@@ -1,463 +1,354 @@
-# Architecture Patterns
+# Architecture Patterns: Signing App Explicit Selection
 
-**Domain:** Desktop App Distribution Channels (Download Page + Homebrew Cask Tap + CI Automation)
-**Researched:** 2026-04-01
+**Domain:** Wallet-as-a-Service signing target resolution
+**Researched:** 2026-04-02
 
 ## Recommended Architecture
 
-3개 신규 컴포넌트가 기존 아키텍처에 통합된다:
+### Overview
 
-1. **Download Page** -- `site/download/index.html` (정적 HTML + 클라이언트 사이드 JS)
-2. **Homebrew Cask Tap** -- `minhoyoo-iotrust/homebrew-waiaas` 별도 GitHub 리포지토리
-3. **CI Formula Automation** -- `desktop-release.yml` 워크플로우에 formula 업데이트 job 추가
+The signing app explicit selection feature modifies 4 existing components and adds 1 DB migration. No new services or components are needed -- this is purely a refinement of existing data flow from "name-based lookup" to "wallet_type group + signing_enabled primary" lookup.
+
+### Current Data Flow (Before)
 
 ```
-기존 아키텍처:
-  docs/*.md --> site/build.mjs --> site/{blog,docs}/*/index.html --> GitHub Pages
-  desktop-v* tag --> desktop-release.yml --> GitHub Releases (.dmg, .msi, .AppImage, .deb)
-
-신규 추가:
-  site/download/index.html (수동 관리, build.mjs 파이프라인 외부)
-    +-- 클라이언트 JS --> GitHub Releases API --> OS별 다운로드 링크 동적 생성
-
-  desktop-release.yml publish-release job 이후:
-    +-- update-homebrew job --> homebrew-waiaas repo Casks/w/waiaas.rb 자동 업데이트
-
-  docs/admin-manual/desktop-installation.md --> site/build.mjs --> site/docs/desktop-installation/
+ApprovalChannelRouter.route(walletId)
+  -> reads wallet.wallet_type from wallets table
+  -> checks wallet_apps WHERE wallet_type = ? AND signing_enabled = 1 (already exists!)
+  -> enriches params.walletName = wallet_type
+  -> calls PushRelaySigningChannel.sendRequest(enrichedParams)
+       -> calls SignRequestBuilder.buildRequest(params)
+            -> walletName = params.walletName || settings.get('signing_sdk.preferred_wallet')
+            -> WalletLinkRegistry.getWallet(walletName) -- name-based lookup in settings JSON
+            -> queries wallet_apps WHERE name = walletName for push_relay_url
+            -> queries wallet_apps WHERE name = walletName for subscription_token
 ```
+
+**Problem:** SignRequestBuilder uses `walletName` (individual app name) to resolve push_relay_url and subscription_token. When multiple apps share the same wallet_type, the `walletName` param is set to wallet_type by ApprovalChannelRouter, but the wallet_apps query uses `WHERE name = ?` which may not match any row (wallet_type != name).
+
+### Target Data Flow (After)
+
+```
+ApprovalChannelRouter.route(walletId)
+  -> reads wallet.wallet_type from wallets table
+  -> checks wallet_apps WHERE wallet_type = ? AND signing_enabled = 1 (unchanged)
+  -> enriches params.walletName = wallet_type (unchanged)
+  -> calls PushRelaySigningChannel.sendRequest(enrichedParams)
+       -> calls SignRequestBuilder.buildRequest(params)
+            -> walletType = params.walletName (already set to wallet_type by router)
+            -> queries wallet_apps WHERE wallet_type = ? AND signing_enabled = 1
+            -> gets push_relay_url, subscription_token, name from the signing primary app
+            -> WalletLinkRegistry.getWallet(appRow.name) -- uses actual app name
+```
+
+**Key insight:** The ApprovalChannelRouter already sets `walletName = wallet_type`. The fix is making SignRequestBuilder query by `wallet_type + signing_enabled` instead of `name`.
 
 ### Component Boundaries
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| `site/download/index.html` | OS 감지 + GitHub Releases API 호출 + 다운로드 링크 렌더링 | GitHub Releases API (read-only, public, CORS 지원) |
-| `site/build.mjs` | 기존 마크다운 to HTML 빌드 (수정 최소: sitemap에 /download/ 추가만) | `docs/**/*.md` 소스 파일 |
-| `desktop-release.yml` | 3-platform 빌드 + Release 발행 + Homebrew formula 자동 업데이트 | GitHub Releases API, homebrew-waiaas repo |
-| `homebrew-waiaas` repo | Cask formula 호스팅 | GitHub Releases (asset URL 참조) |
-| `docs/admin-manual/desktop-installation.md` | Desktop 설치 가이드 (10번째 admin-manual 파일) | build.mjs 파이프라인으로 HTML 변환 |
-| `site/template.html` | nav에 Download 링크 추가 | download/index.html 으로 연결 |
+| Component | Responsibility | Change Type | Communicates With |
+|-----------|---------------|-------------|-------------------|
+| DB Migration v61 | Enforce single signing primary per wallet_type | NEW | wallet_apps table |
+| WalletAppService | CRUD for wallet_apps + auto-toggle signing primary | MODIFY | SQLite, Routes |
+| SignRequestBuilder | Build SignRequest with correct push_relay_url/token | MODIFY | wallet_apps table, WalletLinkRegistry |
+| Admin UI HumanWalletAppsPage | Group by wallet_type, radio for signing | MODIFY | REST API |
+| ApprovalChannelRouter | Route PENDING_APPROVAL to channel | NO CHANGE | Already uses wallet_type + signing_enabled |
+| WalletLinkRegistry | Universal link URL generation | NO CHANGE | Still needed for buildSignUrl() |
+| PushRelaySigningChannel | Send push to relay | NO CHANGE | Delegates to SignRequestBuilder |
+| REST API routes (wallet-apps.ts) | HTTP handlers | NO CHANGE | WalletAppService handles auto-toggle |
 
-### Data Flow
+### Data Flow Changes
 
-```
-[사용자] --> waiaas.ai/download/
-  --> 브라우저 JS: navigator.userAgent --> OS 감지 (macOS/Windows/Linux)
-  --> fetch('https://api.github.com/repos/minhoyoo-iotrust/WAIaaS/releases')
-     --> tag_name이 'desktop-v*' 패턴인 최신 릴리스 필터링
-     --> assets[].name 매칭으로 OS별 바이너리 URL 추출
-  --> 기본 다운로드 버튼: 감지된 OS에 맞는 바이너리
-  --> "Other platforms" 섹션: 전체 바이너리 목록
+#### 1. DB Layer: Partial Unique Index
 
-[CI: desktop-v* tag push]
-  --> desktop-release.yml: create-release --> build-tauri (3 platform) --> publish-release
-  --> update-homebrew job:
-     --> GitHub Releases에서 macOS .dmg SHA256 계산
-     --> homebrew-waiaas repo의 Casks/w/waiaas.rb 업데이트 (version, url, sha256)
-     --> 자동 커밋 + 푸시
+```sql
+-- Migration v61: Enforce at most one signing_enabled=1 per wallet_type
+CREATE UNIQUE INDEX idx_wallet_apps_signing_primary
+  ON wallet_apps(wallet_type) WHERE signing_enabled = 1;
 ```
 
-## Patterns to Follow
-
-### Pattern 1: Download Page as Static HTML (build.mjs 파이프라인 외부)
-
-**What:** `site/download/index.html`을 수동 관리하는 정적 HTML 파일로 생성. `site/build.mjs` 마크다운 파이프라인에 포함하지 않는다.
-
-**When:** 다운로드 페이지는 마크다운 콘텐츠가 아니라 인터랙티브 UI(OS 감지, API 호출, 동적 링크)이므로 별도 관리가 적합하다.
-
-**Why:** `build.mjs`는 `docs/**/*.md` to front-matter to template 파이프라인이다. 다운로드 페이지는 front-matter 없는 커스텀 HTML+JS이므로 이 파이프라인에 강제로 넣으면 복잡해진다. `site/index.html`도 이미 build.mjs 외부의 수동 관리 파일이다 -- 동일 패턴을 따른다.
-
-**Rationale:**
-- `site/index.html` (홈페이지)이 이미 build.mjs 외부의 수동 HTML 파일 -- 선례가 있다
-- GitHub Pages 배포는 `site/` 디렉토리 전체를 업로드하므로 `site/download/index.html`은 자동으로 배포된다
-- `pages.yml` 워크플로우가 `site/**` 경로 변경을 감지하므로 download 페이지 변경 시에도 자동 배포된다
-
-**Example:**
-```html
-<!-- site/download/index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <!-- 기존 template.html의 head 구조 복사 (CRT 테마, 폰트, favicon) -->
-  <title>Download WAIaaS Desktop - WAIaaS</title>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "WAIaaS Desktop",
-    "operatingSystem": "macOS, Windows, Linux",
-    "downloadUrl": "https://waiaas.ai/download/"
-  }
-  </script>
-</head>
-<body>
-  <!-- nav: template.html과 동일 구조, Download 링크 active -->
-  <main class="container">
-    <div id="download-hero">
-      <h1>Download WAIaaS Desktop</h1>
-      <p id="detected-os">Detecting your operating system...</p>
-      <a id="primary-download" class="download-btn" href="#">
-        Download for <span id="os-name">your OS</span>
-      </a>
-      <p id="version-info"></p>
-    </div>
-    <div id="all-downloads">
-      <h2>All Downloads</h2>
-      <div id="download-grid"><!-- JS로 채움 --></div>
-    </div>
-    <div id="alternative-install">
-      <h2>Alternative Installation Methods</h2>
-      <!-- Homebrew, npm, Docker 안내 -->
-    </div>
-  </main>
-  <script>
-    // OS 감지 + GitHub Releases API 호출 (인라인, 외부 JS 없음)
-  </script>
-</body>
-</html>
+Data migration for existing rows:
+```sql
+-- For each wallet_type with multiple signing_enabled=1, keep oldest (min created_at)
+UPDATE wallet_apps SET signing_enabled = 0
+  WHERE signing_enabled = 1
+    AND id NOT IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY wallet_type ORDER BY created_at ASC) as rn
+        FROM wallet_apps WHERE signing_enabled = 1
+      ) WHERE rn = 1
+    );
 ```
 
-### Pattern 2: GitHub Releases API 클라이언트 사이드 호출
+**Note:** SQLite supports partial indexes via `WHERE` clause since 3.8.0 (2013). The WAIaaS project uses better-sqlite3 which bundles a modern SQLite version. HIGH confidence.
 
-**What:** `https://api.github.com/repos/OWNER/REPO/releases` 엔드포인트를 브라우저에서 직접 호출하여 최신 desktop 릴리스의 asset URL을 동적으로 추출한다.
+#### 2. WalletAppService: Auto-Toggle in update()
 
-**When:** 다운로드 페이지 로드 시.
+Current `update()` is a simple field-setter. Two changes needed:
 
-**Why:** GitHub Releases API는 CORS를 지원하고, public repo의 경우 인증 없이 시간당 60회 요청 가능. 빌드 타임에 URL을 하드코딩하면 릴리스마다 사이트 재빌드가 필요하다 -- 클라이언트 사이드 호출이면 릴리스 후 즉시 반영된다.
+**2a. update() with transactional auto-toggle:**
+```typescript
+update(id: string, fields: { signingEnabled?: boolean; ... }): WalletApp {
+  // ... existing validation ...
 
-**Key implementation details:**
-- `desktop-v*` 태그 패턴으로 필터링 (release-please의 npm `v*` 릴리스와 구분)
-- Asset name 패턴 매칭: `.dmg` (macOS), `.msi` (Windows), `.AppImage`/`.deb` (Linux)
-- macOS는 `aarch64` (Apple Silicon)과 `x64` (Intel) 두 아키텍처 구분 필요
-- Rate limit 초과 시 fallback: GitHub Releases 페이지 직접 링크 표시
-- 에러/로딩 상태 UI 표시 (API 응답 대기 중 스켈레톤)
-
-**Example:**
-```javascript
-const REPO = 'minhoyoo-iotrust/WAIaaS';
-const TAG_PREFIX = 'desktop-v';
-
-async function loadDownloads() {
-  const res = await fetch(`https://api.github.com/repos/${REPO}/releases`);
-  const releases = await res.json();
-
-  // desktop-v* 태그인 릴리스만 필터 (release-please 릴리스 제외)
-  const desktopReleases = releases.filter(r =>
-    r.tag_name.startsWith(TAG_PREFIX) && !r.draft
-  );
-  if (desktopReleases.length === 0) return;
-
-  const latest = desktopReleases[0];
-  const version = latest.tag_name.replace(TAG_PREFIX, '');
-
-  // OS 감지
-  const ua = navigator.userAgent;
-  let detectedOS = 'unknown';
-  if (ua.includes('Mac')) detectedOS = 'macOS';
-  else if (ua.includes('Win')) detectedOS = 'Windows';
-  else if (ua.includes('Linux')) detectedOS = 'Linux';
-
-  // Asset 매칭 + 렌더링
-  for (const asset of latest.assets) {
-    // .dmg -> macOS, .msi -> Windows, .AppImage/.deb -> Linux
+  if (fields.signingEnabled === true) {
+    // Wrap in transaction: disable others in same wallet_type, then enable this one
+    this.sqlite.transaction(() => {
+      this.sqlite.prepare(
+        'UPDATE wallet_apps SET signing_enabled = 0, updated_at = ? WHERE wallet_type = ? AND id != ? AND signing_enabled = 1'
+      ).run(now, existingApp.wallet_type, id);
+      // ... existing SET logic with signing_enabled = 1 ...
+    })();
+  } else {
+    // ... existing non-transactional logic (signingEnabled=false or other fields) ...
   }
 }
 ```
 
-### Pattern 3: Homebrew Cask Tap 별도 리포지토리
+**2b. register() with conditional signing_enabled:**
+```typescript
+register(name, displayName, opts) {
+  // Check if wallet_type already has a signing primary
+  const walletType = opts?.walletType || name;
+  const existingPrimary = this.sqlite.prepare(
+    'SELECT id FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1'
+  ).get(walletType);
 
-**What:** `minhoyoo-iotrust/homebrew-waiaas` GitHub 리포지토리에 macOS Cask formula를 호스팅한다.
-
-**When:** macOS 사용자가 `brew install --cask minhoyoo-iotrust/waiaas/waiaas` 또는 `brew tap minhoyoo-iotrust/waiaas && brew install --cask waiaas`로 설치.
-
-**Why:** Homebrew 공식 문서가 tap 리포지토리를 `homebrew-` 접두사로 시작하도록 권장. Cask는 `Casks/` 디렉토리에 배치. 별도 리포지토리여야 `brew tap` 명령이 동작한다.
-
-**Repository structure:**
-```
-homebrew-waiaas/
-  README.md
-  Casks/
-    w/
-      waiaas.rb
+  const signingEnabled = existingPrimary ? 0 : 1;  // New app is secondary if primary exists
+  // ... rest of register with signingEnabled ...
+}
 ```
 
-**Cask formula:**
-```ruby
-# Casks/w/waiaas.rb
-cask "waiaas" do
-  arch arm: "aarch64", intel: "x64"
+#### 3. SignRequestBuilder: wallet_type-Based Lookup
 
-  version "0.1.0"
-  sha256 arm:   "PLACEHOLDER_ARM64_SHA256",
-         intel: "PLACEHOLDER_X64_SHA256"
+Three query sites in `buildRequest()` currently use `WHERE name = ?` and must change to `WHERE wallet_type = ? AND signing_enabled = 1`:
 
-  url "https://github.com/minhoyoo-iotrust/WAIaaS/releases/download/desktop-v#{version}/WAIaaS-Desktop_#{version}_#{arch}.dmg"
-  name "WAIaaS Desktop"
-  desc "Self-hosted wallet daemon for AI agents - desktop app"
-  homepage "https://waiaas.ai/"
+| Line | Current Query | New Query |
+|------|--------------|-----------|
+| L97 | `settings.get('signing_sdk.preferred_wallet')` | `wallet_apps WHERE wallet_type = ? AND signing_enabled = 1` |
+| L158-163 | `wallet_apps WHERE name = ?` (push_relay_url) | Merged into single query above |
+| L219-224 | `wallet_apps WHERE name = ? AND subscription_token IS NOT NULL` | Merged into single query above |
 
-  depends_on macos: ">= :catalina"
+Refactored flow:
+```typescript
+buildRequest(params: BuildRequestParams): BuildRequestResult {
+  // 1. Check signing SDK enabled (unchanged)
+  // 2. Determine wallet type (replaces wallet name resolution)
+  const walletType = params.walletName; // Already set to wallet_type by ApprovalChannelRouter
 
-  app "WAIaaS Desktop.app"
+  if (!walletType) {
+    throw new WAIaaSError('WALLET_NOT_REGISTERED', {
+      message: 'No wallet type specified for signing',
+    });
+  }
 
-  zap trash: [
-    "~/Library/Application Support/dev.waiaas.desktop",
-    "~/Library/Caches/dev.waiaas.desktop",
-    "~/Library/Preferences/dev.waiaas.desktop.plist",
-  ]
-end
+  // 3. Single query: get signing primary app for this wallet_type
+  const appRow = this.sqlite.prepare(
+    'SELECT name, push_relay_url, subscription_token FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1'
+  ).get(walletType);
+
+  if (!appRow) {
+    throw new WAIaaSError('WALLET_NOT_REGISTERED', {
+      message: `No signing-enabled app for wallet type: ${walletType}`,
+    });
+  }
+
+  // 4. Use appRow.name for WalletLinkRegistry (universal link)
+  this.walletLinkRegistry.getWallet(appRow.name);
+
+  // 5. Use appRow.push_relay_url for response channel
+  // 6. Use appRow.subscription_token for request topic
+  // ... (consolidates 3 separate queries into 1)
+}
 ```
 
-**Key decisions:**
-- Cask name: `waiaas` (글로벌 고유해야 함, 충돌 가능성 낮음)
-- `Casks/w/` 서브디렉토리: Homebrew 공식 컨벤션 (첫 글자 디렉토리)
-- `arch arm:, intel:` 듀얼 아키텍처: Homebrew가 자동으로 현재 아키텍처에 맞는 값 선택
-- `depends_on macos: ">= :catalina"`: tauri.conf.json의 `minimumSystemVersion: "10.15"`와 일치
-- `zap trash`: Tauri 앱의 identifier `dev.waiaas.desktop` 기반 경로
+**Deprecation:** `signing_sdk.preferred_wallet` setting is no longer consulted. The signing primary is determined by the `signing_enabled = 1` row in wallet_apps. The setting key remains in `setting-keys.ts` with updated description marking it deprecated.
 
-### Pattern 4: CI Formula 자동 업데이트 (desktop-release.yml 확장)
+#### 4. Admin UI: Grouped Radio Layout
 
-**What:** `desktop-release.yml`의 `publish-release` job 이후에 `update-homebrew` job을 추가하여 homebrew-waiaas 리포지토리의 Cask formula를 자동 업데이트한다.
+Current flat list -> grouped by wallet_type with radio buttons for signing:
 
-**When:** desktop-v* 릴리스가 발행될 때마다 자동 실행.
-
-**Why:** 수동 업데이트는 잊기 쉽고 지연이 발생한다. `HOMEBREW_TAP_TOKEN` secret(homebrew-waiaas repo 쓰기 권한 가진 PAT)으로 인증하여 자동 커밋+푸시한다.
-
-**Required secrets:**
-- `HOMEBREW_TAP_TOKEN`: `minhoyoo-iotrust/homebrew-waiaas` repo에 대한 `contents: write` 권한의 Fine-grained PAT
-
-**Example (desktop-release.yml에 추가할 job):**
-```yaml
-  update-homebrew:
-    needs: publish-release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Extract version
-        id: version
-        run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          VERSION="${TAG#desktop-v}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Download macOS DMGs and compute SHA256
-        id: sha
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          BASE="https://github.com/minhoyoo-iotrust/WAIaaS/releases/download/desktop-v${VERSION}"
-          curl -sL "${BASE}/WAIaaS-Desktop_${VERSION}_aarch64.dmg" -o arm64.dmg
-          curl -sL "${BASE}/WAIaaS-Desktop_${VERSION}_x64.dmg" -o x64.dmg
-          echo "arm64=$(sha256sum arm64.dmg | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "x64=$(sha256sum x64.dmg | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-
-      - name: Checkout homebrew-waiaas
-        uses: actions/checkout@v4
-        with:
-          repository: minhoyoo-iotrust/homebrew-waiaas
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-
-      - name: Update Cask formula
-        run: |
-          sed -i "s/version \".*\"/version \"${{ steps.version.outputs.version }}\"/" Casks/w/waiaas.rb
-          sed -i "s/arm:   \".*\"/arm:   \"${{ steps.sha.outputs.arm64 }}\"/" Casks/w/waiaas.rb
-          sed -i "s/intel: \".*\"/intel: \"${{ steps.sha.outputs.x64 }}\"/" Casks/w/waiaas.rb
-
-      - name: Commit and push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/w/waiaas.rb
-          git commit -m "Update WAIaaS Desktop to ${{ steps.version.outputs.version }}"
-          git push
+```typescript
+// Group apps by wallet_type
+const grouped = new Map<string, WalletAppApi[]>();
+for (const app of apps.value) {
+  const key = app.wallet_type || app.name;
+  if (!grouped.has(key)) grouped.set(key, []);
+  grouped.get(key)!.push(app);
+}
 ```
 
-**DMG 파일명 패턴 주의:** 실제 tauri-action이 생성하는 asset 이름을 확인 필요. 현재 추정: `WAIaaS-Desktop_{version}_{arch}.dmg`. tauri.conf.json의 `productName: "WAIaaS Desktop"`과 빌드 매트릭스 target에 따라 달라질 수 있다. 구현 시 첫 릴리스의 실제 asset 이름을 확인하고 패턴을 맞춰야 한다.
+Radio button handler calls existing `PUT /admin/wallet-apps/{id}` with `{ signing_enabled: true }`. The backend auto-toggle ensures mutual exclusivity. Admin UI refetches list after PUT.
 
-### Pattern 5: 설치 가이드를 기존 docs/admin-manual/ 파이프라인에 통합
+"None" radio option: Admin UI sends `PUT /admin/wallet-apps/{currentPrimaryId}` with `{ signing_enabled: false }`. This disables signing for the entire wallet_type group.
 
-**What:** `docs/admin-manual/desktop-installation.md`를 10번째 admin-manual 파일로 추가. 기존 `build.mjs` 파이프라인이 자동으로 HTML 변환한다.
+## Patterns to Follow
 
-**When:** 항상. 설치 가이드는 마크다운 콘텐츠이므로 기존 파이프라인에 정확히 맞는다.
+### Pattern 1: Transactional Auto-Toggle (Radio Semantics)
 
-**Why:** `build.mjs`가 `docs/**/*.md`를 glob하므로 파일 추가만으로 자동 빌드된다. front-matter에 `section: docs`, `category: Admin Manual`을 넣으면 docs 인덱스 페이지에도 자동 등록된다.
+**What:** When setting `signing_enabled = true` on one app, disable all others in the same wallet_type within a single SQLite transaction.
 
-**Example front-matter:**
-```yaml
----
-title: "Desktop App Installation Guide"
-description: "Install WAIaaS Desktop on macOS, Windows, and Linux. Setup wizard, Homebrew Cask, troubleshooting, and upgrade instructions."
-date: 2026-04-01
-section: docs
-category: Admin Manual
-slug: desktop-installation
----
+**When:** Any mutation that changes signing_enabled to true.
+
+**Why:** The partial unique index enforces the constraint at DB level, but the application must proactively manage the toggle to avoid constraint violation errors. The transaction ensures atomicity -- if the enable fails, the disable is rolled back.
+
+```typescript
+this.sqlite.transaction(() => {
+  // Step 1: Disable all in group
+  this.sqlite.prepare(
+    'UPDATE wallet_apps SET signing_enabled = 0, updated_at = ? WHERE wallet_type = ? AND signing_enabled = 1'
+  ).run(now, walletType);
+  // Step 2: Enable target
+  this.sqlite.prepare(
+    'UPDATE wallet_apps SET signing_enabled = 1, updated_at = ? WHERE id = ?'
+  ).run(now, id);
+})();
 ```
 
-### Pattern 6: 네비게이션에 Download 링크 추가
+### Pattern 2: Single-Query Resolution
 
-**What:** `site/template.html`의 nav-links에 Download 링크를 추가한다. `site/download/index.html`에도 동일한 nav 구조를 수동으로 포함한다.
+**What:** Consolidate multiple wallet_apps queries in SignRequestBuilder into one query that returns all needed fields.
 
-**When:** 다운로드 페이지 완성 후.
+**When:** Building a SignRequest.
 
-**Impact:** template.html 수정은 `build.mjs`가 생성하는 모든 blog/docs 페이지에 반영된다. `site/index.html`(홈페이지)과 `site/download/index.html`은 수동이므로 별도 수정 필요.
+**Why:** Current code queries wallet_apps 3 separate times (name lookup, push_relay_url, subscription_token). The new approach uses one query with `WHERE wallet_type = ? AND signing_enabled = 1` returning all fields.
 
-**Example (template.html 수정):**
-```html
-<div class="nav-links">
-  <a href="https://github.com/minhoyoo-iotrust/WAIaaS">GitHub</a>
-  <a href="/download/">Download</a>
-  <a href="https://www.npmjs.com/package/@waiaas/cli">npm</a>
-  <a href="https://hub.docker.com/u/waiaas">Docker</a>
-  <a href="/blog/" class="{{ACTIVE_BLOG}}">Blog</a>
-  <a href="/docs/" class="{{ACTIVE_DOCS}}">Docs</a>
-</div>
-```
+### Pattern 3: Existing API Surface, New Backend Behavior
 
-`site/index.html` 홈페이지에도 "Download Desktop App" CTA 섹션을 추가한다.
+**What:** Keep REST API schema identical. The auto-toggle is a server-side side effect.
+
+**When:** PUT /admin/wallet-apps/{id} with `signing_enabled: true`.
+
+**Why:** Admin UI already refetches the full list after any update. No need for new response fields or new endpoints. The same `WalletAppUpdateRequestSchema` and `WalletAppResponseSchema` work unchanged.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: build.mjs에 다운로드 페이지 로직 추가
+### Anti-Pattern 1: Client-Side Radio Enforcement
 
-**What:** 다운로드 페이지를 마크다운 파일로 만들어 build.mjs 파이프라인에 넣으려는 시도.
+**What:** Making the Admin UI responsible for sending two API calls (disable old + enable new).
 
-**Why bad:** 다운로드 페이지는 인터랙티브 JS가 필수(OS 감지, API 호출, 동적 렌더링). 마크다운 파이프라인은 정적 콘텐츠용이다. `build.mjs`에 특수 케이스 분기를 추가하면 파이프라인 복잡도가 불필요하게 증가한다.
+**Why bad:** Race conditions, partial failure (one succeeds, other fails), inconsistent state if another client updates simultaneously.
 
-**Instead:** `site/download/index.html`을 `site/index.html`과 동일하게 수동 관리 정적 파일로 둔다.
+**Instead:** Server-side transactional auto-toggle. Client sends one PUT, server handles the rest.
 
-### Anti-Pattern 2: 빌드 타임에 GitHub Releases URL 하드코딩
+### Anti-Pattern 2: New Endpoints for Toggle
 
-**What:** `build.mjs`에서 GitHub API를 호출하여 다운로드 URL을 빌드 타임에 주입.
+**What:** Creating `POST /admin/wallet-apps/{id}/set-signing-primary` or similar.
 
-**Why bad:** 릴리스마다 사이트 재빌드+재배포가 필요. `pages.yml`과 `desktop-release.yml`이 별도 워크플로우이므로 동기화가 복잡해진다. 데스크탑 릴리스 후 pages 재빌드 트리거가 없으면 구버전 URL이 표시된다.
+**Why bad:** Unnecessary API surface expansion. The existing PUT with `signing_enabled: true` is semantically correct -- the only change is server-side behavior.
 
-**Instead:** 클라이언트 사이드에서 GitHub Releases API를 호출하여 항상 최신 데이터를 표시한다.
+**Instead:** Reuse existing PUT endpoint. The auto-toggle is an implementation detail.
 
-### Anti-Pattern 3: WAIaaS 메인 리포지토리에 Homebrew formula 내장
+### Anti-Pattern 3: Removing preferred_wallet Immediately
 
-**What:** WAIaaS 리포지토리 내부에 `homebrew/` 디렉토리를 만들어 formula를 관리.
+**What:** Deleting the `signing_sdk.preferred_wallet` setting key from setting-keys.ts.
 
-**Why bad:** `brew tap`은 `homebrew-` 접두사를 가진 별도 리포지토리를 요구한다. 메인 리포지토리에 formula를 넣으면 tap 기능이 동작하지 않는다.
+**Why bad:** Users who have configured it will get errors. Preset auto-setup references it.
 
-**Instead:** `minhoyoo-iotrust/homebrew-waiaas` 별도 리포지토리를 생성한다.
+**Instead:** Deprecate by updating description, stop consulting it in SignRequestBuilder, update preset-auto-setup.ts to set signing_enabled instead.
 
-### Anti-Pattern 4: Homebrew Releaser 등 범용 Action 사용
+### Anti-Pattern 4: Settings Fallback Chain
 
-**What:** `homebrew-releaser` GitHub Action을 사용하여 formula 관리.
+**What:** `signing_sdk.preferred_wallet` -> wallet_type primary -> first app fallback chain.
 
-**Why bad:** 이 Action은 formula(소스 빌드) 전용이다. WAIaaS Desktop은 prebuilt binary Cask이므로 formula 생성 로직이 맞지 않는다. Cask의 `arch arm:, intel:` 듀얼 아키텍처 패턴을 지원하지 않는다.
+**Why bad:** Unpredictable behavior, debugging difficulty.
 
-**Instead:** `sed` 기반 간단한 스크립트로 version/sha256만 교체한다. Cask formula 구조가 단순하므로 범용 도구 없이도 충분하다.
+**Instead:** wallet_type + signing_enabled=1 single query. If no result, throw WALLET_NOT_REGISTERED error.
 
-## New vs Modified Components
+## Integration Points
 
-### New Files (신규 생성)
+### Existing Integration (No Changes Needed)
 
-| File | Type | Purpose |
-|------|------|---------|
-| `site/download/index.html` | Static HTML+JS | OS 감지 다운로드 페이지 |
-| `docs/admin-manual/desktop-installation.md` | Markdown | Desktop 설치 가이드 (build.mjs 자동 빌드) |
-| `minhoyoo-iotrust/homebrew-waiaas` (별도 repo) | GitHub repo | Homebrew Cask tap |
-| `homebrew-waiaas/Casks/w/waiaas.rb` | Ruby | Cask formula |
-| `homebrew-waiaas/README.md` | Markdown | Tap 설치 안내 |
+| Integration Point | Why No Change |
+|---|---|
+| ApprovalChannelRouter | Already queries `wallet_type + signing_enabled = 1` (lines 93-106) |
+| PushRelaySigningChannel | Delegates to SignRequestBuilder, passes params through |
+| TelegramSigningChannel | Same delegation pattern |
+| REST API wallet-apps routes | WalletAppService handles toggle internally |
+| MCP tools | No wallet app management tools exist |
+| SDK (@waiaas/wallet-sdk) | Signing protocol only, unaware of app selection |
 
-### Modified Files (기존 수정)
+### Modified Integration Points
 
-| File | Change | Impact |
-|------|--------|--------|
-| `site/template.html` | nav-links에 Download 링크 추가 | 전체 빌드 페이지에 반영 (blog/docs 모든 페이지) |
-| `site/index.html` | Download Desktop CTA 섹션 추가 | 홈페이지 |
-| `.github/workflows/desktop-release.yml` | `update-homebrew` job 추가 | CI 파이프라인 확장 |
-| `site/distribution/SUBMISSION_KIT.md` | Desktop 배포 채널 항목 추가 | 문서 |
-| `site/build.mjs` | `generateSitemap()`에 `/download/` 정적 URL 1줄 추가 | SEO sitemap |
+| Integration Point | What Changes |
+|---|---|
+| WalletAppService.update() | Add transactional auto-toggle for signingEnabled=true |
+| WalletAppService.register() | Check existing primary, register as secondary if exists |
+| SignRequestBuilder.buildRequest() | Replace walletName-based queries with wallet_type + signing_enabled query |
+| preset-auto-setup.ts | Stop setting `signing_sdk.preferred_wallet`, set signing_enabled on app instead |
+| Admin UI HumanWalletAppsPage | Group by wallet_type, radio for signing, checkbox for alerts |
 
-### Unchanged Files (수정 불필요)
+### New Components
 
-| File | Why No Change |
-|------|---------------|
-| `.github/workflows/pages.yml` | `site/**` 경로 감지이므로 download 페이지 변경도 자동 배포 |
-| `site/article.css` | download 페이지는 자체 인라인 스타일 사용 (CRT 테마 변수는 template에서 복사) |
-| `apps/desktop/` | Desktop 앱 자체는 변경 없음, 배포 채널만 추가 |
+| Component | Type | Location |
+|---|---|---|
+| Migration v61 | DB migration function | `packages/daemon/src/infrastructure/database/migrations/` (add to v51-v59.ts or create new file) |
+| Partial unique index | DB constraint | `idx_wallet_apps_signing_primary ON wallet_apps(wallet_type) WHERE signing_enabled = 1` |
 
-**Sitemap 처리:** `site/download/index.html`은 build.mjs가 생성하지 않으므로 sitemap.xml에 자동 포함되지 않는다. `build.mjs`의 `generateSitemap()` 함수에서 homepage를 정적으로 추가하는 코드가 이미 있으므로(L636-L652), 동일 패턴으로 `/download/` URL을 1줄 추가하면 된다.
+## Suggested Build Order
 
-## Integration Points Summary
+Based on dependency analysis, build in this order:
 
-```
-                    +--------------------------------------+
-                    |  desktop-v* tag push                 |
-                    |  (기존: desktop-release.yml)          |
-                    +------+------------------+------------+
-                           |                  |
-                    +------v------+     +-----v-------------------+
-                    | publish-    |     | update-homebrew          |
-                    | release     |     | (신규 job)               |
-                    | (기존)      |     |                          |
-                    +------+------+     | 1. DMG SHA256 계산       |
-                           |           | 2. homebrew-waiaas       |
-                    +------v------+     |    Cask formula 업데이트  |
-                    | GitHub      |     | 3. 자동 커밋+푸시         |
-                    | Releases    |     +--------------------------+
-                    | (기존)      |
-                    +------+------+
-                           |
-              +------------+------------------+
-              |            |                  |
-      +-------v-------+ +-v----------+ +-----v-----------+
-      | Download Page | | Homebrew   | | Tauri Auto-     |
-      | (클라이언트 JS) | | Cask       | | Updater         |
-      | API 호출       | | (URL 참조)  | | (latest.json)   |
-      | (신규)         | | (신규)      | | (기존)           |
-      +---------------+ +------------+ +-----------------+
-```
+### Phase 1: DB Migration v61
 
-## Build Order (의존성 기반 추천 순서)
+**Rationale:** Foundation. All other changes depend on the partial unique index being in place.
 
-### Phase 1: Homebrew Cask Tap 리포지토리 생성
+- Add migration v61 with partial unique index
+- Include data migration for existing rows (keep oldest signing_enabled per wallet_type)
+- Update `LATEST_VERSION` constant
+- Write migration test
 
-**의존성:** 없음 (독립적)
-**산출물:** `homebrew-waiaas` repo + `Casks/w/waiaas.rb` + README
+**Dependencies:** None
+**Blocks:** Phase 2, 3
 
-이유: 별도 리포지토리이므로 메인 코드베이스와 독립적. 가장 먼저 만들어 두면 Phase 3의 CI 연동에서 즉시 사용 가능.
+### Phase 2: WalletAppService Backend Changes
 
-### Phase 2: Desktop 설치 가이드
+**Rationale:** Backend logic must be in place before Admin UI can use radio semantics.
 
-**의존성:** 없음 (독립적, 단 Phase 1의 Homebrew 설치 방법을 포함하려면 Phase 1 이후)
-**산출물:** `docs/admin-manual/desktop-installation.md`
+- Modify `update()` with transactional auto-toggle
+- Modify `register()` with conditional signing_enabled
+- Update `preset-auto-setup.ts` to stop setting preferred_wallet
+- Deprecate `signing_sdk.preferred_wallet` in setting-keys.ts description
+- Write unit tests for auto-toggle behavior
 
-이유: 기존 build.mjs 파이프라인에 파일 추가만으로 동작. 다운로드 페이지에서 가이드로 링크하므로 Phase 4보다 먼저.
+**Dependencies:** Phase 1 (index must exist)
+**Blocks:** Phase 4
 
-### Phase 3: CI Formula 자동 업데이트
+### Phase 3: SignRequestBuilder Query Change
 
-**의존성:** Phase 1 (homebrew-waiaas repo 존재 필요)
-**산출물:** `desktop-release.yml` 수정 + `HOMEBREW_TAP_TOKEN` secret 설정
+**Rationale:** Can be done in parallel with Phase 2 since it only changes read queries, but logically depends on the auto-toggle being correct.
 
-이유: Phase 1의 리포지토리가 있어야 CI에서 push할 수 있다.
+- Replace 3 wallet_apps name-based queries with 1 wallet_type + signing_enabled query
+- Remove preferred_wallet fallback from buildRequest()
+- Update unit tests
 
-### Phase 4: Download 페이지 + 네비게이션 업데이트
+**Dependencies:** Phase 1 (partial index guarantees single result)
+**Blocks:** Phase 4 (full flow test)
 
-**의존성:** Phase 2 (설치 가이드 링크 포함)
-**산출물:** `site/download/index.html`, `site/template.html` 수정, `site/index.html` CTA 추가, `site/build.mjs` sitemap 1줄 추가
+### Phase 4: Admin UI Grouped Radio Layout
 
-이유: 모든 배포 채널이 준비된 후 다운로드 페이지에서 통합 안내. template.html 수정은 전체 사이트 nav에 영향이므로 마지막에.
+**Rationale:** UI change depends on backend auto-toggle being in place for correct behavior.
 
-### Phase 5: SUBMISSION_KIT 업데이트 + 마무리
+- Group apps by wallet_type in render
+- Replace signing checkbox with radio button (per group)
+- Add "None" radio option for disabling signing in a group
+- Auto-select for single-app groups (disabled radio)
+- Keep alerts as checkboxes
+- Write Admin UI tests
 
-**의존성:** Phase 1-4 전체
-**산출물:** `SUBMISSION_KIT.md` Desktop 배포 채널 항목 추가
+**Dependencies:** Phase 2 (backend auto-toggle), Phase 3 (query change)
+**Blocks:** None
 
 ## Scalability Considerations
 
-| Concern | 현재 (v0.1.0) | 향후 (v1.0+) | Notes |
-|---------|--------------|-------------|-------|
-| GitHub API Rate Limit | 60 req/hr (비인증) | 충분 | 일반 트래픽에서 문제 없음. 폭주 시 fallback 링크 표시 |
-| Homebrew Formula 업데이트 | CI 자동 sed 교체 | 동일 | Cask 구조가 단순하므로 스케일 문제 없음 |
-| 다운로드 바이너리 호스팅 | GitHub Releases (무료) | 동일 | GitHub LFS 불필요, 릴리스 asset으로 충분 |
-| macOS 아키텍처 | arm64 + x64 | Universal binary 가능 | 현재 2개 분리 빌드, Universal은 tauri-action 설정으로 전환 가능 |
+Not applicable -- wallet_apps table is small (typically 1-5 rows). Partial unique index has negligible overhead. No performance concerns.
 
 ## Sources
 
-- [Homebrew: How to Create and Maintain a Tap](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap) -- HIGH confidence
-- [Homebrew Cask Cookbook](https://docs.brew.sh/Cask-Cookbook) -- HIGH confidence
-- [GitHub REST API: Releases](https://docs.github.com/en/rest/releases/releases) -- HIGH confidence
-- [Simon Willison: Auto-maintaining Homebrew formulas with GitHub Actions](https://til.simonwillison.net/homebrew/auto-formulas-github-actions) -- MEDIUM confidence
-- [josh.fail: Automate Homebrew formulae with GitHub Actions](https://josh.fail/2023/automate-updating-custom-homebrew-formulae-with-github-actions/) -- MEDIUM confidence
-- 기존 코드베이스 분석: `site/build.mjs`, `site/template.html`, `site/index.html`, `.github/workflows/desktop-release.yml`, `.github/workflows/pages.yml` -- HIGH confidence
+- `packages/daemon/src/services/signing-sdk/wallet-app-service.ts` -- current WalletAppService implementation
+- `packages/daemon/src/services/signing-sdk/sign-request-builder.ts` -- current SignRequestBuilder with walletName-based lookup
+- `packages/daemon/src/services/signing-sdk/approval-channel-router.ts` -- existing wallet_type + signing_enabled pattern (lines 93-106)
+- `packages/daemon/src/api/routes/wallet-apps.ts` -- REST API handlers
+- `packages/admin/src/pages/human-wallet-apps.tsx` -- current Admin UI with per-app checkboxes
+- `packages/daemon/src/infrastructure/database/schema.ts` -- wallet_apps table definition (line 551)
+- `internal/objectives/m33-04-signing-app-explicit-selection.md` -- milestone objective document
+- SQLite partial index documentation (supported since 3.8.0, 2013) -- HIGH confidence
