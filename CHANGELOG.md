@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.13.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0...v2.13.0) (2026-04-02)
+
+
+### Bug Fixes
+
+* **ci:** replace global npm upgrade with npx npm@11 in release workflow ([b07cc20](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b07cc209050b6deaae862a2301198594fced7937))
+* **ci:** replace global npm upgrade with npx npm@11 in release workflow ([616eec9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/616eec96d10ede61d9bcebcbd47e1a933d08a910))
+
 ## [2.13.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0-rc.8...v2.13.0) (2026-04-02)
 
 
