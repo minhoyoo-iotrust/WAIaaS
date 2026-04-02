@@ -348,4 +348,91 @@ describe('WalletAppService', () => {
       expect(service.getAlertEnabledApps()).toHaveLength(0);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Tests: exclusive signing toggle (v61)
+  // ---------------------------------------------------------------------------
+
+  describe('exclusive signing toggle', () => {
+    it('TST-01: update() signingEnabled=true disables other same-wallet_type apps', () => {
+      // Register two apps of same wallet_type
+      const appA = service.register('dcent-1', "D'CENT 1", { walletType: 'dcent' });
+      const appB = service.register('dcent-2', "D'CENT 2", { walletType: 'dcent' });
+
+      // appB registered with signingEnabled=0 (because appA already has it)
+      expect(appB.signingEnabled).toBe(false);
+
+      // Now enable signing on appB
+      service.update(appB.id, { signingEnabled: true });
+
+      // appA should be disabled
+      const updatedA = service.getById(appA.id)!;
+      expect(updatedA.signingEnabled).toBe(false);
+
+      // appB should be enabled
+      const updatedB = service.getById(appB.id)!;
+      expect(updatedB.signingEnabled).toBe(true);
+    });
+
+    it('update() signingEnabled=true when no other app has it just enables', () => {
+      const appA = service.register('dcent-1', "D'CENT 1", { walletType: 'dcent' });
+      // Disable it first
+      service.update(appA.id, { signingEnabled: false });
+
+      // Re-enable -- no side effects needed
+      const updated = service.update(appA.id, { signingEnabled: true });
+      expect(updated.signingEnabled).toBe(true);
+    });
+
+    it('update() signingEnabled=false does NOT enable any other app', () => {
+      const appA = service.register('dcent-1', "D'CENT 1", { walletType: 'dcent' });
+      const appB = service.register('dcent-2', "D'CENT 2", { walletType: 'dcent' });
+
+      // Disable appA
+      service.update(appA.id, { signingEnabled: false });
+
+      // appB should remain disabled (no auto-enable)
+      const updatedB = service.getById(appB.id)!;
+      expect(updatedB.signingEnabled).toBe(false);
+    });
+
+    it('register() with existing signing primary creates new app with signingEnabled=0', () => {
+      const appA = service.register('dcent-1', "D'CENT 1", { walletType: 'dcent' });
+      expect(appA.signingEnabled).toBe(true);
+
+      const appB = service.register('dcent-2', "D'CENT 2", { walletType: 'dcent' });
+      expect(appB.signingEnabled).toBe(false);
+    });
+
+    it('register() with no existing signing primary creates new app with signingEnabled=1', () => {
+      const app = service.register('dcent', "D'CENT", { walletType: 'dcent' });
+      expect(app.signingEnabled).toBe(true);
+    });
+
+    it('ensureRegistered() returns existing without modifying signingEnabled', () => {
+      const appA = service.register('dcent', "D'CENT", { walletType: 'dcent' });
+      expect(appA.signingEnabled).toBe(true);
+
+      // Disable signing
+      service.update(appA.id, { signingEnabled: false });
+
+      // ensureRegistered should return existing (with false) not modify it
+      const returned = service.ensureRegistered('dcent', "D'CENT", { walletType: 'dcent' });
+      expect(returned.signingEnabled).toBe(false);
+    });
+
+    it('different wallet_types are independent', () => {
+      const dcent = service.register('dcent', "D'CENT", { walletType: 'dcent' });
+      const ledger = service.register('ledger', 'Ledger', { walletType: 'ledger' });
+
+      // Both should be signing-enabled (different wallet_types)
+      expect(dcent.signingEnabled).toBe(true);
+      expect(ledger.signingEnabled).toBe(true);
+
+      // Toggling ledger should not affect dcent
+      service.update(ledger.id, { signingEnabled: false });
+      const updatedDcent = service.getById(dcent.id)!;
+      expect(updatedDcent.signingEnabled).toBe(true);
+    });
+  });
 });

@@ -62,16 +62,24 @@ export class WalletAppService {
     const signTopic = opts?.signTopic ?? (token ? `waiaas-sign-${walletType}-${token}` : `waiaas-sign-${name}`);
     const notifyTopic = opts?.notifyTopic ?? (token ? `waiaas-notify-${walletType}-${token}` : `waiaas-notify-${name}`);
     const pushRelayUrl = opts?.pushRelayUrl ?? null;
+
+    // SVC-02: Check if same wallet_type already has a signing primary.
+    // If so, register new app with signing_enabled=0 to avoid partial unique index violation.
+    const hasPrimary = this.sqlite.prepare(
+      'SELECT id FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1',
+    ).get(walletType);
+    const signingEnabled = hasPrimary ? 0 : 1;
+
     this.sqlite.prepare(
-      'INSERT INTO wallet_apps (id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, subscription_token, push_relay_url, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?, ?)',
-    ).run(id, name, displayName, walletType, signTopic, notifyTopic, token, pushRelayUrl, now, now);
+      'INSERT INTO wallet_apps (id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, subscription_token, push_relay_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)',
+    ).run(id, name, displayName, walletType, signingEnabled, signTopic, notifyTopic, token, pushRelayUrl, now, now);
 
     return {
       id,
       name,
       displayName,
       walletType,
-      signingEnabled: true,
+      signingEnabled: signingEnabled === 1,
       alertsEnabled: true,
       signTopic,
       notifyTopic,
@@ -149,51 +157,64 @@ export class WalletAppService {
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const setClauses: string[] = ['updated_at = ?'];
-    const params: unknown[] = [now];
 
-    if (fields.signingEnabled !== undefined) {
-      setClauses.push('signing_enabled = ?');
-      params.push(fields.signingEnabled ? 1 : 0);
-    }
-    if (fields.alertsEnabled !== undefined) {
-      setClauses.push('alerts_enabled = ?');
-      params.push(fields.alertsEnabled ? 1 : 0);
-    }
+    // SVC-01: Wrap in transaction for exclusive signing toggle atomicity.
+    const doUpdate = this.sqlite.transaction(() => {
+      // When enabling signing, disable all other apps of same wallet_type first
+      if (fields.signingEnabled === true) {
+        this.sqlite.prepare(
+          'UPDATE wallet_apps SET signing_enabled = 0, updated_at = ? WHERE wallet_type = ? AND signing_enabled = 1 AND id != ?',
+        ).run(now, existingApp.wallet_type, id);
+      }
 
-    // When subscription token is updated, auto-regenerate topics unless explicitly provided
-    if (fields.subscriptionToken !== undefined) {
-      setClauses.push('subscription_token = ?');
-      params.push(fields.subscriptionToken || null);
+      const setClauses: string[] = ['updated_at = ?'];
+      const params: unknown[] = [now];
 
-      if (fields.subscriptionToken && fields.signTopic === undefined) {
+      if (fields.signingEnabled !== undefined) {
+        setClauses.push('signing_enabled = ?');
+        params.push(fields.signingEnabled ? 1 : 0);
+      }
+      if (fields.alertsEnabled !== undefined) {
+        setClauses.push('alerts_enabled = ?');
+        params.push(fields.alertsEnabled ? 1 : 0);
+      }
+
+      // When subscription token is updated, auto-regenerate topics unless explicitly provided
+      if (fields.subscriptionToken !== undefined) {
+        setClauses.push('subscription_token = ?');
+        params.push(fields.subscriptionToken || null);
+
+        if (fields.subscriptionToken && fields.signTopic === undefined) {
+          setClauses.push('sign_topic = ?');
+          params.push(`waiaas-sign-${existingApp.wallet_type}-${fields.subscriptionToken}`);
+        }
+        if (fields.subscriptionToken && fields.notifyTopic === undefined) {
+          setClauses.push('notify_topic = ?');
+          params.push(`waiaas-notify-${existingApp.wallet_type}-${fields.subscriptionToken}`);
+        }
+      }
+
+      if (fields.pushRelayUrl !== undefined) {
+        setClauses.push('push_relay_url = ?');
+        params.push(fields.pushRelayUrl || null);
+      }
+
+      if (fields.signTopic !== undefined) {
         setClauses.push('sign_topic = ?');
-        params.push(`waiaas-sign-${existingApp.wallet_type}-${fields.subscriptionToken}`);
+        params.push(fields.signTopic);
       }
-      if (fields.subscriptionToken && fields.notifyTopic === undefined) {
+      if (fields.notifyTopic !== undefined) {
         setClauses.push('notify_topic = ?');
-        params.push(`waiaas-notify-${existingApp.wallet_type}-${fields.subscriptionToken}`);
+        params.push(fields.notifyTopic);
       }
-    }
 
-    if (fields.pushRelayUrl !== undefined) {
-      setClauses.push('push_relay_url = ?');
-      params.push(fields.pushRelayUrl || null);
-    }
+      params.push(id);
+      this.sqlite.prepare(
+        `UPDATE wallet_apps SET ${setClauses.join(', ')} WHERE id = ?`,
+      ).run(...params);
+    });
 
-    if (fields.signTopic !== undefined) {
-      setClauses.push('sign_topic = ?');
-      params.push(fields.signTopic);
-    }
-    if (fields.notifyTopic !== undefined) {
-      setClauses.push('notify_topic = ?');
-      params.push(fields.notifyTopic);
-    }
-
-    params.push(id);
-    this.sqlite.prepare(
-      `UPDATE wallet_apps SET ${setClauses.join(', ')} WHERE id = ?`,
-    ).run(...params);
+    doUpdate();
 
     return this.getById(id)!;
   }
