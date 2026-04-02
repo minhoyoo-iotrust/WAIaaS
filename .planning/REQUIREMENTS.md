@@ -55,27 +55,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MIG-01 | — | Pending |
-| MIG-02 | — | Pending |
-| MIG-03 | — | Pending |
-| SVC-01 | — | Pending |
-| SVC-02 | — | Pending |
-| SVC-03 | — | Pending |
-| SIG-01 | — | Pending |
-| SIG-02 | — | Pending |
-| ADM-01 | — | Pending |
-| ADM-02 | — | Pending |
-| ADM-03 | — | Pending |
-| ADM-04 | — | Pending |
-| TST-01 | — | Pending |
-| TST-02 | — | Pending |
-| TST-03 | — | Pending |
+| MIG-01 | Phase 467 | Pending |
+| MIG-02 | Phase 467 | Pending |
+| MIG-03 | Phase 467 | Pending |
+| SVC-01 | Phase 467 | Pending |
+| SVC-02 | Phase 467 | Pending |
+| SVC-03 | Phase 467 | Pending |
+| SIG-01 | Phase 468 | Pending |
+| SIG-02 | Phase 468 | Pending |
+| ADM-01 | Phase 469 | Pending |
+| ADM-02 | Phase 469 | Pending |
+| ADM-03 | Phase 469 | Pending |
+| ADM-04 | Phase 469 | Pending |
+| TST-01 | Phase 467 | Pending |
+| TST-02 | Phase 467 | Pending |
+| TST-03 | Phase 468 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-02*
-*Last updated: 2026-04-02 after initial definition*
+*Last updated: 2026-04-02 after roadmap creation*
