@@ -21,8 +21,8 @@ Requirements for milestone v33.4. Each maps to roadmap phases.
 
 ### SignRequestBuilder
 
-- [ ] **SIG-01**: SignRequestBuilder가 `walletName` 기반 조회 대신 `wallet_type + signing_enabled = 1` 기반으로 서명 대상 앱을 조회한다
-- [ ] **SIG-02**: `signing_sdk.preferred_wallet` 설정을 deprecated 처리하고 wallet_type 그룹의 signing primary가 대체한다
+- [x] **SIG-01**: SignRequestBuilder가 `walletName` 기반 조회 대신 `wallet_type + signing_enabled = 1` 기반으로 서명 대상 앱을 조회한다
+- [x] **SIG-02**: `signing_sdk.preferred_wallet` 설정을 deprecated 처리하고 wallet_type 그룹의 signing primary가 대체한다
 
 ### Admin UI
 
@@ -35,7 +35,7 @@ Requirements for milestone v33.4. Each maps to roadmap phases.
 
 - [x] **TST-01**: signing_enabled 라디오 토글 시 같은 wallet_type의 다른 앱이 자동으로 0이 되는 단위 테스트
 - [x] **TST-02**: partial unique index가 같은 wallet_type에 signing_enabled = 1 중복 삽입을 거부하는 단위 테스트
-- [ ] **TST-03**: APPROVAL 티어 TX 생성 시 signing_enabled = 1인 앱의 Push Relay URL로 요청 전송 확인 통합 테스트
+- [x] **TST-03**: APPROVAL 티어 TX 생성 시 signing_enabled = 1인 앱의 Push Relay URL로 요청 전송 확인 통합 테스트
 
 ## Future Requirements
 
@@ -61,15 +61,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SVC-01 | Phase 467 | Complete |
 | SVC-02 | Phase 467 | Complete |
 | SVC-03 | Phase 467 | Complete |
-| SIG-01 | Phase 468 | Pending |
-| SIG-02 | Phase 468 | Pending |
+| SIG-01 | Phase 468 | Complete |
+| SIG-02 | Phase 468 | Complete |
 | ADM-01 | Phase 469 | Pending |
 | ADM-02 | Phase 469 | Pending |
 | ADM-03 | Phase 469 | Pending |
 | ADM-04 | Phase 469 | Pending |
 | TST-01 | Phase 467 | Complete |
 | TST-02 | Phase 467 | Complete |
-| TST-03 | Phase 468 | Pending |
+| TST-03 | Phase 468 | Complete |
 
 **Coverage:**
 - v1 requirements: 15 total

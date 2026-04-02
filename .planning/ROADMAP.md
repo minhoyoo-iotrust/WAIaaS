@@ -107,7 +107,7 @@ See `.planning/milestones/v33.3-ROADMAP.md` for full details.
 **Milestone Goal:** 서명 앱 선택을 name 기반 암묵적 매칭에서 wallet_type 기반 명시적 선택으로 전환한다. DB partial unique index로 무결성을 보장하고, 서비스/쿼리 레이어를 정비하며, Admin UI를 라디오 그룹으로 갱신한다.
 
 - [x] **Phase 467: DB Migration + Backend Service** (2 plans) - DB v61 partial unique index + WalletAppService 트랜잭션 토글 + PresetAutoSetupService 전환 (completed 2026-04-02)
-- [ ] **Phase 468: SignRequestBuilder Query Transition** (1 plan) - wallet_type 기반 서명 대상 조회 전환 + preferred_wallet deprecated
+- [x] **Phase 468: SignRequestBuilder Query Transition** (1 plan) - wallet_type 기반 서명 대상 조회 전환 + preferred_wallet deprecated (completed 2026-04-02)
 - [ ] **Phase 469: Admin UI Radio Group** - wallet_type 그룹 레이아웃 + 서명 라디오 버튼 + "None" 옵션
 
 ## Phase Details
@@ -130,9 +130,9 @@ Plans:
 **Goal**: 서명 대상 앱 조회가 name 기반 3-쿼리에서 wallet_type + signing_enabled=1 단일 쿼리로 전환되어 정확한 signing primary를 사용한다
 **Depends on**: Phase 467
 **Requirements**: SIG-01, SIG-02, TST-03
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 468-01-PLAN.md — SignRequestBuilder wallet_type 기반 쿼리 전환 + 통합 테스트
+- [x] 468-01-PLAN.md — SignRequestBuilder wallet_type 기반 쿼리 전환 + 통합 테스트
 **Success Criteria** (what must be TRUE):
   1. SignRequestBuilder가 wallet_type + signing_enabled=1 조건으로 서명 대상 앱을 조회한다
   2. signing_sdk.preferred_wallet 설정이 deprecated 처리되어 SignRequestBuilder에서 참조하지 않는다
@@ -158,5 +158,5 @@ Phases execute in numeric order: 467 → 468 → 469
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 467. DB Migration + Backend Service | 2/2 | Complete    | 2026-04-02 |
-| 468. SignRequestBuilder Query Transition | 0/1 | Not started | - |
+| 468. SignRequestBuilder Query Transition | 1/1 | Complete   | 2026-04-02 |
 | 469. Admin UI Radio Group | 0/0 | Not started | - |

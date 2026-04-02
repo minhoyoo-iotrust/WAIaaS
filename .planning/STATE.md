@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v33.4
 milestone_name: 서명 앱 명시적 선택
 status: verifying
-stopped_at: Completed 467-01-PLAN.md and 467-02-PLAN.md
-last_updated: "2026-04-02T09:18:35.603Z"
+stopped_at: Completed 468-01-PLAN.md
+last_updated: "2026-04-02T12:14:44.910Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
   percent: 0
 ---
 
@@ -50,12 +50,15 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase 467 P01 | 5 | 2 tasks | 5 files |
 | Phase 467 P02 | 8 | 2 tasks | 4 files |
+| Phase 468 P01 | 3min | 2 tasks | 4 files |
 
 ### Decisions
 
 - [Phase 467]: Used partial unique index instead of table rebuild for signing primary uniqueness
 - [Phase 467]: Used BEFORE INSERT/UPDATE triggers for signing_enabled CHECK constraint
 - [Phase 467]: Removed preferred_wallet setting from PresetAutoSetupService, replaced with signing_enabled column
+- [Phase 468]: Consolidated 3 name-based queries into 1 wallet_type + signing_enabled=1 query
+- [Phase 468]: preferred_wallet setting deprecated but kept for backward compatibility
 
 ### Pending Todos
 
@@ -67,6 +70,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T09:17:53.504Z
-Stopped at: Completed 467-01-PLAN.md and 467-02-PLAN.md
+Last session: 2026-04-02T12:14:44.906Z
+Stopped at: Completed 468-01-PLAN.md
 Resume file: None
