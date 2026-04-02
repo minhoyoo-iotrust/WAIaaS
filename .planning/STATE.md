@@ -4,7 +4,7 @@ milestone: v33.4
 milestone_name: 서명 앱 명시적 선택
 status: verifying
 stopped_at: Completed 467-01-PLAN.md and 467-02-PLAN.md
-last_updated: "2026-04-02T09:17:53.508Z"
+last_updated: "2026-04-02T09:18:35.603Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 3
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 
 ## Current Position
 
-Phase: 1 of 3 (467. DB Migration + Backend Service)
-Plan: 0 of 0 in current phase (TBD)
+Phase: 468 of 3 (signrequestbuilder query transition)
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-02
 
