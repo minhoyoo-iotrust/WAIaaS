@@ -38,6 +38,16 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
+      - name: Detect prerelease
+        id: prerelease
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if echo "$VERSION" | grep -qE '[-](rc|alpha|beta)'; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create draft release
         id: create
         uses: actions/github-script@v7
@@ -49,7 +59,7 @@ jobs:
               tag_name: '${{ steps.version.outputs.tag }}',
               name: `WAIaaS Desktop ${{ steps.version.outputs.version }}`,
               draft: true,
-              prerelease: false,
+              prerelease: ${{ steps.prerelease.outputs.is_prerelease }},
             });
             return data.id;
 
