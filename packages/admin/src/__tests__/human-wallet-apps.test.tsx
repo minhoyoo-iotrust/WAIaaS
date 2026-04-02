@@ -110,6 +110,57 @@ const mockApps = {
   ],
 };
 
+/** Mock data with two apps of the same wallet_type (dcent) + one different (custom) */
+const mockAppsMultiGroup = {
+  apps: [
+    {
+      id: 'app-1',
+      name: 'dcent-phone',
+      display_name: "D'CENT Phone",
+      wallet_type: 'dcent',
+      signing_enabled: true,
+      alerts_enabled: true,
+      sign_topic: 'waiaas-sign-dcent-phone',
+      notify_topic: 'waiaas-notify-dcent-phone',
+      subscription_token: 'tok-phone',
+      push_relay_url: 'https://waiaas-push.dcentwallet.com',
+      used_by: [],
+      created_at: 1700000000,
+      updated_at: 1700000000,
+    },
+    {
+      id: 'app-3',
+      name: 'dcent-tablet',
+      display_name: "D'CENT Tablet",
+      wallet_type: 'dcent',
+      signing_enabled: false,
+      alerts_enabled: false,
+      sign_topic: null,
+      notify_topic: null,
+      subscription_token: null,
+      push_relay_url: null,
+      used_by: [],
+      created_at: 1700000200,
+      updated_at: 1700000200,
+    },
+    {
+      id: 'app-2',
+      name: 'custom',
+      display_name: 'Custom Wallet',
+      wallet_type: 'custom',
+      signing_enabled: false,
+      alerts_enabled: false,
+      sign_topic: null,
+      notify_topic: null,
+      subscription_token: null,
+      push_relay_url: null,
+      used_by: [],
+      created_at: 1700000100,
+      updated_at: 1700000100,
+    },
+  ],
+};
+
 const mockSettings = {
   signing_sdk: {
     enabled: 'true',
@@ -629,6 +680,149 @@ describe('HumanWalletAppsPage', () => {
     const datalist = document.getElementById('wallet-type-presets');
     expect(datalist).toBeTruthy();
     expect(datalist!.querySelector('option[value="dcent"]')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Radio group tests (ADM-01 ~ ADM-05)
+// ---------------------------------------------------------------------------
+
+describe('HumanWalletAppsPage - Radio Group', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  function mockMultiGroupCalls() {
+    mockApiGet.mockImplementation(async (path: string) => {
+      if (path === '/v1/admin/wallet-apps') return { data: mockAppsMultiGroup };
+      if (path === '/v1/admin/settings') return { data: mockSettings };
+      return { data: {} };
+    });
+  }
+
+  it('T-ADM-01: same wallet_type apps grouped under one section header', async () => {
+    mockMultiGroupCalls();
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+    });
+
+    // Should have wallet_type group headers
+    const headings = document.querySelectorAll('[data-testid^="group-header-"]');
+    expect(headings.length).toBe(2); // dcent + custom
+    expect(screen.getByText('dcent')).toBeTruthy();
+    expect(screen.getByText('custom')).toBeTruthy();
+  });
+
+  it('T-ADM-02: signing control uses radio buttons (not checkboxes)', async () => {
+    mockMultiGroupCalls();
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+    });
+
+    // Radio inputs for signing should exist
+    const radios = document.querySelectorAll('input[type="radio"][name^="signing-"]');
+    expect(radios.length).toBeGreaterThan(0);
+  });
+
+  it('T-ADM-03: "None" radio option exists and selecting it calls PUT with signing_enabled=false', async () => {
+    mockMultiGroupCalls();
+    mockApiPut.mockResolvedValue({ data: {} });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+    });
+
+    // Find the "None" radio for the dcent group
+    const noneRadio = document.querySelector('input[type="radio"][name="signing-dcent"][value="none"]') as HTMLInputElement;
+    expect(noneRadio).toBeTruthy();
+
+    // Currently app-1 has signing_enabled=true, so "none" is not checked
+    expect(noneRadio.checked).toBe(false);
+
+    // Select "None"
+    fireEvent.click(noneRadio);
+
+    await waitFor(() => {
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/v1/admin/wallet-apps/{id}',
+        expect.objectContaining({
+          params: { path: { id: 'app-1' } },
+          body: { signing_enabled: false },
+        }),
+      );
+    });
+  });
+
+  it('T-ADM-04: single app group has radio auto-selected when signing_enabled=true', async () => {
+    // custom group has only 1 app (app-2) with signing_enabled=false
+    // dcent group app-1 has signing_enabled=true
+    mockMultiGroupCalls();
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+    });
+
+    // The dcent group: app-1 radio should be checked (signing_enabled=true)
+    const app1Radio = document.querySelector('input[type="radio"][name="signing-dcent"][value="app-1"]') as HTMLInputElement;
+    expect(app1Radio).toBeTruthy();
+    expect(app1Radio.checked).toBe(true);
+
+    // The custom group: app-2 has signing_enabled=false, so "none" should be checked
+    const customNoneRadio = document.querySelector('input[type="radio"][name="signing-custom"][value="none"]') as HTMLInputElement;
+    expect(customNoneRadio).toBeTruthy();
+    expect(customNoneRadio.checked).toBe(true);
+  });
+
+  it('T-ADM-05: selecting app radio calls PUT with signing_enabled=true', async () => {
+    mockMultiGroupCalls();
+    mockApiPut.mockResolvedValue({ data: {} });
+
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+    });
+
+    // Select app-3 (D'CENT Tablet, currently signing_enabled=false)
+    const app3Radio = document.querySelector('input[type="radio"][name="signing-dcent"][value="app-3"]') as HTMLInputElement;
+    expect(app3Radio).toBeTruthy();
+    expect(app3Radio.checked).toBe(false);
+
+    fireEvent.click(app3Radio);
+
+    await waitFor(() => {
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/v1/admin/wallet-apps/{id}',
+        expect.objectContaining({
+          params: { path: { id: 'app-3' } },
+          body: { signing_enabled: true },
+        }),
+      );
+    });
+  });
+
+  it('T-ADM-06: different wallet_type apps are in separate groups', async () => {
+    mockMultiGroupCalls();
+    render(<HumanWalletAppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Phone")).toBeTruthy();
+    });
+
+    // dcent group should contain D'CENT Phone and D'CENT Tablet
+    const dcentGroup = document.querySelector('[data-testid="group-dcent"]');
+    expect(dcentGroup).toBeTruthy();
+    expect(dcentGroup!.textContent).toContain("D'CENT Phone");
+    expect(dcentGroup!.textContent).toContain("D'CENT Tablet");
+    expect(dcentGroup!.textContent).not.toContain('Custom Wallet');
+
+    // custom group should contain Custom Wallet only
+    const customGroup = document.querySelector('[data-testid="group-custom"]');
+    expect(customGroup).toBeTruthy();
+    expect(customGroup!.textContent).toContain('Custom Wallet');
+    expect(customGroup!.textContent).not.toContain("D'CENT");
   });
 });
 
