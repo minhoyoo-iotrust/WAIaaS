@@ -1,315 +1,242 @@
-# Pitfalls Research
+# Domain Pitfalls
 
-**Domain:** Desktop App Distribution Channels (Download Page + Homebrew Cask + Installation Guide)
-**Researched:** 2026-04-01
-**Confidence:** HIGH
+**Domain:** Signing App Explicit Selection (wallet_type group radio, partial unique index, auto-toggle)
+**Researched:** 2026-04-02
 
 ## Critical Pitfalls
 
-### Pitfall 1: GitHub Releases API Rate Limiting on Download Page
+Mistakes that cause data corruption, signing failures, or require migration rollback.
 
-**What goes wrong:**
-Download page uses unauthenticated GitHub Releases API (`api.github.com/repos/.../releases/latest`) to fetch asset URLs. Unauthenticated requests are limited to 60 requests/hour per IP. A popular page or corporate network sharing a single IP exhausts the limit quickly, leaving visitors with a broken download page showing no versions or links.
+### Pitfall 1: Migration Data Integrity -- Multiple signing_enabled = 1 per wallet_type
 
-**Why it happens:**
-Client-side JS calling the API directly from the browser. Each page load = 1 API call. No caching layer between user and GitHub.
+**What goes wrong:** The v61 migration adds a partial unique index `ON wallet_apps(wallet_type) WHERE signing_enabled = 1`, but existing data may already have multiple rows with `signing_enabled = 1` for the same `wallet_type`. The `CREATE UNIQUE INDEX` statement will fail with a constraint violation, crashing the migration and blocking daemon startup.
 
-**How to avoid:**
-1. Build-time approach (recommended): Fetch release data during `site/build.mjs` and embed asset URLs directly in the HTML. Re-build on `desktop-release.yml` publish event or daily cron (already have `schedule` in pages.yml).
-2. If client-side is needed: Cache the API response in localStorage with a 1-hour TTL. Show hardcoded fallback URLs (direct GitHub release page link) when API fails.
-3. Never call `api.github.com` on every page load without a cache.
+**Why it happens:** Every `register()` call currently sets `signing_enabled = 1` unconditionally (line 66 of wallet-app-service.ts: hardcoded `1` in INSERT). If a user registered multiple apps with the same `wallet_type` (e.g., `dcent` production + `dcent-test` dev, both with `walletType: 'dcent'`), both have `signing_enabled = 1`.
 
-**Warning signs:**
-- Download page shows "loading..." indefinitely on some networks
-- Console shows 403 from `api.github.com` with `X-RateLimit-Remaining: 0`
+**Consequences:** Migration failure blocks daemon startup. If other DDL was executed before the index creation in the same migration function, those changes cannot be rolled back (SQLite DDL auto-commits within `exec()`).
 
-**Phase to address:**
-Download Page phase -- implement build-time asset URL embedding from the start.
+**Prevention:**
+1. In the v61 migration, **first normalize existing data** before creating the index:
+   ```sql
+   -- Keep only the oldest app per wallet_type as signing primary
+   UPDATE wallet_apps SET signing_enabled = 0
+   WHERE id NOT IN (
+     SELECT id FROM (
+       SELECT id, ROW_NUMBER() OVER (PARTITION BY wallet_type ORDER BY created_at ASC) AS rn
+       FROM wallet_apps WHERE signing_enabled = 1
+     ) WHERE rn = 1
+   );
+   ```
+2. **Then** create the partial unique index.
+3. Both operations in a single migration step so it either fully succeeds or fully fails.
 
----
+**Detection:** Migration test: seed data with multiple `signing_enabled = 1` for same wallet_type, apply v61, verify only oldest survives as primary. Also add a pre-migration assertion: `SELECT wallet_type, COUNT(*) FROM wallet_apps WHERE signing_enabled = 1 GROUP BY wallet_type HAVING COUNT(*) > 1`.
 
-### Pitfall 2: Homebrew Cask SHA256 Checksum Race Condition
-
-**What goes wrong:**
-CI workflow updates the Cask formula with a SHA256 hash computed from a GitHub Release asset, but the asset is not yet fully propagated when the hash is computed. Or worse, the CI runs before `publish-release` job finishes (draft release assets have different URLs than published ones). The Cask formula ships with a wrong checksum, and `brew install --cask` fails for every user.
-
-**Why it happens:**
-The `desktop-release.yml` workflow has three jobs: `create-release` (draft) -> `build-tauri` (upload assets) -> `publish-release` (undraft). A Cask update CI triggered on `release.published` event might fire before assets are fully available via the public download URL, or GitHub CDN caching causes transient checksum mismatches.
-
-**How to avoid:**
-1. Trigger Cask update workflow only after `publish-release` job completes, using `workflow_run` event on `desktop-release.yml` with `conclusion: success`.
-2. In the Cask update job: download the actual `.dmg`/`.zip` asset, compute `shasum -a 256` locally, then write that hash into the formula.
-3. Add a verification step: `brew audit --cask` on the generated formula before committing.
-4. Add a 30-second sleep or retry loop (max 3 attempts) before downloading, to handle CDN propagation delay.
-
-**Warning signs:**
-- `brew install --cask waiaas` fails with "SHA256 mismatch" within hours of a new release
-- Cask update CI completes but `shasum` value differs from manual download
-
-**Phase to address:**
-Homebrew Cask phase -- build the CI pipeline with retry + verification from day 1.
+**Phase:** DB Migration phase (first phase) -- must be addressed before any service code changes.
 
 ---
 
-### Pitfall 3: macOS Sequoia Gatekeeper Bypass Instructions Are Outdated
+### Pitfall 2: UPDATE Order Within Transaction -- SQLite Enforces Constraints Per Statement
 
-**What goes wrong:**
-Installation guide tells users to "right-click and Open" to bypass Gatekeeper, but macOS Sequoia (15.0+) removed the Control-click/right-click bypass method. Users on Sequoia follow the guide, it does not work, and they cannot install the app. Support load spikes.
+**What goes wrong:** When auto-toggling signing_enabled, if the code sets the target app to `signing_enabled = 1` BEFORE setting siblings to `signing_enabled = 0`, the partial unique index rejects the statement immediately -- even inside a transaction. SQLite validates constraints per-statement, not at commit time.
 
-**Why it happens:**
-Most online guides and even Apple's own older docs describe the pre-Sequoia method. Developers test on their own machines (often with Gatekeeper disabled) and never encounter the issue.
+**Why it happens:** Developers familiar with PostgreSQL or MySQL may assume constraint checking is deferred to transaction commit. In SQLite, `CREATE UNIQUE INDEX` constraints are enforced at each individual DML statement.
 
-**How to avoid:**
-1. Document the Sequoia-specific flow: System Settings -> Privacy & Security -> scroll to bottom -> "Open Anyway" button -> confirm with admin password.
-2. Version-gate the instructions: detect macOS version in the guide or provide separate sections for "macOS 14 and earlier" vs "macOS 15 (Sequoia) and later".
-3. Long-term: invest in Apple Developer ID signing + notarization (secrets already in desktop-release.yml: `APPLE_CERTIFICATE`, `APPLE_ID`, etc.) to eliminate the Gatekeeper warning entirely.
+**Consequences:** `SQLITE_CONSTRAINT_UNIQUE` error, entire transaction rolls back. Signing app toggle fails with opaque 500 error.
 
-**Warning signs:**
-- User reports of "app is damaged" or "cannot be opened" specifically from macOS 15+ users
-- The `APPLE_CERTIFICATE` secret is empty/unset in GitHub Actions (meaning builds are unsigned)
+**Prevention:**
+1. Order operations: **first** `UPDATE ... SET signing_enabled = 0 WHERE wallet_type = ? AND id != ?` (disable siblings), **then** `UPDATE ... SET signing_enabled = 1 WHERE id = ?` (enable target).
+2. Wrap both in `this.sqlite.transaction(() => { ... })()` for atomicity.
+3. Unit test both orderings: correct order succeeds, reversed order would fail (if not transacted, the index catches it).
 
-**Phase to address:**
-Installation Guide phase -- must verify whether Apple signing secrets are configured; guide content depends on this.
+**Detection:** Unit test with reversed UPDATE order to confirm the constraint fires.
+
+**Phase:** WalletAppService backend phase -- core logic change.
 
 ---
 
-### Pitfall 4: OS Detection Misidentifies Platform or Architecture
+### Pitfall 3: SignRequestBuilder walletName-to-walletType Semantic Mismatch
 
-**What goes wrong:**
-Download page detects user's OS via `navigator.userAgent` or `navigator.platform` but shows wrong download. Common failures: (1) Apple Silicon Mac shown x86_64 download, (2) Linux ARM shown x86_64 `.deb`, (3) Chromebook detected as Linux when it cannot run native apps, (4) iPad with desktop Safari detected as macOS.
+**What goes wrong:** `SignRequestBuilder.buildRequest()` currently receives `walletName` (app name) and queries `wallet_apps WHERE name = ?` (lines 158-161). The design changes this to query `WHERE wallet_type = ? AND signing_enabled = 1`. But `walletName` is passed from `ApprovalChannelRouter` (line 89: `walletName: row.wallet_type || params.walletName`), which already resolves to `wallet_type`. The parameter is called `walletName` but carries a `wallet_type` value -- the type system cannot catch this semantic drift.
 
-**Why it happens:**
-`navigator.platform` is deprecated and unreliable. `navigator.userAgent` does not distinguish ARM vs x86 on macOS (Apple intentionally hides this). `navigator.userAgentData` (User-Agent Client Hints) is not available on Firefox/Safari.
+**Why it happens:** `BuildRequestParams.walletName` is typed as `string | undefined`. There is no nominal type distinction between app name and wallet type. ApprovalChannelRouter already passes `wallet_type` as `walletName`, masking the mismatch.
 
-**How to avoid:**
-1. Use `navigator.userAgentData?.platform` with fallback to `navigator.platform` for OS detection.
-2. For macOS: do NOT attempt ARM vs x86 detection -- show both download links (aarch64 + x86_64) with aarch64 as the default/recommended since Apple Silicon is now dominant.
-3. Always show a "All downloads" section below the auto-detected recommendation so users can self-correct.
-4. Show the detected OS prominently ("Detected: macOS") so users notice if it is wrong.
+**Consequences:** If any code path still passes an actual app `name` (not `wallet_type`) as `walletName`, the new query `WHERE wallet_type = ?` finds nothing. This causes `WALLET_NOT_REGISTERED` errors for legitimate signing requests -- a runtime-only failure.
 
-**Warning signs:**
-- Users downloading wrong architecture and getting "this app is not supported on your Mac" errors
-- Analytics showing macOS users downloading Linux builds
+**Prevention:**
+1. Rename the parameter from `walletName` to `walletType` in `BuildRequestParams` and all callers. TypeScript compiler errors will surface every call site that needs updating.
+2. Audit `PushRelaySigningChannel` (line 129) and `TelegramSigningChannel` -- both construct `BuildRequestParams`.
+3. Add a unit test: register app with `name='dcent-dev'` and `walletType='dcent'`, set as signing primary, call `buildRequest({ walletType: 'dcent' })` -- assert it resolves to the correct app.
 
-**Phase to address:**
-Download Page phase -- OS detection logic must be tested across browsers.
+**Detection:** TypeScript compiler errors after rename (desired behavior).
+
+**Phase:** SignRequestBuilder phase -- must coordinate with ApprovalChannelRouter.
 
 ---
 
-### Pitfall 5: Homebrew Cask Naming Collision with Official Tap
+### Pitfall 4: "None" Radio Option Creates Silent Signing Failure
 
-**What goes wrong:**
-The Cask name in your custom tap (`homebrew-waiaas`) collides with an existing formula/cask in `homebrew-core` or `homebrew-cask`. Users cannot install it, or worse, install the wrong package.
+**What goes wrong:** The "None" radio option sets all apps in a wallet_type group to `signing_enabled = 0`. APPROVAL-tier transactions then fail with `SIGNING_DISABLED` at `ApprovalChannelRouter` (lines 92-105). But the error surfaces only when a transaction hits APPROVAL policy tier -- not at configuration time. The admin sets "None", closes the page, and days later a high-value transaction silently fails.
 
-**Why it happens:**
-Unlike formulae, Homebrew casks must have globally unique names. Developers pick a common name without checking the official repos first. Homebrew 5.0+ also changed tap behavior -- `homebrew/cask` is no longer a separate tap but integrated into core.
+**Why it happens:** No validation that at least one wallet_type group has signing enabled when APPROVAL-tier policies exist. The system is default-deny, but there is no proactive warning.
 
-**How to avoid:**
-1. Before creating the cask: run `brew search waiaas` and `brew info waiaas` to verify no conflicts.
-2. Use the full qualified name pattern: `waiaas-desktop` (not just `waiaas`).
-3. Test installation via `brew install minhoyoo-iotrust/waiaas/waiaas-desktop` (fully qualified tap path).
-4. Document both `brew tap minhoyoo-iotrust/waiaas && brew install --cask waiaas-desktop` and the one-liner form.
+**Consequences:** APPROVAL-tier transactions stuck in PENDING_APPROVAL with no way to be approved. Transaction times out. No immediate feedback to admin about why.
 
-**Warning signs:**
-- `brew audit --cask` reports naming conflicts
-- `brew install --cask waiaas` installs something unexpected
+**Prevention:**
+1. Show a **confirmation dialog** when "None" is selected: "Signing will be disabled for all [wallet_type] wallets. APPROVAL-tier transactions will fail until a signing app is re-enabled."
+2. Add a **warning banner** on the Wallet Apps page when any wallet_type group has zero signing-enabled apps.
+3. Consider adding signing status to `/v1/connect-info` so agents can detect misconfiguration proactively.
 
-**Phase to address:**
-Homebrew Cask phase -- verify naming before writing the formula.
+**Detection:** Admin UI test: select "None" radio, verify confirmation dialog appears.
 
----
+**Phase:** Admin UI phase.
 
-### Pitfall 6: Windows SmartScreen Reputation Gate Blocks Installation
+## Moderate Pitfalls
 
-**What goes wrong:**
-Windows shows "Windows protected your PC" / "SmartScreen prevented an unrecognized app from starting" with no obvious way to proceed. The "Run anyway" button is hidden behind "More info" click. Many non-technical users give up at this point.
+### Pitfall 5: preferred_wallet Deprecation Breaks PresetAutoSetupService
 
-**Why it happens:**
-Windows SmartScreen uses a reputation-based system. New/unsigned executables have zero reputation. Even with standard code signing, SmartScreen warnings persist until the binary accumulates enough "reputation" (enough users have run it). Only EV (Extended Validation) code signing certificates get immediate SmartScreen bypass.
+**What goes wrong:** `PresetAutoSetupService.apply()` (lines 102-107) sets `signing_sdk.preferred_wallet` as Step 3 of the 4-step atomic setup. After deprecation, SignRequestBuilder stops reading this setting. But PresetAutoSetupService still calls `ensureRegistered()` (line 130), which calls `register()` -- which currently hardcodes `signing_enabled = 1`. After the new auto-toggle logic is added (new apps get `signing_enabled = 0` if a primary exists), preset auto-setup will register the new app as non-primary. The signing SDK appears enabled but no app is actually the signing target for the new wallet_type -- a silent misconfiguration.
 
-**How to avoid:**
-1. Installation guide must include clear screenshots of the SmartScreen dialog with step-by-step: "Click More info -> Click Run anyway".
-2. Explain the file properties "Unblock" checkbox method as an alternative (right-click -> Properties -> General -> Unblock).
-3. Long-term: get an EV code signing certificate (~$300-500/year) for instant SmartScreen trust.
-4. Include the note that this warning is normal for new open-source software and does not indicate malware.
+**Consequences:** Signing appears configured (SDK enabled, wallet registered) but APPROVAL transactions fail because the new app is not the signing primary.
 
-**Warning signs:**
-- Windows users reporting they cannot install the app
-- Download stats show Windows downloads but zero Windows usage
+**Prevention:**
+1. Update `PresetAutoSetupService` to explicitly set the new app as signing primary via `walletAppService.update(app.id, { signingEnabled: true })` after `ensureRegistered()`.
+2. Remove `signing_sdk.preferred_wallet` from `SNAPSHOT_KEYS` and Step 3.
+3. Keep the setting key in `SettingsService` to avoid breaking existing `config.toml` files, but stop reading it.
+4. Add deprecation notice in Admin Settings UI.
 
-**Phase to address:**
-Installation Guide phase -- SmartScreen bypass instructions with screenshots are mandatory.
+**Detection:** Test: preset auto-setup with existing primary for different wallet_type, verify new app becomes signing primary for its wallet_type.
+
+**Phase:** WalletAppService + PresetAutoSetupService phase -- must be coordinated.
 
 ---
 
-### Pitfall 7: Download Page Breaks When GitHub Release Has No Desktop Assets
+### Pitfall 6: Admin UI Stale State After Server-Side Auto-Toggle
 
-**What goes wrong:**
-Client-side JS fetches `/releases/latest` but the latest release is for the npm package (not desktop), returning assets with names like `waiaas-2.13.0.tgz` instead of `.dmg`/`.msi`/`.AppImage`. Download page shows wrong links or no links.
+**What goes wrong:** User clicks signing radio for App A. Admin UI sends `PUT /admin/wallet-apps/{appA_id}` with `{ signing_enabled: true }`. Server auto-toggles App B to `signing_enabled = 0`. API response only contains App A's data (current `WalletAppResponseSchema`). If Admin UI uses optimistic updates or the re-fetch is slow, UI briefly shows both App A and App B as signing-enabled.
 
-**Why it happens:**
-The project has two release tracks: npm releases via release-please and desktop releases via `desktop-release.yml`. `GET /releases/latest` returns the most recent non-draft, non-prerelease release regardless of which track created it. The desktop release uses `desktop-v*` tags, but the API does not filter by tag prefix.
+**Prevention:**
+1. **No optimistic updates for radio state.** Wait for PUT response, then immediately re-fetch the full app list before updating UI signals.
+2. Disable the entire radio group (not just the clicked radio) during the save operation using `toggleSaving` signal.
+3. The re-fetch must be awaited before any state update.
 
-**How to avoid:**
-1. Do NOT use `/releases/latest`. Instead, use `/releases` and filter client-side (or at build time) for releases whose `tag_name` starts with `desktop-v`.
-2. Build-time approach: `site/build.mjs` fetches releases, filters for `desktop-v*` tags, picks the latest, embeds the asset URLs.
-3. Add a hardcoded fallback URL pattern: `https://github.com/.../releases/tag/desktop-v0.1.0` as a "manual download" link.
+**Detection:** Admin UI test: toggle signing radio, simulate slow API response, verify intermediate state never shows two active radios.
 
-**Warning signs:**
-- Download page shows npm tarball links instead of desktop installers
-- Page shows "No downloads available" after an npm release
-
-**Phase to address:**
-Download Page phase -- critical design decision, must filter by tag prefix.
+**Phase:** Admin UI phase.
 
 ---
 
-### Pitfall 8: Cross-Repo PAT Rotation Breaks Cask Auto-Update
+### Pitfall 7: Missing CHECK Constraint on signing_enabled Column
 
-**What goes wrong:**
-Homebrew Cask auto-update CI uses a Personal Access Token (PAT) to push to the `homebrew-waiaas` repo from the main repo's workflow. The PAT expires (default 90 days for fine-grained tokens), and Cask updates silently stop. New desktop releases ship but the Cask formula stays on the old version indefinitely.
+**What goes wrong:** The partial unique index uses `WHERE signing_enabled = 1`. SQLite has no native boolean type -- it stores integers. If any code path writes a truthy-but-not-1 value (e.g., `2` or `true` as string), those rows bypass the partial unique index entirely, allowing multiple "enabled" apps per wallet_type without constraint violation.
 
-**Why it happens:**
-Fine-grained PATs have mandatory expiration. Classic PATs can be set to never expire but are being deprecated. The CI failure is silent unless you monitor workflow runs.
+**Why it happens:** Raw SQL `INSERT`/`UPDATE` statements in WalletAppService bypass Drizzle's boolean-to-integer mapping. Currently the `wallet_apps` table has NO `CHECK` constraint on `signing_enabled` (unlike `webhooks` table which has `check_webhook_enabled` at schema.ts line 585).
 
-**How to avoid:**
-1. Use a GitHub App installation token instead of a PAT -- GitHub Apps do not expire and have granular permissions.
-2. If using PAT: set a 1-year expiration, add a calendar reminder, and add a CI health check that runs monthly to verify the PAT is still valid.
-3. Alternative: use `repository_dispatch` event from the main repo to trigger a workflow in the tap repo (both using `GITHUB_TOKEN`, no PAT needed if the tap repo has its own workflow that self-updates).
-4. Monitor: add a Slack/email notification on workflow failure in the tap repo.
+**Prevention:**
+1. Add `CHECK (signing_enabled IN (0, 1))` to wallet_apps in the v61 migration.
+2. Use explicit `1` and `0` (not `true`/`false`) in all raw SQL for `signing_enabled`.
 
-**Warning signs:**
-- Cask formula version is 2+ releases behind
-- `desktop-release.yml` succeeds but tap repo has no recent commits
-- GitHub Actions shows "Resource not accessible by integration" errors
+**Detection:** Migration test: attempt INSERT with `signing_enabled = 2`, verify CHECK constraint rejects it.
 
-**Phase to address:**
-Homebrew Cask phase -- authentication strategy must be decided upfront.
+**Phase:** DB Migration phase.
 
 ---
 
-### Pitfall 9: Linux Installation Guide Omits AppImage Permissions and FUSE
+### Pitfall 8: "None" Option Missing for Single-App wallet_type Groups
 
-**What goes wrong:**
-Users download the `.AppImage` file but it does not run because it lacks execute permission. Or they double-click it in a file manager and nothing happens because their desktop environment does not know how to handle AppImage files.
+**What goes wrong:** The design says single-app groups should have "라디오 자동 선택 (비활성 표시)". A disabled auto-selected radio with no "None" option means the admin cannot disable signing for that wallet_type without removing the app entirely. This contradicts existing behavior where `signing_enabled` can be independently toggled.
 
-**Why it happens:**
-Downloaded files on Linux do not have execute permission by default. AppImage is not universally integrated into Linux desktop environments. FUSE (required for AppImage) may not be installed on some distros (Ubuntu 22.04+ removed `libfuse2` from default install).
+**Prevention:**
+1. Always show the "None" option, even for single-app groups.
+2. Radio options for a 1-app group: `[AppName]` (selected) and `[None]` (unselected), both enabled.
+3. Only disable the radio if the business logic requires an always-active app (design does not mandate this).
 
-**How to avoid:**
-1. Installation guide must include: `chmod +x WAIaaS-Desktop*.AppImage && ./WAIaaS-Desktop*.AppImage`
-2. Document FUSE dependency: `sudo apt install libfuse2` for Ubuntu/Debian.
-3. Provide alternative: extract-and-run method (`--appimage-extract` flag) for systems without FUSE.
-4. Consider also providing `.deb` package if Tauri supports it (it does -- check `tauri.conf.json` bundle targets).
+**Phase:** Admin UI phase.
 
-**Warning signs:**
-- Linux users reporting "Permission denied" or "cannot execute binary file"
-- Users reporting the AppImage opens but crashes immediately (FUSE missing)
+---
 
-**Phase to address:**
-Installation Guide phase -- Linux section needs FUSE and permissions coverage.
+### Pitfall 9: "None" Selection API -- Avoid Multi-PUT Race
 
-## Technical Debt Patterns
+**What goes wrong:** If Admin UI implements "None" by sending PUT `signingEnabled: false` to every app in the group, multiple concurrent requests could interleave with user clicks on other groups. Network latency could cause out-of-order responses.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Client-side GitHub API calls instead of build-time embedding | Faster initial implementation | Rate limiting, loading states, error handling complexity | Never for production -- always prefer build-time |
-| Hardcoded download URLs instead of API integration | No API dependency | Manual updates on every release, stale links | Only as fallback, never as primary |
-| Single PAT for cross-repo CI | Quick to set up | Expiration risk, rotation burden, security surface | MVP only -- migrate to GitHub App within 1 milestone |
-| Skipping Apple notarization | No Apple Developer account cost ($99/year) | Every macOS user sees Gatekeeper warning | Acceptable for initial launch, plan to add within 3 months |
-| Single architecture macOS download | Simpler OS detection | Rosetta 2 performance penalty for Apple Silicon users | Never -- both architectures already built in CI |
+**Prevention:** "None" selection only needs to PUT `signingEnabled: false` on the **current signing primary** (the one app with `signing_enabled = 1`). All other apps in the group are already `signing_enabled = 0`. This is a single API call, no race condition.
 
-## Integration Gotchas
+**Detection:** Verify that clicking "None" triggers exactly one PUT request (not N requests for N apps in group).
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| GitHub Releases API | Using `/releases/latest` which returns npm releases | Filter `/releases` by `tag_name` prefix `desktop-v` |
-| GitHub Releases API | Not handling draft/prerelease releases | Filter `draft: false, prerelease: false` explicitly |
-| Homebrew Cask formula | Computing SHA256 from redirect URL instead of final download URL | Follow redirects, download full file, then compute hash |
-| Homebrew Cask CI | Using `GITHUB_TOKEN` which cannot access other repos | Use PAT with `contents:write` on tap repo, or GitHub App |
-| GitHub Pages build | Not triggering rebuild when desktop release publishes | Add `repository_dispatch` or `workflow_run` trigger to `pages.yml` |
-| `site/build.mjs` | Fetching release data without auth (60 req/hour limit in CI) | Use `GITHUB_TOKEN` in build environment (5,000 req/hour) |
+**Phase:** Admin UI phase.
 
-## Performance Traps
+## Minor Pitfalls
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Client-side API call on page load | 200ms+ delay before download links appear, flash of empty content | Build-time embedding | Immediately for users on slow networks |
-| Large asset listing (all platforms in one API call) | Slow page render if release has 10+ assets | Filter and parse at build time, embed only needed URLs | When release has many artifacts |
-| No CDN caching for static site | Slow page loads from GitHub Pages in Asia/Pacific | Use Cloudflare or similar CDN in front | With international users |
+### Pitfall 10: wallet_type Empty String Edge Case
 
-## Security Mistakes
+**What goes wrong:** `wallet_type` column has `DEFAULT ''` (schema.ts line 555). Legacy apps registered without `walletType` default to `''`. The partial unique index groups all empty-wallet_type apps together, and `SignRequestBuilder` query with empty string returns an unexpected app.
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Storing PAT as plain text in workflow file | Token leak, unauthorized access to tap repo | Use GitHub Secrets, rotate regularly |
-| Download page linking to HTTP (not HTTPS) URLs | Man-in-the-middle binary swap | Always use HTTPS links, verify GitHub URLs |
-| Not displaying checksums on download page | Users cannot verify download integrity | Show SHA256 for each asset on the download page |
-| Homebrew formula using `url` without `verified:` | Homebrew audit warning, trust issue | Add `url "...", verified: "github.com/..."` pattern |
+**Prevention:** In v61 migration, normalize `wallet_type = ''` rows to `wallet_type = name` (same pattern as v34 migration, line 77 of v31-v40.ts). Consider adding `CHECK (wallet_type != '')`.
 
-## UX Pitfalls
+**Phase:** DB Migration phase.
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Only showing auto-detected OS download | Wrong OS detected = user stuck | Show detected OS prominently + "All platforms" section below |
-| Gatekeeper/SmartScreen instructions without screenshots | Users cannot follow text-only instructions for security dialogs | Include actual screenshots of each OS security dialog |
-| Download starts immediately without confirmation | Confusing, may trigger browser download warnings | Show download button, let user click to start |
-| No version number shown on download page | Users do not know if they have the latest | Show version number, release date, and changelog link |
-| Installation guide assumes command-line familiarity | Desktop app users may not use terminal | Provide both GUI and CLI instructions for each step |
+---
 
-## "Looks Done But Isn't" Checklist
+### Pitfall 11: ApprovalChannelRouter SIGNING_DISABLED Uses Plain Error
 
-- [ ] **Download page:** Often missing fallback for API failure -- verify page works with GitHub API blocked
-- [ ] **Download page:** Often missing version display -- verify version number and date are shown
-- [ ] **Download page:** Often missing checksum display -- verify SHA256 hashes are shown for security-conscious users
-- [ ] **Homebrew Cask:** Often missing `brew audit --cask` validation -- verify formula passes audit in CI
-- [ ] **Homebrew Cask:** Often missing uninstall stanza -- verify `brew uninstall --cask` cleans up completely (app bundle, preferences, sidecar binary)
-- [ ] **Homebrew Cask:** Often missing `zap` stanza -- verify deep uninstall removes all app data
-- [ ] **Installation guide:** Often missing Sequoia-specific Gatekeeper instructions -- verify guide covers macOS 15+
-- [ ] **Installation guide:** Often missing FUSE requirement for Linux AppImage -- verify `libfuse2` is documented
-- [ ] **Installation guide:** Often missing auto-update verification -- verify guide explains how to check for updates within the app
-- [ ] **CI pipeline:** Often missing rebuild trigger for download page on new release -- verify pages.yml triggers on desktop release
+**What goes wrong:** `ApprovalChannelRouter` throws `new Error('SIGNING_DISABLED: ...')` (line 103), not `WAIaaSError`. REST API returns generic 500 instead of structured error with `SIGNING_DISABLED` code. With the "None" radio option, admins will intentionally trigger this path and need a clear error message.
 
-## Recovery Strategies
+**Prevention:** Change to `throw new WAIaaSError('SIGNING_DISABLED', { message: ... })`.
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Wrong SHA256 in Cask formula | LOW | Push corrected formula to tap repo, users re-run `brew install` |
-| Rate-limited download page | LOW | Switch to build-time embedding, redeploy site |
-| Outdated Gatekeeper instructions | LOW | Update guide markdown, rebuild site |
-| Naming collision in Homebrew | MEDIUM | Rename cask (breaking change for existing users), update all docs |
-| PAT expiration breaks Cask CI | LOW | Generate new PAT, update secret, trigger manual workflow run |
-| Wrong OS detection logic | LOW | Fix JS detection code, redeploy site |
-| Download page showing npm releases | MEDIUM | Implement tag prefix filter, rebuild site, add regression test |
+**Phase:** WalletAppService backend phase -- quick fix.
 
-## Pitfall-to-Phase Mapping
+---
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| GitHub API rate limiting | Download Page | Page loads correctly with API mocked as unavailable |
-| SHA256 race condition | Homebrew Cask | `brew install --cask` succeeds immediately after release publish |
-| Sequoia Gatekeeper change | Installation Guide | Guide has macOS 15+ specific section with correct steps |
-| OS detection misidentification | Download Page | Test on Safari(macOS), Chrome(Windows), Firefox(Linux), Safari(iPad) |
-| Cask naming collision | Homebrew Cask | `brew search waiaas` shows only our cask |
-| SmartScreen blocking | Installation Guide | Guide has screenshots of SmartScreen "More info" flow |
-| Wrong release track (npm vs desktop) | Download Page | Page shows desktop assets even after npm release |
-| PAT expiration | Homebrew Cask | Use GitHub App or set monitoring on PAT expiry |
-| Linux AppImage permissions | Installation Guide | Guide includes `chmod +x` and FUSE instructions |
-| Pages rebuild on release | Download Page + Homebrew Cask | New desktop release triggers `pages.yml` rebuild automatically |
+### Pitfall 12: register() Hardcodes signing_enabled = 1 -- Index Violation
+
+**What goes wrong:** Current `register()` hardcodes `signing_enabled = 1` in INSERT (line 66). After the partial unique index exists, registering a second app with the same `wallet_type` violates the constraint immediately.
+
+**Prevention:** Update `register()` to check if wallet_type already has a `signing_enabled = 1` app. If yes, insert new app with `signing_enabled = 0`. Must be in a transaction to prevent TOCTOU race. This change must be deployed **before or simultaneously with** the v61 migration.
+
+**Detection:** Unit test: register two apps with same wallet_type, second must have `signing_enabled = false`.
+
+**Phase:** WalletAppService backend phase -- must precede or coincide with migration.
+
+---
+
+### Pitfall 13: Test Coverage Gap During preferred_wallet Removal
+
+**What goes wrong:** `sign-request-builder.test.ts` has 8+ tests referencing `signing_sdk.preferred_wallet` (lines 28, 199, 202-203, 277, 280). Removing the fallback without writing replacement tests creates a coverage gap.
+
+**Prevention:** Write new `wallet_type + signing_enabled` query tests BEFORE modifying SignRequestBuilder. Then update implementation. Then update/remove old tests. Coverage never drops.
+
+**Phase:** SignRequestBuilder phase.
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| DB Migration (v61) | Pitfall 1: Existing data has multiple signing_enabled=1 per wallet_type | Normalize data BEFORE creating partial unique index |
+| DB Migration (v61) | Pitfall 10: Empty wallet_type strings | Normalize `'' -> name` like v34 migration |
+| DB Migration (v61) | Pitfall 7: No CHECK on signing_enabled | Add `CHECK (signing_enabled IN (0, 1))` |
+| WalletAppService | Pitfall 2: UPDATE order within transaction | Disable siblings FIRST, enable target SECOND |
+| WalletAppService | Pitfall 12: register() hardcodes signing_enabled=1 | Check for existing primary, insert as 0 if exists |
+| WalletAppService | Pitfall 11: SIGNING_DISABLED is plain Error | Change to `WAIaaSError('SIGNING_DISABLED')` |
+| PresetAutoSetupService | Pitfall 5: preferred_wallet deprecation | Replace Step 3 with explicit `update({ signingEnabled: true })` |
+| SignRequestBuilder | Pitfall 3: walletName/walletType semantic mismatch | Rename parameter, audit all callers |
+| SignRequestBuilder | Pitfall 13: Test coverage gap | Write new tests before modifying code |
+| Admin UI | Pitfall 6: Stale state after server-side toggle | Full list re-fetch, no optimistic updates, disable group during save |
+| Admin UI | Pitfall 8: "None" missing for single-app groups | Always show "None" option |
+| Admin UI | Pitfall 4: No warning for all-disabled wallet_type | Confirmation dialog + warning banner |
+| Admin UI | Pitfall 9: "None" multi-PUT race | Only PUT the current signing primary |
 
 ## Sources
 
-- [GitHub REST API Rate Limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api) -- 60 req/hour unauthenticated
-- [Homebrew Tap Documentation](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap) -- naming, audit, formula structure
-- [Homebrew 5.0.0 Release Notes](https://brew.sh/2025/11/12/homebrew-5.0.0/) -- tap changes, cask signing deprecation
-- [Homebrew 5.1.0 Release Notes](https://brew.sh/2026/03/10/homebrew-5.1.0/) -- CI baseline updates
-- [Apple Gatekeeper Documentation](https://support.apple.com/en-us/102445) -- safe app opening procedures
-- [macOS Sequoia Gatekeeper Changes](https://www.techbloat.com/macos-sequoia-bypassing-gatekeeper-to-install-unsigned-apps.html) -- right-click bypass removal
-- [Simon Willison's Homebrew Auto-Formulas](https://til.simonwillison.net/homebrew/auto-formulas-github-actions) -- CI automation pattern
-- [Automating Homebrew Tap Updates](https://builtfast.dev/blog/automating-homebrew-tap-updates-with-github-actions/) -- cross-repo workflow pattern
-- [Homebrew SHA256 Checksum Mismatch Issues](https://github.com/Homebrew/homebrew-cask/issues/41993) -- common causes
-- [Windows SmartScreen Bypass Guide](https://www.fortect.com/windows-optimization-tips/windows-defender-smartscreen-prevented-an-unrecognized-app-from-starting-warning/) -- user-facing instructions
+- [SQLite Partial Indexes](https://www.sqlite.org/partialindex.html) -- official docs on partial index behavior, per-statement constraint enforcement
+- [SQLite CREATE INDEX](https://sqlite.org/lang_createindex.html) -- UNIQUE constraint behavior
+- Codebase: `packages/daemon/src/services/signing-sdk/wallet-app-service.ts` -- register hardcodes signing_enabled=1 (line 66), update method (line 141)
+- Codebase: `packages/daemon/src/services/signing-sdk/sign-request-builder.ts` -- preferred_wallet fallback (line 97), wallet_apps queries (lines 158-161, 219-224)
+- Codebase: `packages/daemon/src/services/signing-sdk/approval-channel-router.ts` -- wallet_type + signing_enabled check (lines 92-106), walletName enrichment (line 89)
+- Codebase: `packages/daemon/src/services/signing-sdk/preset-auto-setup.ts` -- preferred_wallet Step 3 (lines 102-107), ensureRegistered (line 130)
+- Codebase: `packages/daemon/src/infrastructure/database/schema.ts` -- wallet_apps table (lines 551-564), no CHECK on signing_enabled
+- Codebase: `packages/daemon/src/infrastructure/database/migrations/v31-v40.ts` -- v34 wallet_type normalization pattern (line 77)
+- Codebase: `internal/objectives/m33-04-signing-app-explicit-selection.md` -- milestone design document
 
 ---
-*Pitfalls research for: Desktop App Distribution Channels*
-*Researched: 2026-04-01*
+*Pitfalls research for: Signing App Explicit Selection*
+*Researched: 2026-04-02*

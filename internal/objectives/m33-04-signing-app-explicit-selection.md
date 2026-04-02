@@ -1,7 +1,7 @@
 # 마일스톤 m33-04: 서명 앱 명시적 선택
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v33.4
 
 ## 목표
 
@@ -11,28 +11,37 @@
 
 ## 배경
 
-현재 `SignRequestBuilder`는 `wallet_apps.name = wallet_type`인 앱을 암묵적으로 선택한다. 같은 `wallet_type`에 앱이 여러 개 등록되면:
+현재 `SignRequestBuilder`는 `walletName` 또는 `signing_sdk.preferred_wallet` 설정값으로 앱을 조회한다(`WalletLinkRegistry.getWallet(walletName)`). 같은 `wallet_type`에 앱이 여러 개 등록되면:
 
-- 어떤 앱이 서명 대상인지 불투명
+- 어떤 앱이 서명 대상인지 불투명 — `walletName` 기반이라 wallet_type 그룹 개념이 없음
 - Admin UI에서 서명 대상 앱을 제어하는 UI 부재
 - 개발/운영 환경 간 Push Relay 전환이 불편
+
+> **참고**: `wallet_apps`는 전역 테이블(walletId 스코프 없음). `ApprovalChannelRouter`에는 이미 `wallet_type + signing_enabled` 조회 패턴이 존재하므로 SignRequestBuilder도 동일 패턴으로 통일.
 
 ## 변경 범위
 
 ### 1. DB 마이그레이션 (v61)
 
-- 같은 `wallet_type` 내 `signing_enabled = 1` 최대 1개 보장
+- `wallet_type + signing_enabled` 조합에 **partial unique index** 추가:
+  ```sql
+  CREATE UNIQUE INDEX idx_wallet_apps_signing_primary
+    ON wallet_apps(wallet_type) WHERE signing_enabled = 1;
+  ```
 - 기존 데이터: 같은 그룹에 다수 활성화 시 `created_at` 가장 빠른 앱만 유지, 나머지 비활성화
 
 ### 2. WalletAppService 백엔드
 
-- **`update()`**: `signingEnabled = true` 설정 시 같은 `wallet_type`의 다른 앱을 자동으로 `signing_enabled = 0`으로 변경
+- **`update()`**: `signingEnabled = true` 설정 시 같은 `wallet_type`의 다른 앱을 자동으로 `signing_enabled = 0`으로 변경 (트랜잭션 내 처리)
 - **`register()`**: 같은 `wallet_type`에 이미 `signing_enabled = 1`인 앱이 있으면 새 앱은 `signing_enabled = 0`으로 등록
+- 사이드이펙트 발생 시 PUT 응답에 영향받은 앱 정보를 포함할 필요 없음 — Admin UI가 목록을 리패치하므로 기존 `WalletAppResponseSchema` 유지
 
 ### 3. SignRequestBuilder 조회 변경
 
+기존 `walletName` 기반 조회를 `wallet_type + signing_enabled` 기반으로 변경:
+
 ```typescript
-// 기존: wallet_apps.name = walletName
+// 기존: WalletLinkRegistry.getWallet(walletName) → wallet_apps.name 매칭
 // 변경: wallet_apps.wallet_type = walletType AND signing_enabled = 1
 const appRow = this.sqlite.prepare(
   'SELECT name, push_relay_url, subscription_token FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1',
@@ -40,6 +49,7 @@ const appRow = this.sqlite.prepare(
 ```
 
 - `requestTopic`을 `appRow.subscription_token || appRow.name`으로 변경하여 Push Relay에서 정확한 디바이스에 전달
+- `signing_sdk.preferred_wallet` 설정은 deprecated — wallet_type 그룹의 signing primary가 대체
 
 ### 4. Admin UI — Human Wallet Apps 페이지
 
@@ -62,20 +72,30 @@ D'CENT (dcent)
 
 | 항목 | 현재 | 변경 후 |
 |------|------|---------|
-| 서명 | 체크박스 (앱별 독립) | **라디오 버튼** (그룹 내 하나만 선택) |
+| 서명 | 체크박스 (앱별 독립) | **라디오 버튼** (그룹 내 하나만 선택, "없음" 옵션 포함) |
 | 알림 | 체크박스 (앱별 독립) | 체크박스 유지 (여러 앱 동시 발송) |
 
 - 서명 라디오 선택 시: 해당 앱 `signing_enabled = 1`, 같은 wallet_type 나머지 `signing_enabled = 0`
+- **"없음" 선택 시**: 해당 wallet_type의 모든 앱 `signing_enabled = 0` → 서명 비활성화 (기존 `SIGNING_DISABLED` 에러 코드 재사용, `error-codes.ts:854`)
 - wallet_type에 앱이 1개만 있으면 라디오 자동 선택 (비활성 표시)
 
 ### 5. ApprovalChannelRouter
 
-기존 signing_enabled 체크 로직은 그대로 유지 가능 — signing primary인 앱이 있으면 통과.
+기존 `wallet_type + signing_enabled` 체크 로직은 그대로 유지 — signing primary인 앱이 있으면 통과, 전부 해제 시 SIGNING_DISABLED 에러. 변경 불필요.
+
+### 6. REST API (PUT /admin/wallet-apps/{id})
+
+기존 엔드포인트·스키마 변경 없음. `signing_enabled = true` 업데이트 시 WalletAppService가 같은 wallet_type의 다른 앱을 자동으로 비활성화하는 사이드이펙트만 추가. 응답은 기존 `WalletAppResponseSchema` 유지 (Admin UI가 목록 리패치).
+
+### 7. MCP / SDK 영향
+
+MCP에 wallet app 관리 도구 없음 — 영향 없음. SDK(`@waiaas/wallet-sdk`)는 서명 프로토콜만 담당하므로 변경 불필요.
 
 ## 테스트 항목
 
 ### 단위 테스트
 - signing_enabled 라디오 토글 시 같은 wallet_type의 다른 앱이 자동으로 0이 되는지
+- partial unique index가 같은 wallet_type에 signing_enabled = 1 중복 삽입을 거부하는지
 - SignRequestBuilder가 signing_enabled = 1인 앱의 push_relay_url을 사용하는지
 - subscriptionToken이 선택된 앱의 subscription_token으로 설정되는지
 - register 시 기존 primary가 있으면 새 앱이 signing_enabled = 0인지

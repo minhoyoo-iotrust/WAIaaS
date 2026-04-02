@@ -403,19 +403,6 @@ jobs:
             echo "Copied README.md -> $pkg_path/README.md"
           done
 
-      - name: Ensure npm >= 11.5.1
-        run: |
-          CURRENT=$(npm --version)
-          REQUIRED="11.5.1"
-          echo "Current npm: $CURRENT, Required: >= $REQUIRED"
-          if [ "$(printf '%s\n' "$REQUIRED" "$CURRENT" | sort -V | head -n1)" != "$REQUIRED" ]; then
-            echo "Upgrading npm to latest..."
-            npm install -g npm@latest
-            echo "Upgraded to: $(npm --version)"
-          else
-            echo "npm version sufficient"
-          fi
-
       - name: Publish packages
         run: |
           PACKAGES=(
@@ -441,7 +428,7 @@ jobs:
             PKG_VERSION=$(node -p "require('./package.json').version")
 
             # Skip if version already published
-            if npm view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
+            if npx npm@11 view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
               echo "  ⏭ ${PKG_NAME}@${PKG_VERSION} already published, skipping"
               cd "$GITHUB_WORKSPACE"
               continue
@@ -451,9 +438,9 @@ jobs:
             TARBALL=$(pnpm pack --pack-destination "$PACK_DIR" 2>/dev/null | tail -1)
             echo "  Packed: $TARBALL"
             if [[ "$PKG_VERSION" == *-* ]]; then
-              npm publish "$TARBALL" --provenance --access public --tag rc 2>&1
+              npx npm@11 publish "$TARBALL" --provenance --access public --tag rc 2>&1
             else
-              npm publish "$TARBALL" --provenance --access public 2>&1
+              npx npm@11 publish "$TARBALL" --provenance --access public 2>&1
             fi
             cd "$GITHUB_WORKSPACE"
           done
