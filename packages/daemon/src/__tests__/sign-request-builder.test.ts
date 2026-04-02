@@ -25,7 +25,6 @@ import { SignRequestBuilder } from '../services/signing-sdk/sign-request-builder
 function createMockSettingsService(overrides: Record<string, string> = {}) {
   const defaults: Record<string, string> = {
     'signing_sdk.enabled': 'true',
-    'signing_sdk.preferred_wallet': 'dcent',
     'signing_sdk.request_expiry_min': '30',
     'signing_sdk.preferred_channel': 'push_relay',
     'telegram.bot_token': '',
@@ -35,6 +34,39 @@ function createMockSettingsService(overrides: Record<string, string> = {}) {
   return {
     get: vi.fn((key: string) => store[key] ?? ''),
     set: vi.fn(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Mock SQLite (signing_enabled based queries)
+// ---------------------------------------------------------------------------
+
+function createMockSqlite(opts: {
+  signingApp?: { name: string; wallet_type: string; push_relay_url: string | null; subscription_token: string | null } | undefined;
+  pendingApproval?: { expires_at: number } | undefined;
+  ownerAddress?: { owner_address: string | null } | undefined;
+} = {}) {
+  const defaultApp = {
+    name: 'dcent',
+    wallet_type: 'dcent',
+    push_relay_url: 'https://relay.example.com',
+    subscription_token: 'tok-123',
+  };
+  const app = opts.signingApp !== undefined ? opts.signingApp : defaultApp;
+
+  return {
+    prepare: vi.fn((sql: string) => {
+      if (sql.includes('signing_enabled') && sql.includes('wallet_apps')) {
+        return { get: vi.fn(() => app) };
+      }
+      if (sql.includes('pending_approvals')) {
+        return { get: vi.fn(() => opts.pendingApproval) };
+      }
+      if (sql.includes('owner_address')) {
+        return { get: vi.fn(() => opts.ownerAddress) };
+      }
+      return { get: vi.fn(() => undefined) };
+    }),
   };
 }
 
@@ -91,13 +123,16 @@ describe('SignRequestBuilder', () => {
   let builder: SignRequestBuilder;
   let mockSettings: ReturnType<typeof createMockSettingsService>;
   let mockRegistry: ReturnType<typeof createMockWalletLinkRegistry>;
+  let mockSqlite: ReturnType<typeof createMockSqlite>;
 
   beforeEach(() => {
     mockSettings = createMockSettingsService();
     mockRegistry = createMockWalletLinkRegistry();
+    mockSqlite = createMockSqlite();
     builder = new SignRequestBuilder({
       settingsService: mockSettings as any,
       walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
     });
   });
 
@@ -196,14 +231,15 @@ describe('SignRequestBuilder', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 5. No preferred_wallet + no walletName -> error
+  // 5. No signing-enabled wallet app -> error
   // -----------------------------------------------------------------------
 
-  it('throws error when no wallet name specified and no preferred_wallet configured', () => {
-    mockSettings = createMockSettingsService({ 'signing_sdk.preferred_wallet': '' });
+  it('throws error when no signing-enabled wallet app found', () => {
+    mockSqlite = createMockSqlite({ signingApp: undefined });
     builder = new SignRequestBuilder({
       settingsService: mockSettings as any,
       walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
     });
 
     expect(() => builder.buildRequest(baseParams)).toThrow(WAIaaSError);
@@ -223,6 +259,7 @@ describe('SignRequestBuilder', () => {
     builder = new SignRequestBuilder({
       settingsService: mockSettings as any,
       walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
     });
 
     const before = Date.now();
@@ -241,23 +278,8 @@ describe('SignRequestBuilder', () => {
   // 7. push_relay response channel with pushRelayUrl from DB
   // -----------------------------------------------------------------------
 
-  it('builds push_relay response channel with pushRelayUrl from wallet_apps DB', () => {
-    const mockSqlite = {
-      prepare: vi.fn((sql: string) => {
-        if (sql.includes('push_relay_url') && sql.includes('wallet_apps')) {
-          return { get: vi.fn(() => ({ push_relay_url: 'https://relay.example.com' })) };
-        }
-        return { get: vi.fn(() => undefined) };
-      }),
-    };
-
-    const dbBuilder = new SignRequestBuilder({
-      settingsService: mockSettings as any,
-      walletLinkRegistry: mockRegistry as any,
-      sqlite: mockSqlite as any,
-    });
-
-    const result = dbBuilder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+  it('builds push_relay response channel with pushRelayUrl from signing_enabled app', () => {
+    const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
     expect(result.request.responseChannel.type).toBe('push_relay');
     if (result.request.responseChannel.type === 'push_relay') {
       expect(result.request.responseChannel.pushRelayUrl).toBe('https://relay.example.com');
@@ -266,18 +288,19 @@ describe('SignRequestBuilder', () => {
   });
 
   it('builds push_relay response channel with empty URL when no DB', () => {
-    const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
-    expect(result.request.responseChannel.type).toBe('push_relay');
-    if (result.request.responseChannel.type === 'push_relay') {
-      expect(result.request.responseChannel.pushRelayUrl).toBe('');
-    }
+    const noDB = new SignRequestBuilder({
+      settingsService: mockSettings as any,
+      walletLinkRegistry: mockRegistry as any,
+    });
+    // Without sqlite, signing_enabled query can't run; provide walletName fallback
+    expect(() => noDB.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' })).toThrow(WAIaaSError);
   });
 
   // -----------------------------------------------------------------------
-  // 8. Uses walletName parameter over preferred_wallet setting
+  // 8. Uses walletName as wallet_type to find signing_enabled app
   // -----------------------------------------------------------------------
 
-  it('uses explicit walletName parameter over preferred_wallet setting', () => {
+  it('uses walletName as wallet_type to find signing_enabled app', () => {
     const result = builder.buildRequest({
       ...baseParams,
       amount: '1',
@@ -309,9 +332,9 @@ describe('SignRequestBuilder', () => {
   // 10. requestTopic is walletName
   // -----------------------------------------------------------------------
 
-  it('sets requestTopic to walletName', () => {
+  it('sets requestTopic to subscription_token from signing_enabled app', () => {
     const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
-    expect(result.requestTopic).toBe('dcent');
+    expect(result.requestTopic).toBe('tok-123');
   });
 
   // -----------------------------------------------------------------------
@@ -326,6 +349,7 @@ describe('SignRequestBuilder', () => {
     builder = new SignRequestBuilder({
       settingsService: mockSettings as any,
       walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
     });
 
     const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
@@ -337,6 +361,49 @@ describe('SignRequestBuilder', () => {
 
   // -----------------------------------------------------------------------
   // 12. Display message without amount
+  // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // 12b. preferred_wallet is ignored -- signing_enabled=1 app is used
+  // -----------------------------------------------------------------------
+
+  it('ignores preferred_wallet setting and uses signing_enabled=1 app', () => {
+    mockSettings = createMockSettingsService({ 'signing_sdk.preferred_wallet': 'some-old-wallet' });
+    builder = new SignRequestBuilder({
+      settingsService: mockSettings as any,
+      walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
+    });
+
+    const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+    // Should use 'dcent' from signing_enabled query, not 'some-old-wallet' from settings
+    expect(mockRegistry.getWallet).toHaveBeenCalledWith('dcent');
+    expect(result.request).toBeDefined();
+    expect(mockSettings.get).not.toHaveBeenCalledWith('signing_sdk.preferred_wallet');
+  });
+
+  // -----------------------------------------------------------------------
+  // 12c. walletName without signing_enabled match -> error
+  // -----------------------------------------------------------------------
+
+  it('throws error when walletName specified but no signing_enabled app for that type', () => {
+    mockSqlite = createMockSqlite({ signingApp: undefined });
+    builder = new SignRequestBuilder({
+      settingsService: mockSettings as any,
+      walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
+    });
+
+    expect(() => builder.buildRequest({ ...baseParams, walletName: 'dcent' })).toThrow(WAIaaSError);
+    try {
+      builder.buildRequest({ ...baseParams, walletName: 'dcent' });
+    } catch (err) {
+      expect((err as WAIaaSError).code).toBe('WALLET_NOT_REGISTERED');
+    }
+  });
+
+  // -----------------------------------------------------------------------
+  // 13. Display message without amount
   // -----------------------------------------------------------------------
 
   it('generates display message without amount for CONTRACT_CALL', () => {
