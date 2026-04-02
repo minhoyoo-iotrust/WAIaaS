@@ -167,7 +167,7 @@ describe('AdminStatsService', () => {
     expect(stats.sessions.active).toBe(1);
 
     expect(stats.system.version).toBe('2.9.0');
-    expect(stats.system.schemaVersion).toBe(60);
+    expect(stats.system.schemaVersion).toBe(61);
     expect(stats.system.nodeVersion).toBe(process.version);
   });
 
