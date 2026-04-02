@@ -1,159 +1,179 @@
 # Project Research Summary
 
-**Project:** m33-04 서명 앱 명시적 선택 (Signing App Explicit Selection)
-**Domain:** Wallet-as-a-Service signing target resolution
-**Researched:** 2026-04-02
+**Project:** WAIaaS - XRP Ledger (Ripple) Mainnet Support (m33-06)
+**Domain:** 3rd ChainType integration into existing multi-chain AI Agent Wallet-as-a-Service
+**Researched:** 2026-04-03
 **Confidence:** HIGH
 
 ## Executive Summary
 
-이 마일스톤은 신규 기술 도입 없이 기존 WAIaaS 인프라를 정밀하게 수정하는 작업이다. 핵심 문제는 `SignRequestBuilder`가 wallet_type 대신 앱 name을 기반으로 서명 대상을 조회하는 반면, `ApprovalChannelRouter`는 이미 `wallet_type + signing_enabled = 1` 패턴을 사용하고 있어 두 컴포넌트 간 의미론적 불일치가 존재한다는 것이다. 같은 wallet_type에 앱이 여러 개 등록된 환경에서는 어떤 앱이 서명 대상인지 명확하지 않으며 DB 레벨 무결성 보장도 없다. 해결책은 SQLite partial unique index로 wallet_type 당 signing primary를 하나로 제한하고, WalletAppService에 트랜잭션 기반 자동 비활성화 로직을 추가하며, Admin UI를 라디오 버튼 그룹으로 전환하는 것이다.
+XRP Ledger integration into WAIaaS follows a clean additive pattern: add `'ripple'` as the 3rd `ChainType` alongside `'ethereum'` and `'solana'`, implement a new `@waiaas/adapter-ripple` package with a single `xrpl` npm dependency (v4.6.0, XRPLF official), and extend SSoT enum arrays in `@waiaas/shared`. The existing `IChainAdapter` interface covers ~21 of 25 methods directly; 4 are thrown as NOT_SUPPORTED because XRPL has no smart contracts, no batch transactions, no NFT approval mechanism, and full-sweep is blocked by the reserve system. The pipeline remains completely chain-agnostic — zero stage modifications needed.
 
-권장 접근법은 DB 마이그레이션 우선 전략이다. v61 마이그레이션에서 기존 데이터 정규화와 partial unique index 생성을 원자적으로 처리한 후, 서비스 레이어(WalletAppService + SignRequestBuilder + PresetAutoSetupService)를 수정하고, 마지막으로 Admin UI를 갱신한다. 전체 scope는 신규 API 엔드포인트나 라이브러리 없이 기존 패턴(sqlite.transaction(), Preact radio, raw SQL migration)의 조합으로 완성할 수 있다.
+The recommended approach is: extend SSoT enums first (shared → core → DB migration v62), then implement `@waiaas/adapter-ripple`, then wire into `AdapterPool` and `KeyStore` in the daemon. Key generation reuses the existing `sodium-native` Ed25519 path identical to Solana; only the address derivation differs (`0xED`-prefixed public key → RIPEMD-160 → Base58Check r-address via `ripple-keypairs.deriveAddress()`). The `xrpl.Client` uses WebSocket as its primary transport, which requires explicit reconnection management unlike the HTTP-based EVM and Solana adapters.
 
-가장 큰 위험은 v61 마이그레이션 실패다. 기존 `register()`가 `signing_enabled = 1`을 무조건 삽입하므로 같은 wallet_type에 복수의 primary가 존재할 수 있다. 인덱스 생성 전에 데이터 정규화가 반드시 선행되어야 하며, SQLite의 per-statement 제약 검사 특성 때문에 트랜잭션 내 UPDATE 순서(비활성화 먼저, 활성화 나중)를 엄수해야 한다.
+The primary risks cluster around XRPL-specific concepts absent in EVM/Solana: the reserve system (base 1 XRP + 0.2 XRP per owned object) must be reflected in `getBalance()` as an `available` field or AI agents will generate transfer failures; the Destination Tag field is separate from `memo` and its omission silently loses funds at exchanges; Trust Lines require `tfSetNoRipple` flag on all `TrustSet` transactions to prevent unintended rippling; and all transactions must include `LastLedgerSequence` (via `autofill()`) to avoid permanent pending states. These are correctness requirements, not edge cases — each must be addressed in Phase 1 of implementation.
 
 ## Key Findings
 
 ### Recommended Stack
 
-신규 라이브러리 추가 없음. 기존 스택만으로 구현 가능하며, 동일 패턴이 코드베이스에 이미 광범위하게 존재한다.
+The entire XRPL integration requires one new npm package: `xrpl@^4.6.0`. This is the official XRPLF TypeScript SDK and internally bundles `ripple-keypairs` (address derivation), `ripple-address-codec` (Base58Check), and `ripple-binary-codec` (transaction serialization). No additional libraries are needed. The existing `sodium-native` continues to handle Ed25519 key generation (same as Solana), `xrpl` handles address derivation and RPC interaction, and `viem`/`@solana/kit` are untouched.
 
 **Core technologies:**
-- **better-sqlite3 ^12.6.0**: SQLite 드라이버 — `sqlite.transaction()` 패턴이 15곳 이상 검증됨. partial unique index는 raw SQL `exec()`으로 처리하므로 드라이버 제한 없음
-- **SQLite Partial Unique Index**: DB 무결성 보장 — `CREATE UNIQUE INDEX ... WHERE signing_enabled = 1` (SQLite 3.8.0+ 표준 기능, 프로젝트에 9개 이상 partial index 이미 사용 중)
-- **Preact 10.x + @preact/signals**: Admin UI 라디오 그룹 — `wallets.tsx:1378`에서 동일 `<input type="radio">` 패턴 이미 검증됨
-- **drizzle-orm ^0.45.0**: Schema 타입 정의만 사용, 마이그레이션은 raw SQL 유지
+- `xrpl@^4.6.0`: XRPL WebSocket client, transaction building, signing, and address derivation — the only new dependency
+- `sodium-native` (existing): Ed25519 key generation, reused identically from the Solana path
+- `ripple-keypairs` (bundled in `xrpl`): `deriveAddress()` for r-address from `0xED`-prefixed public key
+- `drizzle` + SQLite (existing): DB migration v62 adding `'ripple'` to CHECK constraints on 4 tables
+
+**Critical version note:** xrpl versions 4.2.1–4.2.4 were compromised in a supply chain attack (April 2025). Use v4.6.0 (released 2025-02-12) which is confirmed safe. Never lock to any version in the 4.2.1–4.2.4 range.
 
 ### Expected Features
 
 **Must have (table stakes):**
-- DB v61 partial unique index (`wallet_type` 당 `signing_enabled=1` 최대 1개 DB 보장) — DB 무결성 없이는 모든 애플리케이션 레벨 보장이 무의미
-- 기존 데이터 정규화 마이그레이션 (created_at 기준 최초 앱만 primary 유지) — 인덱스 생성 전 필수
-- WalletAppService 트랜잭션 토글 (`update()`: 같은 그룹 자동 비활성화) — 핵심 백엔드 로직
-- WalletAppService `register()` 조건부 signing_enabled (기존 primary 있으면 0으로 삽입) — 미래 중복 방지
-- SignRequestBuilder wallet_type 기반 단일 쿼리 전환 (`WHERE wallet_type = ? AND signing_enabled = 1`) — 서명 라우팅 정확성
-- Admin UI wallet_type 그룹 레이아웃 + 서명 라디오 버튼 + "None" 옵션 — 운영자 UX 핵심
-- `signing_sdk.preferred_wallet` deprecated (SignRequestBuilder에서 읽기 중단, 주석 처리) — 설정 혼란 제거
-- `ApprovalChannelRouter` SIGNING_DISABLED를 WAIaaSError로 변환 — 구조화된 에러 응답
+- XRP native transfer (Payment TX) with drops unit and Destination Tag support
+- Reserve-aware balance query — `available = total - (base_reserve + owner_count * owner_reserve)`
+- Fee estimation via `fee` RPC command (dynamic, typically 10–12 drops)
+- Sequence number management via `account_info` (analogous to EVM nonce)
+- Transaction simulation (dry-run via `autofill` + `submit({fail_hard: false})`)
+- Transaction finality confirmation polling until `validated: true` or LastLedgerSequence exceeded
+- Trust Line token transfer (IOU Payment with `{currency, issuer, value}` Amount object)
+- Trust Line setup / TrustSet mapped to `buildApprove()` — always with `tfSetNoRipple` flag
+- Asset listing: native XRP + Trust Lines via `account_lines`
+- Ed25519 key generation + r-address derivation (KeyStore extension)
+- CAIP-2/CAIP-19 identifiers: `xrpl:0/1/2`, `slip44:144`, `token:{currency}.{issuer}`, `xls20:{id}`
+- DB migration v62 (CHECK constraints expanded on 4 tables + ENVIRONMENT_NETWORK_MAP)
+- REST/MCP/SDK routing for `chain=ripple`
 
-**Should have (competitive):**
-- "None" 선택 시 확인 다이얼로그 + 경고 배너 (서명 비활성화 시 운영자 인지 보장)
-- 단일 앱 그룹 자동 선택 + disabled 라디오 표시 (불필요한 조작 제거)
-- `CHECK (signing_enabled IN (0, 1))` 제약 추가 (SQLite boolean 타입 안전성)
-- wallet_type = '' 빈 문자열 정규화 (name으로 대체, v34 마이그레이션 패턴 재사용)
+**Should have (differentiators):**
+- Reserve-aware balance with detailed `reserved` breakdown in API response (base + owner * N objects)
+- X-address automatic parsing to r-address + embedded Destination Tag extraction
+- XLS-20 NFT transfer (2-step CreateOffer + AcceptOffer) returning `pending_accept` status with offer ID
+- Trust Line dual currency code format (3-char ISO vs 40-char hex) transparent handling
+- WebSocket reconnection manager with exponential backoff and request concurrency limit (max 10)
 
-**Defer (v2+):**
-- 그룹 축소/확장 UI (wallet_type 그룹이 3+ 이상 될 때 필요, 현재 불필요)
-- per-wallet signing app 선택 (스키마 변경 규모 큼, 현재 사용 사례 없음)
-- MCP wallet app 관리 도구 (운영 자동화 요구 발생 시)
+**Defer to later milestones:**
+- XRPL DEX (OfferCreate/OfferCancel) — m33-08
+- XRPL AMM (XLS-30) — m33-10
+- Incoming transaction monitoring (IChainSubscriber XRPL impl) — separate milestone
+- RPC Pool multi-endpoint failover — separate milestone
+- Payment Channels, Escrow, Checks, Hooks (niche or unavailable on mainnet)
 
 ### Architecture Approach
 
-이 변경은 신규 서비스나 컴포넌트 없이 기존 4개 컴포넌트를 정밀 수정하고 1개의 DB 마이그레이션을 추가하는 방식이다. ApprovalChannelRouter는 이미 올바른 패턴(`wallet_type + signing_enabled = 1`)을 사용 중이므로 변경이 없다. 핵심은 SignRequestBuilder가 "name 기반 조회"에서 "wallet_type 기반 단일 조회"로 전환하는 것이며, 이를 통해 3개의 개별 DB 조회가 1개로 통합된다.
+The integration is purely additive: `@waiaas/adapter-ripple` is a new package following the `@waiaas/adapter-solana` / `@waiaas/adapter-evm` pattern. SSoT enum arrays in `@waiaas/shared` are extended first, propagating automatically to Zod schemas, DB CHECK constraints, and UI dropdowns. `AdapterPool` gets one new `chain === 'ripple'` branch using dynamic import. `KeyStore.generateKeyPair()` adds a `chain === 'ripple'` branch that is near-identical to the Solana path. The pipeline stages require zero changes because they dispatch through `IChainAdapter` polymorphically.
 
 **Major components:**
-1. **DB Migration v61** — partial unique index 생성 + 기존 데이터 정규화 + CHECK 제약 추가 (기반 레이어, 모든 변경의 선행 조건)
-2. **WalletAppService** — `update()` 트랜잭션 토글 + `register()` 조건부 primary 설정 (백엔드 자동화 핵심)
-3. **SignRequestBuilder** — walletName 기반 3-쿼리를 wallet_type + signing_enabled 단일 쿼리로 대체 (서명 라우팅 정확성)
-4. **PresetAutoSetupService** — preferred_wallet 설정 Step 3 제거, 명시적 `update({ signingEnabled: true })` 호출로 대체
-5. **Admin UI HumanWalletAppsPage** — flat list에서 wallet_type 그룹 레이아웃으로 전환, 서명 체크박스를 라디오 그룹으로 교체
+1. `@waiaas/adapter-ripple` — new package; `RippleAdapter` implements `IChainAdapter`; `xrpl.Client` WebSocket management; address derivation utilities; 21 implemented + 4 NOT_SUPPORTED methods
+2. `@waiaas/shared` SSoT extension — `CHAIN_TYPES`, `NETWORK_TYPES`, `RIPPLE_NETWORK_TYPES`, `ENVIRONMENT_NETWORK_MAP` additions; single point of change for all downstream validation
+3. `@waiaas/core` CAIP maps — `xrpl:0/1/2` to network mapping, CAIP-19 `slip44:144`/`token:{}.{}`/`xls20:{}` asset IDs; existing regex already compatible with XRPL formats
+4. `@waiaas/daemon` KeyStore — `generateRippleEd25519KeyPair()` method (sodium-native key gen + ripple-keypairs address derivation); KeystoreFileV1 `curve: 'ed25519'` field already supports ripple
+5. `@waiaas/daemon` DB migration v62 — `wallets`, `incoming_transactions`, `defi_positions`, `nft_metadata_cache` CHECK constraint expansion using existing table-recreate pattern
 
 ### Critical Pitfalls
 
-1. **Migration data integrity violation** — `register()`가 현재 `signing_enabled = 1`을 무조건 삽입하므로 기존 DB에 같은 wallet_type의 복수 primary가 존재할 수 있다. 인덱스 생성 전 반드시 `UPDATE ... WHERE id NOT IN (oldest per wallet_type)` 데이터 정규화를 선행 실행해야 한다.
+1. **Reserve calculation error in getBalance()** — Returning only `balance` without subtracting base reserve (1 XRP) + owner reserves (0.2 XRP per owned object) causes AI agents to generate `tecINSUFFICIENT_XRP` failures. Reserve values must be queried dynamically from `server_info` — hardcoded values broke in December 2024 when reserves were lowered. Prevention: add `available` field to `BalanceInfo`; query `validated_ledger.reserve_base_xrp` and `reserve_inc_xrp` from `server_info` with 5-minute cache.
 
-2. **SQLite per-statement constraint enforcement** — PostgreSQL/MySQL과 달리 SQLite는 트랜잭션 커밋 시점이 아니라 각 DML statement 실행 즉시 제약을 검사한다. 트랜잭션 내에서 반드시 "sibling disable → target enable" 순서를 지켜야 한다. 순서가 역전되면 partial unique index가 즉시 위반 오류를 발생시킨다.
+2. **Destination Tag omission** — Sending XRP to an exchange address without a Destination Tag causes the exchange to be unable to credit the correct user account; funds are not automatically recoverable. Prevention: add `destinationTag?: number` to `TransferRequest`; auto-parse X-addresses to extract embedded tags; pre-check `RequireDest` flag on recipient account.
 
-3. **walletName/walletType semantic mismatch** — `BuildRequestParams.walletName`은 실제로 wallet_type 값을 담고 있다. `walletName` -> `walletType`으로 파라미터를 리네임하면 TypeScript 컴파일러가 모든 호출 지점을 강제 수정해 런타임 오류를 사전에 차단할 수 있다.
+3. **Trust Line rippling** — Omitting `tfSetNoRipple` from `TrustSet` transactions allows the account to act as an intermediary in cross-user payments, causing unintended balance changes. Prevention: always include `Flags: TrustSetFlags.tfSetNoRipple` in `buildApprove()`.
 
-4. **PresetAutoSetupService silent misconfiguration** — preferred_wallet 설정을 제거하면서 register()에 "기존 primary 있으면 0으로 삽입" 로직이 추가되면, preset 자동 설정이 등록 후 signing primary가 되지 않는 무음 실패가 발생한다. 명시적 `walletAppService.update(app.id, { signingEnabled: true })` 호출로 보완해야 한다.
+4. **LastLedgerSequence not set** — Transactions without `LastLedgerSequence` remain permanently pending in congestion scenarios, blocking all subsequent transactions on the same account. Prevention: always use `autofill()` which automatically sets `LastLedgerSequence = current_ledger + 20`.
 
-5. **"None" 옵션 시 APPROVAL 트랜잭션 무음 실패** — Admin UI에서 "None" 선택 시 즉각적인 피드백이 없으면, 며칠 후 고액 트랜잭션이 PENDING_APPROVAL에서 타임아웃되고 나서야 문제를 인지하게 된다. 선택 시 확인 다이얼로그와 페이지 상단 경고 배너가 필수다.
+5. **WebSocket connection instability** — xrpl.js `Client` has known issues with concurrent requests (100+ causes `DisconnectedError`) and reconnection loops after network interruptions. Prevention: wrap `Client` in a `RippleConnectionManager` with exponential backoff, limit concurrent requests to 10, and handle `disconnected` events explicitly.
+
+6. **drops unit confusion** — XRP uses drops (1 XRP = 1,000,000 drops; 6 decimals), but IOU amounts use decimal strings. Mixing them causes 1,000,000x over/under payment. Prevention: register `ripple: 6` in `NATIVE_DECIMALS` SSoT; always use `autofill()` for Fee field; validate that all API amounts for native XRP are in drops.
 
 ## Implications for Roadmap
 
-Based on research, the dependency graph dictates a strict 4-phase ordering. Phase 1 is the only blocker for all subsequent phases.
+Based on combined research, the natural build order follows the dependency chain identified in ARCHITECTURE.md and the feature dependencies in FEATURES.md.
 
-### Phase 1: DB Migration v61
+### Phase 1: SSoT Extension + DB Migration
+**Rationale:** All downstream code (adapter, daemon, UI) derives from enum arrays and Zod schemas. Extending SSoT first means DB CHECK constraints, Zod validators, and CAIP maps are all correct before any adapter code is written. DB v62 must exist before any `chain='ripple'` rows can be inserted.
+**Delivers:** `'ripple'` recognized as valid chain across all validation layers; DB accepts ripple wallets; CAIP-2 `xrpl:0/1/2` and CAIP-19 `slip44:144`/`token:{}.{}` identifiers functional
+**Addresses:** DB migration table stake, CAIP standard compliance
+**Avoids:** Cascading validation failures if adapter is wired before SSoT is extended
 
-**Rationale:** 모든 변경의 기반. partial unique index가 없으면 WalletAppService 트랜잭션 토글도, SignRequestBuilder 단일 쿼리도 의미 없다. 마이그레이션 실패는 daemon 시작을 차단하므로 데이터 정규화를 마이그레이션 함수 내에서 인덱스 생성 전에 원자적으로 처리해야 한다.
-**Delivers:** DB 레벨 무결성 보장 — wallet_type당 signing primary 최대 1개, CHECK 제약, 빈 wallet_type 정규화
-**Addresses:** table stakes "partial unique index", "기존 데이터 정규화", "CHECK 제약"
-**Avoids:** Pitfall 1 (migration data integrity), Pitfall 7 (no CHECK on signing_enabled), Pitfall 10 (empty wallet_type)
+### Phase 2: Adapter Package + Core Transaction Methods
+**Rationale:** Core infrastructure (connect, getBalance with reserve, estimateFee, getCurrentNonce, buildTransaction, simulateTransaction, signTransaction, submitTransaction, waitForConfirmation) is the foundation for all subsequent features. The reserve-calculation pitfall and LastLedgerSequence pitfall must be resolved here — not deferred. WebSocket connection manager must be built here, not retrofitted.
+**Delivers:** Functional XRP native transfers end-to-end; `@waiaas/adapter-ripple` package with CI and tests; KeyStore `generateRippleEd25519KeyPair()` method; AdapterPool `chain === 'ripple'` branch; Destination Tag support in TransferRequest
+**Uses:** `xrpl@^4.6.0`, `sodium-native` (existing), `ripple-keypairs.deriveAddress()`
+**Avoids:** Reserve calculation errors (Pitfall 1), Destination Tag omission (Pitfall 2), LastLedgerSequence missing (Pitfall 4), WebSocket instability (Pitfall 5), drops unit confusion (Pitfall 6)
 
-### Phase 2: WalletAppService + PresetAutoSetupService 백엔드 변경
+### Phase 3: Trust Line Token Support
+**Rationale:** Trust Lines are XRPL's token model — analogous to ERC-20 but fundamentally different. This phase adds `buildApprove()` (TrustSet with mandatory `tfSetNoRipple`), `buildTokenTransfer()` (IOU Payment), `getAssets()` (XRP + Trust Lines), and `getTokenInfo()`. The rippling pitfall is resolved here through enforced flag inclusion.
+**Delivers:** Full Trust Line token lifecycle (set Trust Line → transfer IOU → query assets); currency code dual-format handler (3-char ISO vs 40-char hex); Trust Line pre-validation (freeze check, receiver Trust Line existence check)
+**Avoids:** Rippling pitfall (Pitfall 3); Trust Line deletion when balance > 0; `tecPATH_DRY` errors from missing receiver Trust Line
 
-**Rationale:** Admin UI의 라디오 UX는 서버 사이드 자동 토글이 정확히 동작해야 의미가 있다. Phase 1의 index 존재를 전제로 트랜잭션 내 올바른 UPDATE 순서를 구현한다. PresetAutoSetupService를 이 단계에서 함께 수정해 preferred_wallet 의존성을 완전히 제거한다.
-**Delivers:** auto-exclusive 토글 동작, register() 조건부 primary 설정, SIGNING_DISABLED WAIaaSError 변환
-**Uses:** `sqlite.transaction()` 기존 패턴, Phase 1 partial unique index
-**Avoids:** Pitfall 2 (UPDATE order), Pitfall 5 (PresetAutoSetupService silent misconfiguration), Pitfall 11 (SIGNING_DISABLED plain Error), Pitfall 12 (register hardcodes signing_enabled=1)
-
-### Phase 3: SignRequestBuilder 쿼리 전환
-
-**Rationale:** Phase 2와 독립적으로 진행 가능하나 Phase 1(index) 완료 후 시작한다. walletName 파라미터를 walletType으로 리네임하면 TypeScript 컴파일러가 모든 호출 지점을 강제 수정해 런타임 오류를 차단한다. 3개 개별 DB 쿼리를 1개로 통합한다.
-**Delivers:** 올바른 signing primary 조회, preferred_wallet fallback 제거, 타입 안전한 BuildRequestParams
-**Avoids:** Pitfall 3 (walletName/walletType semantic mismatch), Pitfall 13 (test coverage gap)
-
-### Phase 4: Admin UI 라디오 그룹 레이아웃
-
-**Rationale:** 백엔드(Phase 2, 3)가 완성된 후 UI를 수정한다. flat list에서 wallet_type 그룹 레이아웃으로 전환하고 서명 체크박스를 라디오 버튼으로 교체한다. "None" 옵션 확인 다이얼로그와 경고 배너를 포함해 운영자 인지 보장.
-**Delivers:** wallet_type 그룹별 서명 라디오 선택 UI, "None" 옵션, 경고 배너
-**Avoids:** Pitfall 4 ("None" silent failure), Pitfall 6 (stale state after server-side toggle), Pitfall 8 ("None" missing for single-app groups), Pitfall 9 ("None" multi-PUT race)
+### Phase 4: NFT + Integration Completeness
+**Rationale:** XLS-20 NFT support and the full cross-interface wiring (REST API, MCP, SDK, Admin UI, skill files) complete the milestone scope. NFT is a differentiator, not table stakes, so it follows core functionality. Interface wiring is bundled here because it is mostly automatic once SSoT is extended.
+**Delivers:** XLS-20 NFT transfer (2-step CreateOffer + AcceptOffer with `pending_accept` status and offer ID); `chain=ripple` support across REST/MCP/SDK; Admin UI wallet creation with Ripple chain option; Trust Line display; skill file for AI agents explaining XRPL concepts; sign-only external transaction support (`parseTransaction` + `signExternalTransaction`)
+**Avoids:** NFT 2-step async pitfall (explicit `pending_accept` return, mandatory Expiration on offers); Destination-less NFT offer sniping (always set `Destination` on NFT offers)
 
 ### Phase Ordering Rationale
 
-- **DB first:** SQLite partial unique index는 애플리케이션 레이어보다 먼저 배치해야 한다. 코드 레벨 제약(트랜잭션 토글)이 실패해도 DB 제약이 최후 방어선 역할을 한다.
-- **Backend before UI:** Admin UI의 라디오 선택 후 단순 리패치 패턴은 서버 사이드 자동 토글이 정확해야 올바르게 동작한다.
-- **SignRequestBuilder parallel with Phase 2:** 읽기 전용 쿼리 변경이므로 Phase 2와 병행 개발 가능. 단, Phase 1 완료 후 시작.
-- **전체 4단계 scope:** 각 phase는 독립적으로 테스트 가능하며 total LOC 변경 규모가 작다 (DB 15줄, 서비스 20-30줄, UI 50-80줄).
+- SSoT first because `CHAIN_TYPES` drives CHECK constraints, Zod discriminatedUnion members, and CAIP namespace lookups — building the adapter before SSoT creates ordering bugs that mask real failures
+- Reserve + LastLedgerSequence + WebSocket reconnection addressed in Phase 2 (not deferred) because they are correctness requirements; deferring them means all subsequent testing is on a broken foundation
+- Trust Lines before NFT because owner reserve tracking (required for NFT reserve understanding) is established in Phase 3, and Trust Line is table stakes while NFT is a differentiator
+- Interface wiring (REST/MCP/SDK/Admin UI) is bundled with Phase 4 rather than Phase 2 because the integration is largely automatic via SSoT; main manual work is Admin UI Ripple-specific components and skill file prose
 
 ### Research Flags
 
-Phases with standard patterns (skip research-phase — patterns fully documented):
-- **Phase 1 (DB Migration):** SQLite partial unique index는 공식 문서 확인 + 프로젝트 내 9개 기존 사례 검증. 완전히 표준 패턴.
-- **Phase 2 (WalletAppService):** `sqlite.transaction()` 패턴이 프로젝트 15곳에서 검증됨. 신규 패턴 없음.
-- **Phase 3 (SignRequestBuilder):** 기존 코드 리팩토링 + TypeScript 리네임. 표준 패턴.
-- **Phase 4 (Admin UI):** Preact radio 패턴이 `wallets.tsx:1378`에서 검증됨. 신규 컴포넌트 없음.
+Phases likely needing deeper research during planning:
+- **Phase 2 (WebSocket connection manager):** xrpl.js has known GitHub issues with reconnection (Issue #1185). The implementation strategy for `RippleConnectionManager` (concurrency limit of 10, backoff algorithm, client instance recycling on irrecoverable loop) warrants a pre-implementation spike before committing to a specific design.
+- **Phase 3 (currency code dual format + CAIP-19):** The 3-char ISO vs 40-char hex encoding for IOU currency codes has edge cases in CAIP-19 asset ID formatting. The `parseAssetId()` function in `asset-resolve.ts` needs verification with real Trust Line data against a live testnet node.
+- **Phase 4 (NFT auto-accept within same WAIaaS instance):** Auto-chaining sell offer + accept when both wallets are in the same WAIaaS instance is not documented in xrpl.js. Needs implementation research before coding.
 
-이 마일스톤은 전 phase에서 research-phase가 필요 없다. 모든 기술적 결정이 이미 검증된 기존 코드 패턴을 따르며, 연구 결과 confidence가 HIGH다.
+Phases with standard patterns (skip additional research):
+- **Phase 1 (SSoT + DB migration):** Exact table-recreate pattern used 15+ times in prior milestones (v61-v70.ts). CHECK constraint expansion is well-established.
+- **Phase 2 (KeyStore extension):** `generateRippleEd25519KeyPair()` is structurally identical to `generateEd25519KeyPair()` with one `deriveAddress()` call added. No unknowns.
+- **Phase 4 (REST/MCP/SDK wiring):** SSoT-driven routing is automatic once `CHAIN_TYPES` is extended. AdapterPool branch + rpcConfigKey mapping are thin mechanical changes.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | 신규 라이브러리 없음. 모든 기술이 프로젝트에서 이미 광범위하게 사용 중. |
-| Features | HIGH | 마일스톤 목표 문서(m33-04-signing-app-explicit-selection.md)와 기존 코드 분석으로 완전히 검증됨. |
-| Architecture | HIGH | ApprovalChannelRouter가 이미 올바른 패턴을 사용 중이라는 핵심 인사이트 코드 직접 확인. 데이터 플로우 변경 범위 명확. |
-| Pitfalls | HIGH | SQLite 공식 문서 + 코드베이스 직접 분석으로 13개 pitfall 식별. 특히 per-statement constraint enforcement와 UPDATE 순서 이슈는 높은 재현 가능성. |
+| Stack | HIGH | `xrpl@^4.6.0` npm-verified; XRPLF official SDK; TypeDoc and source confirmed for key APIs (Wallet constructor, deriveAddress, autofill, submitAndWait) |
+| Features | HIGH | All feature decisions backed by official XRPL documentation; CAIP-2/19 namespaces from chainagnostic.org official specs; existing CAIP-19 regex confirmed compatible |
+| Architecture | HIGH | Integration pattern directly mirrors existing adapter packages; existing codebase files verified by reading (adapter-pool.ts, keystore.ts, stage5-execute.ts, network-map.ts) |
+| Pitfalls | HIGH | Reserve values confirmed from December 2024 amendment; xrpl.js issues from GitHub Issues tracker; supply chain advisory from XRPLF official blog |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **signing_sdk.preferred_wallet 설정 키 보존 여부:** 기존 `config.toml`에 이 설정이 있는 사용자를 위해 키는 유지하되 무시(deprecated)로 처리. SettingsService에서 경고 로그 출력 여부는 구현 시 결정.
-- **단일 앱 그룹 auto-select 동작:** Phase 4 구현 시 "1개 그룹의 라디오 disabled 표시 vs. 항상 enabled 표시" 선택. Pitfall 8에 따르면 "None" 옵션은 항상 표시해야 함.
-- **migration 파일 배치:** v61을 기존 `v51-v59.ts`에 추가할지 신규 파일(`v61-v70.ts`)로 생성할지는 프로젝트 관례 확인 필요 (현재 파일명이 버전 범위로 명명됨).
+- **Trust Line freeze state detection:** `buildTokenTransfer()` should pre-check freeze status via `account_lines` before submitting. The exact `account_lines` response fields for frozen Trust Lines need validation against a live testnet node during Phase 3 implementation.
+- **CAIP-19 `token:` namespace spelling:** One minor inconsistency in PITFALLS.md suggests `trustline:` format; ARCHITECTURE.md and official chainagnostic.org spec both use `token:`. The official spec (`token:{CURRENCY}.{ISSUER}`) is authoritative.
+- **DB migration v62 network-column constraints:** ARCHITECTURE.md identifies 4 tables with `chain` CHECK constraints. Network-column constraints (where they exist separately) need a complete scan of schema-ddl.ts during Phase 1 — research identified the pattern but did not enumerate all affected columns exhaustively.
+- **`simulate` RPC command availability in xrpl v4.6.0:** ARCHITECTURE.md notes using `submit({fail_hard: false})` for dry-run as the primary approach. Whether the `simulate` command is available and stable in v4.6.0 should be confirmed during Phase 2 implementation.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- `internal/objectives/m33-04-signing-app-explicit-selection.md` — 마일스톤 목표 문서, 요구사항, 변경 범위
-- `packages/daemon/src/services/signing-sdk/wallet-app-service.ts` — WalletApp 인터페이스, register/update 로직 직접 분석
-- `packages/daemon/src/services/signing-sdk/sign-request-builder.ts` — walletName 기반 조회, preferred_wallet 참조 직접 분석
-- `packages/daemon/src/services/signing-sdk/approval-channel-router.ts` — wallet_type + signing_enabled 조회 패턴 (라인 93-106) 직접 확인
-- `packages/admin/src/pages/human-wallet-apps.tsx` — 현재 체크박스 UI 패턴 분석
-- `packages/daemon/src/infrastructure/database/schema.ts` — wallet_apps 테이블 정의 (라인 551-564) 직접 확인
-- `packages/daemon/src/infrastructure/database/migrations/v21-v30.ts`, `v31-v40.ts`, `v51-v59.ts` — 기존 partial index 패턴 9개 확인
-- SQLite 공식 문서: Partial Indexes (https://www.sqlite.org/partialindex.html) — SQLite 3.8.0+ partial unique index 지원 확인
-- better-sqlite3 API 문서 (https://github.com/WiseLibs/better-sqlite3/blob/master/docs/api.md) — `transaction()` API 동기 실행 특성 확인
+- [xrpl npm package v4.6.0](https://www.npmjs.com/package/xrpl) — version confirmation, TypeScript SDK
+- [xrpl.js Wallet class API](https://js.xrpl.org/classes/Wallet.html) — constructor signature, Ed25519 default
+- [ripple-keypairs (GitHub)](https://github.com/XRPLF/xrpl.js/tree/main/packages/ripple-keypairs) — `deriveAddress()` function
+- [XRPL Cryptographic Keys](https://xrpl.org/docs/concepts/accounts/cryptographic-keys) — Ed25519 `0xED` prefix format
+- [XRPL Addresses](https://xrpl.org/docs/concepts/accounts/addresses) — r-address derivation algorithm
+- [XRPL Reserves](https://xrpl.org/docs/concepts/accounts/reserves) — base reserve + owner reserve system
+- [Lower Reserves Dec 2024](https://xrpl.org/blog/2024/lower-reserves-are-in-effect) — current reserve values (1 XRP base, 0.2 XRP owner)
+- [XRPL CAIP-2 Namespace](https://namespaces.chainagnostic.org/xrpl/caip2) — `xrpl:0` mainnet, `xrpl:1` testnet, `xrpl:2` devnet
+- [XRPL CAIP-19 Assets](https://namespaces.chainagnostic.org/xrpl/caip19) — `slip44:144`, `token:{}.{}`, `xls20:{}`
+- [TrustSet Transaction](https://xrpl.org/docs/references/protocol/transactions/types/trustset) — Trust Line setup + NoRipple flag
+- [Trust Line Tokens](https://xrpl.org/docs/concepts/tokens/fungible-tokens/trust-line-tokens) — IOU token model + rippling mechanism
+- [Non-Fungible Tokens](https://xrpl.org/docs/concepts/tokens/nfts) — XLS-20 NFT overview
+- [NFTokenCreateOffer](https://xrpl.org/docs/references/protocol/transactions/types/nftokencreateoffer) — NFT offer creation
+- [NFTokenAcceptOffer](https://xrpl.org/docs/references/protocol/transactions/types/nftokenacceptoffer) — NFT offer acceptance
+- [Reliable Transaction Submission](https://xrpl.org/docs/concepts/transactions/reliable-transaction-submission) — LastLedgerSequence pattern
+- [Transaction Cost](https://xrpl.org/docs/concepts/transactions/transaction-cost) — fee model (drops)
+- [Partial Payments](https://xrpl.org/docs/concepts/payment-types/partial-payments) — `delivered_amount` security
+- [Source and Destination Tags](https://xrpl.org/docs/concepts/transactions/source-and-destination-tags) — Destination Tag uint32
 
 ### Secondary (MEDIUM confidence)
-
-- `packages/admin/src/pages/wallets.tsx:1378` — Preact radio 버튼 기존 구현 패턴 참조
-- `packages/daemon/src/services/signing-sdk/preset-auto-setup.ts` — preferred_wallet Step 3 설정 코드 확인
+- [xrpl.js GitHub Issue #1185](https://github.com/XRPLF/xrpl.js/issues/1185) — WebSocket reconnection loop bug
+- [xrpl.js GitHub Issue #903](https://github.com/XRPLF/xrpl.js/issues/903) — 100+ concurrent requests disconnect
+- [xrpl.js Supply Chain Advisory](https://xrpl.org/blog/2025/vulnerabilitydisclosurereport-bug-apr2025) — v4.2.1–4.2.4 compromised, v4.6.0 safe
+- Existing codebase: `adapter-pool.ts`, `keystore.ts`, `stage5-execute.ts`, `network-map.ts`, `networks.ts` — verified by reading
 
 ---
-*Research completed: 2026-04-02*
+*Research completed: 2026-04-03*
 *Ready for roadmap: yes*
