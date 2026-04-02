@@ -1,36 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v33.4
-milestone_name: 서명 앱 명시적 선택
-status: shipped
-stopped_at: Milestone complete
-last_updated: "2026-04-02T13:10:00.000Z"
-last_activity: 2026-04-02
+milestone: v33.6
+milestone_name: XRP 메인넷 지원
+status: active
+stopped_at: null
+last_updated: "2026-04-03T00:00:00.000Z"
+last_activity: 2026-04-03
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-02)
+See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v33.6 XRP 메인넷 지원
 
 ## Current Position
 
-Phase: All complete
-Plan: All complete
-Status: Milestone v33.4 shipped
-Last activity: 2026-04-02
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-03 — Milestone v33.6 started
 
 ## Accumulated Context
 
