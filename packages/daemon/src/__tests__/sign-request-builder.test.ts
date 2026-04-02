@@ -52,7 +52,7 @@ function createMockSqlite(opts: {
     push_relay_url: 'https://relay.example.com',
     subscription_token: 'tok-123',
   };
-  const app = opts.signingApp !== undefined ? opts.signingApp : defaultApp;
+  const app = 'signingApp' in opts ? opts.signingApp : defaultApp;
 
   return {
     prepare: vi.fn((sql: string) => {
@@ -166,8 +166,8 @@ describe('SignRequestBuilder', () => {
     expect(result.universalLinkUrl).toContain('https://link.dcentwallet.com');
     expect(mockRegistry.buildSignUrl).toHaveBeenCalledWith('dcent', result.request);
 
-    // Request topic is wallet name
-    expect(result.requestTopic).toBe('dcent');
+    // Request topic is subscription_token from signing_enabled app
+    expect(result.requestTopic).toBe('tok-123');
   });
 
   // -----------------------------------------------------------------------
