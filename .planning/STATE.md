@@ -4,7 +4,7 @@ milestone: v33.4
 milestone_name: 서명 앱 명시적 선택
 status: verifying
 stopped_at: Completed 468-01-PLAN.md
-last_updated: "2026-04-02T12:14:44.910Z"
+last_updated: "2026-04-02T12:15:09.716Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 3
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 
 ## Current Position
 
-Phase: 468 of 3 (signrequestbuilder query transition)
+Phase: 469 of 3 (admin ui radio group)
 Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-02

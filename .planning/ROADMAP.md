@@ -158,5 +158,5 @@ Phases execute in numeric order: 467 → 468 → 469
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 467. DB Migration + Backend Service | 2/2 | Complete    | 2026-04-02 |
-| 468. SignRequestBuilder Query Transition | 1/1 | Complete   | 2026-04-02 |
+| 468. SignRequestBuilder Query Transition | 1/1 | Complete    | 2026-04-02 |
 | 469. Admin UI Radio Group | 0/0 | Not started | - |
