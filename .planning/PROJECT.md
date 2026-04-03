@@ -8,9 +8,21 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current State (v33.6 shipped — ready for next milestone)
+## Current Milestone: v33.8 XRPL DEX 지원
 
-v33.6 XRP 메인넷 지원 SHIPPED (2026-04-03). @waiaas/adapter-ripple 패키지로 XRP Ledger를 3번째 ChainType으로 통합 — IChainAdapter 25 메서드 구현, 네이티브 XRP 전송(drops 변환, 동적 reserve, Destination Tag, validated ledger 확인), Trust Line 토큰(TrustSet tfSetNoRipple, IOU 전송, 3-char/40-char hex 통화 코드), XLS-20 NFT(2-step offer 모델), CAIP-2 xrpl:0/1/2 + CAIP-19 slip44:144/token 네임스페이스, DB v62, 전 인터페이스 SSoT 자동 전파. 4 phases, 10 plans, 37 requirements, 131 adapter tests, 3,120 LOC.
+**Goal:** XRPL 내장 DEX(오더북)를 Action Provider로 구현하여 AI 에이전트가 XRPL에서 네이티브 토큰 스왑(XRP ↔ IOU, IOU ↔ IOU)을 오더북 기반으로 실행할 수 있는 상태
+
+**Target features:**
+- XrplDexProvider: swap(즉시 실행, tfImmediateOrCancel), limit_order(지정가), cancel_order, get_orderbook, get_offers
+- 호가 조회: book_offers RPC로 매수/매도 오더북 깊이 제공
+- 슬리피지 보호: tfImmediateOrCancel + 최소 수량 검증
+- 부분 체결 처리: 지정가 주문의 부분 체결 상태 추적
+- MCP/SDK 도구: xrpl_dex_swap, xrpl_dex_limit_order, xrpl_dex_cancel, xrpl_dex_orderbook
+- Admin UI: XRPL DEX 활성화 설정, 거래 내역 표시
+
+## Previous Milestone: v33.6 XRP 메인넷 지원 — SHIPPED 2026-04-03
+
+@waiaas/adapter-ripple 패키지로 XRP Ledger를 3번째 ChainType으로 통합 — IChainAdapter 25 메서드 구현, 네이티브 XRP 전송(drops 변환, 동적 reserve, Destination Tag, validated ledger 확인), Trust Line 토큰(TrustSet tfSetNoRipple, IOU 전송, 3-char/40-char hex 통화 코드), XLS-20 NFT(2-step offer 모델), CAIP-2 xrpl:0/1/2 + CAIP-19 slip44:144/token 네임스페이스, DB v62, 전 인터페이스 SSoT 자동 전파. 4 phases, 10 plans, 37 requirements, 131 adapter tests, 3,120 LOC.
 
 ## Previous Milestone: v33.4 서명 앱 명시적 선택 — SHIPPED 2026-04-02
 
