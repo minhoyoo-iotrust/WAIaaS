@@ -23,6 +23,7 @@
 | 476 | BUG | HIGH | Desktop RC 릴리스가 prerelease로 마킹되지 않음 | — | FIXED | 2026-04-02 |
 | 477 | BUG | CRITICAL | MCP tools/list Zod z.record() 키 스키마 누락으로 빈 배열 반환 | — | FIXED | 2026-04-02 |
 | 478 | ENHANCEMENT | LOW | MCP 서버 버전 0.0.0 하드코딩 | — | FIXED | 2026-04-02 |
+| 479 | BUG | HIGH | MCP listTools() 레이스 컨디션: Action Provider 도구 누락 | — | OPEN | — |
 
 ## Type Legend
 
@@ -34,9 +35,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **PLANNED:** 0
 - **FIXED:** 476
 - **WONTFIX:** 1
-- **Total:** 478
+- **Total:** 479
 - **Archived:** 468 (001–468)

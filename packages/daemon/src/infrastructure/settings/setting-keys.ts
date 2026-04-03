@@ -110,7 +110,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'notifications.notify_categories', category: 'notifications', configPath: 'notifications.notify_categories', defaultValue: '[]', isCredential: false, label: 'Notify Categories', description: 'JSON array of notification category filters' },
   { key: 'notifications.notify_events', category: 'notifications', configPath: 'notifications.notify_events', defaultValue: '[]', isCredential: false, label: 'Notify Events', description: 'JSON array of specific notification event filters' },
 
-  // --- rpc category (Solana 3 + EVM 12) ---
+  // --- rpc category (Solana 3 + EVM 12 + XRPL 3) ---
   { key: 'rpc.solana_mainnet', category: 'rpc', configPath: 'rpc.solana_mainnet', defaultValue: 'https://api.mainnet-beta.solana.com', isCredential: false, label: 'Solana Mainnet', description: 'Solana mainnet RPC endpoint URL' },
   { key: 'rpc.solana_devnet', category: 'rpc', configPath: 'rpc.solana_devnet', defaultValue: 'https://api.devnet.solana.com', isCredential: false, label: 'Solana Devnet', description: 'Solana devnet RPC endpoint URL' },
   { key: 'rpc.solana_testnet', category: 'rpc', configPath: 'rpc.solana_testnet', defaultValue: 'https://api.testnet.solana.com', isCredential: false, label: 'Solana Testnet', description: 'Solana testnet RPC endpoint URL' },
@@ -126,6 +126,9 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'rpc.evm_base_sepolia', category: 'rpc', configPath: 'rpc.evm_base_sepolia', defaultValue: 'https://base-sepolia.drpc.org', isCredential: false, label: 'Base Sepolia', description: 'Base Sepolia testnet RPC endpoint URL' },
   { key: 'rpc.evm_hyperevm_mainnet', category: 'rpc', configPath: 'rpc.evm_hyperevm_mainnet', defaultValue: 'https://rpc.hyperliquid.xyz/evm', isCredential: false, label: 'HyperEVM Mainnet', description: 'HyperEVM mainnet RPC endpoint URL' },
   { key: 'rpc.evm_hyperevm_testnet', category: 'rpc', configPath: 'rpc.evm_hyperevm_testnet', defaultValue: 'https://rpc.hyperliquid-testnet.xyz/evm', isCredential: false, label: 'HyperEVM Testnet', description: 'HyperEVM testnet RPC endpoint URL' },
+  { key: 'rpc.xrpl_mainnet', category: 'rpc', configPath: 'rpc.xrpl_mainnet', defaultValue: 'wss://xrplcluster.com', isCredential: false, label: 'XRPL Mainnet', description: 'XRPL mainnet WebSocket RPC endpoint URL' },
+  { key: 'rpc.xrpl_testnet', category: 'rpc', configPath: 'rpc.xrpl_testnet', defaultValue: 'wss://s.altnet.rippletest.net:51233', isCredential: false, label: 'XRPL Testnet', description: 'XRPL testnet WebSocket RPC endpoint URL' },
+  { key: 'rpc.xrpl_devnet', category: 'rpc', configPath: 'rpc.xrpl_devnet', defaultValue: 'wss://s.devnet.rippletest.net:51233', isCredential: false, label: 'XRPL Devnet', description: 'XRPL devnet WebSocket RPC endpoint URL' },
 
   // --- security category ---
   { key: 'security.max_sessions_per_wallet', category: 'security', configPath: 'security.max_sessions_per_wallet', defaultValue: '5', isCredential: false, label: 'Max Sessions Per Wallet', description: 'Maximum concurrent sessions allowed per wallet' },
@@ -219,6 +222,9 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'incoming.wss_url.polygon-amoy', category: 'incoming', configPath: 'incoming.wss_url.polygon-amoy', defaultValue: '', isCredential: false, label: 'Polygon-Amoy', description: 'WebSocket URL override for incoming TX monitoring on this network' },
   { key: 'incoming.wss_url.hyperevm-mainnet', category: 'incoming', configPath: 'incoming.wss_url.hyperevm-mainnet', defaultValue: '', isCredential: false, label: 'Hyperevm-Mainnet', description: 'WebSocket URL override for incoming TX monitoring on this network' },
   { key: 'incoming.wss_url.hyperevm-testnet', category: 'incoming', configPath: 'incoming.wss_url.hyperevm-testnet', defaultValue: '', isCredential: false, label: 'Hyperevm-Testnet', description: 'WebSocket URL override for incoming TX monitoring on this network' },
+  { key: 'incoming.wss_url.xrpl-mainnet', category: 'incoming', configPath: 'incoming.wss_url.xrpl-mainnet', defaultValue: '', isCredential: false, label: 'Xrpl-Mainnet', description: 'WebSocket URL override for incoming TX monitoring on this network' },
+  { key: 'incoming.wss_url.xrpl-testnet', category: 'incoming', configPath: 'incoming.wss_url.xrpl-testnet', defaultValue: '', isCredential: false, label: 'Xrpl-Testnet', description: 'WebSocket URL override for incoming TX monitoring on this network' },
+  { key: 'incoming.wss_url.xrpl-devnet', category: 'incoming', configPath: 'incoming.wss_url.xrpl-devnet', defaultValue: '', isCredential: false, label: 'Xrpl-Devnet', description: 'WebSocket URL override for incoming TX monitoring on this network' },
 
   // --- actions category (DeFi action providers) ---
   { key: 'actions.jupiter_swap_enabled', category: 'actions', configPath: 'actions.jupiter_swap_enabled', defaultValue: 'true', isCredential: false, label: 'Jupiter Swap Enabled', description: 'Enable or disable this feature' },
@@ -302,6 +308,9 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'rpc_pool.polygon-amoy', category: 'rpc_pool', configPath: 'rpc_pool.polygon-amoy', defaultValue: '[]', isCredential: false, label: 'Polygon-Amoy', description: 'JSON array of RPC endpoint URLs for pool rotation' },
   { key: 'rpc_pool.hyperevm-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.hyperevm-mainnet', defaultValue: '[]', isCredential: false, label: 'Hyperevm-Mainnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
   { key: 'rpc_pool.hyperevm-testnet', category: 'rpc_pool', configPath: 'rpc_pool.hyperevm-testnet', defaultValue: '[]', isCredential: false, label: 'Hyperevm-Testnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
+  { key: 'rpc_pool.xrpl-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.xrpl-mainnet', defaultValue: '[]', isCredential: false, label: 'Xrpl-Mainnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
+  { key: 'rpc_pool.xrpl-testnet', category: 'rpc_pool', configPath: 'rpc_pool.xrpl-testnet', defaultValue: '[]', isCredential: false, label: 'Xrpl-Testnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
+  { key: 'rpc_pool.xrpl-devnet', category: 'rpc_pool', configPath: 'rpc_pool.xrpl-devnet', defaultValue: '[]', isCredential: false, label: 'Xrpl-Devnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
 
   // --- position_tracker category (DeFi position sync) ---
   // DB-only: no config.toml [position_tracker] section. Managed exclusively via Admin Settings.

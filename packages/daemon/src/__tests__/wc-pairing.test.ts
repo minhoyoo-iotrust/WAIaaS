@@ -287,8 +287,8 @@ describe('WcSessionService Pairing', () => {
       expect(NETWORK_TO_CAIP2['base-sepolia']).toBe('eip155:84532');
     });
 
-    it('has 15 entries total (3 Solana + 12 EVM)', () => {
-      expect(Object.keys(NETWORK_TO_CAIP2).length).toBe(15);
+    it('has 18 entries total (3 Solana + 12 EVM + 3 XRPL)', () => {
+      expect(Object.keys(NETWORK_TO_CAIP2).length).toBe(18);
     });
   });
 });

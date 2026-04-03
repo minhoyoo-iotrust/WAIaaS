@@ -1,5 +1,5 @@
 /**
- * Built-in RPC defaults for 15 networks (8 mainnet + 7 testnet).
+ * Built-in RPC defaults for 18 networks (9 mainnet + 9 testnet).
  *
  * These are public, free-tier RPC endpoints. They provide a working
  * out-of-the-box experience without any configuration. Users should
@@ -11,14 +11,15 @@
 /**
  * Built-in default RPC URLs for all supported networks.
  *
- * - **Mainnet (8):** solana-mainnet, ethereum-mainnet, arbitrum-mainnet,
- *   optimism-mainnet, base-mainnet, polygon-mainnet, hyperevm-mainnet
- * - **Testnet (7):** solana-devnet, solana-testnet, ethereum-sepolia,
+ * - **Mainnet (9):** solana-mainnet, ethereum-mainnet, arbitrum-mainnet,
+ *   optimism-mainnet, base-mainnet, polygon-mainnet, hyperevm-mainnet,
+ *   xrpl-mainnet
+ * - **Testnet (9):** solana-devnet, solana-testnet, ethereum-sepolia,
  *   arbitrum-sepolia, optimism-sepolia, base-sepolia, polygon-amoy,
- *   hyperevm-testnet
+ *   hyperevm-testnet, xrpl-testnet, xrpl-devnet
  *
  * URLs are ordered by priority (index 0 = highest priority).
- * All URLs use https:// protocol.
+ * All URLs use https:// (or wss:// for XRPL) protocol.
  */
 export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> = {
   // ─── Mainnet (8 networks) ──────────────────────────────────────
@@ -53,8 +54,13 @@ export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> 
   'hyperevm-mainnet': [
     'https://rpc.hyperliquid.xyz/evm',
   ],
+  'xrpl-mainnet': [
+    'wss://xrplcluster.com',
+    'wss://s1.ripple.com',
+    'wss://s2.ripple.com',
+  ],
 
-  // ─── Testnet (8 networks) ─────────────────────────────────────
+  // ─── Testnet (9 networks) ─────────────────────────────────────
   'solana-devnet': [
     'https://api.devnet.solana.com',
     'https://rpc.ankr.com/solana_devnet',
@@ -88,5 +94,11 @@ export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> 
   ],
   'hyperevm-testnet': [
     'https://rpc.hyperliquid-testnet.xyz/evm',
+  ],
+  'xrpl-testnet': [
+    'wss://s.altnet.rippletest.net:51233',
+  ],
+  'xrpl-devnet': [
+    'wss://s.devnet.rippletest.net:51233',
   ],
 } as const;

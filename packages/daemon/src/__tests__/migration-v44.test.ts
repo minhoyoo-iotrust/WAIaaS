@@ -77,8 +77,8 @@ describe('DB v44 Migration: nft_metadata_cache', () => {
     sqlite.pragma('foreign_keys = ON');
     pushSchema(sqlite);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(61);
-    expect(getMaxVersion(sqlite)).toBe(61);
+    expect(LATEST_SCHEMA_VERSION).toBe(62);
+    expect(getMaxVersion(sqlite)).toBe(62);
   });
 
   // Test 2: nft_metadata_cache table exists with correct columns
@@ -164,7 +164,7 @@ describe('DB v44 Migration: nft_metadata_cache', () => {
     runMigrations(sqlite);
 
     expect(tableExists(sqlite, 'nft_metadata_cache')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(61);
+    expect(getMaxVersion(sqlite)).toBe(62);
 
     const cols = getTableColumns(sqlite, 'nft_metadata_cache');
     expect(cols).toContain('id');

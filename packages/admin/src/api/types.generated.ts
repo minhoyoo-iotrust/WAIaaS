@@ -2060,7 +2060,7 @@ export type paths = {
                             humanAmount?: string;
                             memo?: string;
                             /** @enum {string} */
-                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                             gasCondition?: {
                                 maxGasPrice?: string;
                                 maxPriorityFee?: string;
@@ -2081,7 +2081,7 @@ export type paths = {
                             };
                             memo?: string;
                             /** @enum {string} */
-                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                             gasCondition?: {
                                 maxGasPrice?: string;
                                 maxPriorityFee?: string;
@@ -2123,7 +2123,7 @@ export type paths = {
                             }[];
                             addressLookupTableAddresses?: string[];
                             /** @enum {string} */
-                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                             actionProvider?: string;
                             actionName?: string;
                             gasCondition?: {
@@ -2145,11 +2145,11 @@ export type paths = {
                             /** @description Human-readable amount (e.g., "1000" for 1000 USDC). Mutually exclusive with amount. Uses token.decimals for conversion. */
                             humanAmount?: string;
                             /** @enum {string} */
-                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                             nft?: {
                                 tokenId: string;
                                 /** @enum {string} */
-                                standard: "ERC-721" | "ERC-1155" | "METAPLEX";
+                                standard: "ERC-721" | "ERC-1155" | "METAPLEX" | "XLS-20";
                             };
                             gasCondition?: {
                                 maxGasPrice?: string;
@@ -2166,7 +2166,7 @@ export type paths = {
                                 humanAmount?: string;
                                 memo?: string;
                                 /** @enum {string} */
-                                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                                 gasCondition?: {
                                     maxGasPrice?: string;
                                     maxPriorityFee?: string;
@@ -2185,7 +2185,7 @@ export type paths = {
                                 };
                                 memo?: string;
                                 /** @enum {string} */
-                                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                                 gasCondition?: {
                                     maxGasPrice?: string;
                                     maxPriorityFee?: string;
@@ -2225,7 +2225,7 @@ export type paths = {
                                 }[];
                                 addressLookupTableAddresses?: string[];
                                 /** @enum {string} */
-                                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                                 actionProvider?: string;
                                 actionName?: string;
                                 gasCondition?: {
@@ -2245,11 +2245,11 @@ export type paths = {
                                 /** @description Human-readable amount (e.g., "1000" for 1000 USDC). Mutually exclusive with amount. Uses token.decimals for conversion. */
                                 humanAmount?: string;
                                 /** @enum {string} */
-                                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                                 nft?: {
                                     tokenId: string;
                                     /** @enum {string} */
-                                    standard: "ERC-721" | "ERC-1155" | "METAPLEX";
+                                    standard: "ERC-721" | "ERC-1155" | "METAPLEX" | "XLS-20";
                                 };
                                 gasCondition?: {
                                     maxGasPrice?: string;
@@ -2258,7 +2258,7 @@ export type paths = {
                                 };
                             })[];
                             /** @enum {string} */
-                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                             gasCondition?: {
                                 maxGasPrice?: string;
                                 maxPriorityFee?: string;
@@ -2272,13 +2272,13 @@ export type paths = {
                                 address: string;
                                 tokenId: string;
                                 /** @enum {string} */
-                                standard: "ERC-721" | "ERC-1155" | "METAPLEX";
+                                standard: "ERC-721" | "ERC-1155" | "METAPLEX" | "XLS-20";
                                 assetId?: string;
                             };
                             /** @default 1 */
                             amount?: string;
                             /** @enum {string} */
-                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                             gasCondition?: {
                                 maxGasPrice?: string;
                                 maxPriorityFee?: string;
@@ -2291,7 +2291,7 @@ export type paths = {
                             constructorArgs?: string;
                             value?: string;
                             /** @enum {string} */
-                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                             gasCondition?: {
                                 maxGasPrice?: string;
                                 maxPriorityFee?: string;
@@ -2299,7 +2299,7 @@ export type paths = {
                             };
                         };
                         /** @enum {string} */
-                        network: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                        network: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                     };
                 };
             };
@@ -7579,7 +7579,7 @@ export type components = {
             humanAmount?: string;
             memo?: string;
             /** @enum {string} */
-            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
             gasCondition?: {
                 maxGasPrice?: string;
                 maxPriorityFee?: string;
@@ -7601,7 +7601,7 @@ export type components = {
             };
             memo?: string;
             /** @enum {string} */
-            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
             gasCondition?: {
                 maxGasPrice?: string;
                 maxPriorityFee?: string;
@@ -7644,7 +7644,7 @@ export type components = {
             }[];
             addressLookupTableAddresses?: string[];
             /** @enum {string} */
-            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
             actionProvider?: string;
             actionName?: string;
             gasCondition?: {
@@ -7667,11 +7667,11 @@ export type components = {
             /** @description Human-readable amount (e.g., "1000" for 1000 USDC). Mutually exclusive with amount. Uses token.decimals for conversion. */
             humanAmount?: string;
             /** @enum {string} */
-            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
             nft?: {
                 tokenId: string;
                 /** @enum {string} */
-                standard: "ERC-721" | "ERC-1155" | "METAPLEX";
+                standard: "ERC-721" | "ERC-1155" | "METAPLEX" | "XLS-20";
             };
             gasCondition?: {
                 maxGasPrice?: string;
@@ -7689,7 +7689,7 @@ export type components = {
                 humanAmount?: string;
                 memo?: string;
                 /** @enum {string} */
-                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                 gasCondition?: {
                     maxGasPrice?: string;
                     maxPriorityFee?: string;
@@ -7708,7 +7708,7 @@ export type components = {
                 };
                 memo?: string;
                 /** @enum {string} */
-                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                 gasCondition?: {
                     maxGasPrice?: string;
                     maxPriorityFee?: string;
@@ -7748,7 +7748,7 @@ export type components = {
                 }[];
                 addressLookupTableAddresses?: string[];
                 /** @enum {string} */
-                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                 actionProvider?: string;
                 actionName?: string;
                 gasCondition?: {
@@ -7768,11 +7768,11 @@ export type components = {
                 /** @description Human-readable amount (e.g., "1000" for 1000 USDC). Mutually exclusive with amount. Uses token.decimals for conversion. */
                 humanAmount?: string;
                 /** @enum {string} */
-                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+                network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
                 nft?: {
                     tokenId: string;
                     /** @enum {string} */
-                    standard: "ERC-721" | "ERC-1155" | "METAPLEX";
+                    standard: "ERC-721" | "ERC-1155" | "METAPLEX" | "XLS-20";
                 };
                 gasCondition?: {
                     maxGasPrice?: string;
@@ -7781,7 +7781,7 @@ export type components = {
                 };
             })[];
             /** @enum {string} */
-            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
             gasCondition?: {
                 maxGasPrice?: string;
                 maxPriorityFee?: string;
@@ -7926,7 +7926,7 @@ export type components = {
              * @default solana
              * @enum {string}
              */
-            chain: "solana" | "ethereum";
+            chain: "solana" | "ethereum" | "ripple";
             /**
              * @default testnet
              * @enum {string}
@@ -8170,7 +8170,7 @@ export type components = {
             /** @default true */
             enabled: boolean;
             /** @enum {string} */
-            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+            network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet" | "xrpl-mainnet" | "xrpl-testnet" | "xrpl-devnet";
         };
         PaginatedPolicyList: {
             data: components["schemas"]["PolicyResponse"][];
@@ -8702,7 +8702,7 @@ export type components = {
             ownerSignature?: string;
             ownerAddress?: string;
             /** @enum {string} */
-            chain?: "solana" | "ethereum";
+            chain?: "solana" | "ethereum" | "ripple";
             message?: string;
         };
         ShutdownResponse: {
@@ -8842,7 +8842,7 @@ export type components = {
              * @default ethereum
              * @enum {string}
              */
-            chain: "solana" | "ethereum";
+            chain: "solana" | "ethereum" | "ripple";
         };
         OracleStatusResponse: {
             cache: {

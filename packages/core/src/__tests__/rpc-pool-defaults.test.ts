@@ -12,6 +12,7 @@ const MAINNET_KEYS = [
   'base-mainnet',
   'polygon-mainnet',
   'hyperevm-mainnet',
+  'xrpl-mainnet',
 ] as const;
 
 const TESTNET_KEYS = [
@@ -23,6 +24,8 @@ const TESTNET_KEYS = [
   'base-sepolia',
   'polygon-amoy',
   'hyperevm-testnet',
+  'xrpl-testnet',
+  'xrpl-devnet',
 ] as const;
 
 const ALL_KEYS = [...MAINNET_KEYS, ...TESTNET_KEYS];
@@ -30,26 +33,26 @@ const ALL_KEYS = [...MAINNET_KEYS, ...TESTNET_KEYS];
 // ─── Data Integrity Tests ─────────────────────────────────────
 
 describe('BUILT_IN_RPC_DEFAULTS', () => {
-  it('has exactly 15 network keys', () => {
-    expect(Object.keys(BUILT_IN_RPC_DEFAULTS)).toHaveLength(15);
+  it('has exactly 18 network keys', () => {
+    expect(Object.keys(BUILT_IN_RPC_DEFAULTS)).toHaveLength(18);
   });
 
-  it('contains all 7 mainnet keys', () => {
+  it('contains all 8 mainnet keys', () => {
     for (const key of MAINNET_KEYS) {
       expect(BUILT_IN_RPC_DEFAULTS).toHaveProperty(key);
     }
   });
 
-  it('contains all 8 testnet keys', () => {
+  it('contains all 10 testnet keys', () => {
     for (const key of TESTNET_KEYS) {
       expect(BUILT_IN_RPC_DEFAULTS).toHaveProperty(key);
     }
   });
 
-  it('every URL starts with https://', () => {
+  it('every URL starts with https:// or wss://', () => {
     for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
       for (const url of urls) {
-        expect(url, `${network}: ${url}`).toMatch(/^https:\/\//);
+        expect(url, `${network}: ${url}`).toMatch(/^(https|wss):\/\//);
       }
     }
   });
@@ -67,7 +70,7 @@ describe('BUILT_IN_RPC_DEFAULTS', () => {
     }
   });
 
-  it('contains only the expected 15 keys (no extras)', () => {
+  it('contains only the expected 18 keys (no extras)', () => {
     const keys = Object.keys(BUILT_IN_RPC_DEFAULTS).sort();
     expect(keys).toEqual([...ALL_KEYS].sort());
   });
@@ -81,12 +84,12 @@ describe('RpcPool.createWithDefaults()', () => {
     expect(pool).toBeInstanceOf(RpcPool);
   });
 
-  it('registers all 15 networks', () => {
+  it('registers all 18 networks', () => {
     const pool = RpcPool.createWithDefaults();
-    expect(pool.getNetworks()).toHaveLength(15);
+    expect(pool.getNetworks()).toHaveLength(18);
   });
 
-  it('hasNetwork returns true for all 15 networks', () => {
+  it('hasNetwork returns true for all 18 networks', () => {
     const pool = RpcPool.createWithDefaults();
     for (const key of ALL_KEYS) {
       expect(pool.hasNetwork(key), `hasNetwork('${key}')`).toBe(true);
@@ -194,7 +197,7 @@ describe('additional registrations merge with defaults', () => {
     const pool = RpcPool.createWithDefaults();
     pool.register('custom-network', ['https://custom.example.com']);
 
-    expect(pool.getNetworks()).toHaveLength(16); // 15 defaults + 1 custom
+    expect(pool.getNetworks()).toHaveLength(19); // 18 defaults + 1 custom
     expect(pool.getUrl('custom-network')).toBe('https://custom.example.com');
   });
 });

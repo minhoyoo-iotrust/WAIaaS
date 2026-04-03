@@ -43,14 +43,15 @@ import {
 
 describe('Enum SSoT', () => {
   // 16 Enum value count verification
-  it('ChainType has 2 values', () => {
-    expect(CHAIN_TYPES).toHaveLength(2);
+  it('ChainType has 3 values', () => {
+    expect(CHAIN_TYPES).toHaveLength(3);
     expect(CHAIN_TYPES).toContain('solana');
     expect(CHAIN_TYPES).toContain('ethereum');
+    expect(CHAIN_TYPES).toContain('ripple');
   });
 
-  it('NetworkType has 15 values', () => {
-    expect(NETWORK_TYPES).toHaveLength(15);
+  it('NetworkType has 18 values', () => {
+    expect(NETWORK_TYPES).toHaveLength(18);
     // Solana networks
     expect(NETWORK_TYPES).toContain('solana-mainnet');
     expect(NETWORK_TYPES).toContain('solana-devnet');
@@ -68,6 +69,10 @@ describe('Enum SSoT', () => {
     expect(NETWORK_TYPES).toContain('base-sepolia');
     expect(NETWORK_TYPES).toContain('hyperevm-mainnet');
     expect(NETWORK_TYPES).toContain('hyperevm-testnet');
+    // XRPL networks
+    expect(NETWORK_TYPES).toContain('xrpl-mainnet');
+    expect(NETWORK_TYPES).toContain('xrpl-testnet');
+    expect(NETWORK_TYPES).toContain('xrpl-devnet');
   });
 
   it('EnvironmentType has 2 values', () => {

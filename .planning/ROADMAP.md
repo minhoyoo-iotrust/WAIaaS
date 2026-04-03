@@ -12,6 +12,7 @@
 - ✅ **v33.2 Tauri Desktop App** — Phases 459-463 (shipped 2026-04-01)
 - ✅ **v33.3 Desktop App 배포 채널 확장** — Phases 464-466 (shipped 2026-04-01)
 - ✅ **v33.4 서명 앱 명시적 선택** — Phases 467-469 (shipped 2026-04-02)
+- ✅ **v33.6 XRP 메인넷 지원** — Phases 470-473 (shipped 2026-04-03)
 
 <details>
 <summary>✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Phases 432-434) — SHIPPED 2026-03-16</summary>
@@ -112,3 +113,15 @@ See `.planning/milestones/v33.3-ROADMAP.md` for full details.
 </details>
 
 See `.planning/milestones/v33.4-ROADMAP.md` for full details.
+
+<details>
+<summary>✅ v33.6 XRP 메인넷 지원 (Phases 470-473) — SHIPPED 2026-04-03</summary>
+
+- [x] Phase 470: SSoT Extension + DB Migration (3/3 plans) — completed 2026-04-03
+- [x] Phase 471: Adapter Package + Native XRP Transfer (2/2 plans) — completed 2026-04-03
+- [x] Phase 472: Trust Line Token Support (2/2 plans) — completed 2026-04-03
+- [x] Phase 473: XLS-20 NFT + Integration Completeness (3/3 plans) — completed 2026-04-03
+
+</details>
+
+See `.planning/milestones/v33.6-ROADMAP.md` for full details.

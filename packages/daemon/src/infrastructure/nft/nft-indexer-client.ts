@@ -60,6 +60,13 @@ export class NftIndexerClient {
    * Throws INDEXER_NOT_CONFIGURED if the API key is not set.
    */
   getIndexer(chain: ChainType): INftIndexer {
+    // XRPL NFTs are queried directly via adapter's account_nfts RPC, not external indexers
+    if (chain === 'ripple') {
+      throw new WAIaaSError('INDEXER_NOT_CONFIGURED', {
+        message: 'XRPL NFT indexing uses native RPC via adapter. Use GET /v1/wallet/assets instead.',
+      });
+    }
+
     // Check if we have a cached indexer (and API key hasn't changed)
     const apiKey = this.getApiKey(chain);
 

@@ -49,6 +49,7 @@
     "@solana/kit": "^6.0.1",
     "@waiaas/actions": "workspace:*",
     "@waiaas/adapter-evm": "workspace:*",
+    "@waiaas/adapter-ripple": "workspace:*",
     "@waiaas/adapter-solana": "workspace:*",
     "@waiaas/core": "workspace:*",
     "@walletconnect/sign-client": "^2.23.5",

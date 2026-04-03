@@ -72,7 +72,7 @@ describe('DB v51 Migration: hyperliquid_orders', () => {
   });
 
   it('T1: LATEST_SCHEMA_VERSION is 59', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(61);
+    expect(LATEST_SCHEMA_VERSION).toBe(62);
   });
 
   it('T2: hyperliquid_orders has all 23 columns', () => {
@@ -176,7 +176,7 @@ describe('DB v51 Migration: hyperliquid_orders', () => {
     runMigrations(sqlite);
 
     expect(tableExists(sqlite, 'hyperliquid_orders')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(61);
+    expect(getMaxVersion(sqlite)).toBe(62);
 
     const cols = getTableColumns(sqlite, 'hyperliquid_orders');
     expect(cols).toContain('id');

@@ -5,7 +5,7 @@
 
 // ─── Chain Types ─────────────────────────────────────────────────────────────
 
-export const CHAIN_TYPES = ['solana', 'ethereum'] as const;
+export const CHAIN_TYPES = ['solana', 'ethereum', 'ripple'] as const;
 export type ChainType = (typeof CHAIN_TYPES)[number];
 
 // ─── Network Types (all supported networks) ─────────────────────────────────
@@ -21,6 +21,8 @@ export const NETWORK_TYPES = [
   'base-mainnet', 'base-sepolia',
   // HyperEVM (Hyperliquid)
   'hyperevm-mainnet', 'hyperevm-testnet',
+  // XRPL (Ripple)
+  'xrpl-mainnet', 'xrpl-testnet', 'xrpl-devnet',
 ] as const;
 export type NetworkType = (typeof NETWORK_TYPES)[number];
 
@@ -28,6 +30,11 @@ export type NetworkType = (typeof NETWORK_TYPES)[number];
 
 export const SOLANA_NETWORK_TYPES = ['solana-mainnet', 'solana-devnet', 'solana-testnet'] as const;
 export type SolanaNetworkType = (typeof SOLANA_NETWORK_TYPES)[number];
+
+// ─── Ripple Network Types ───────────────────────────────────────────────────
+
+export const RIPPLE_NETWORK_TYPES = ['xrpl-mainnet', 'xrpl-testnet', 'xrpl-devnet'] as const;
+export type RippleNetworkType = (typeof RIPPLE_NETWORK_TYPES)[number];
 
 // ─── EVM Network Types ──────────────────────────────────────────────────────
 
@@ -70,6 +77,8 @@ export const ENVIRONMENT_NETWORK_MAP: Record<
     'base-sepolia',
     'hyperevm-testnet',
   ],
+  'ripple:mainnet': ['xrpl-mainnet'],
+  'ripple:testnet': ['xrpl-testnet', 'xrpl-devnet'],
 } as const;
 
 // ─── Validate Chain + Network ───────────────────────────────────────────────
@@ -87,6 +96,10 @@ export function validateChainNetwork(chain: ChainType, network: NetworkType): vo
   } else if (chain === 'ethereum') {
     if (!(EVM_NETWORK_TYPES as readonly string[]).includes(network)) {
       throw new Error(`Invalid network '${network}' for chain 'ethereum'. Valid EVM networks: ${EVM_NETWORK_TYPES.join(', ')}`);
+    }
+  } else if (chain === 'ripple') {
+    if (!(RIPPLE_NETWORK_TYPES as readonly string[]).includes(network)) {
+      throw new Error(`Invalid network '${network}' for chain 'ripple'. Valid: ${RIPPLE_NETWORK_TYPES.join(', ')}`);
     }
   }
 }
@@ -113,6 +126,9 @@ export const NETWORK_DISPLAY_NAMES: Record<NetworkType, string> = {
   'base-sepolia': 'Base Sepolia',
   'hyperevm-mainnet': 'HyperEVM Mainnet',
   'hyperevm-testnet': 'HyperEVM Testnet',
+  'xrpl-mainnet': 'XRPL Mainnet',
+  'xrpl-testnet': 'XRPL Testnet',
+  'xrpl-devnet': 'XRPL Devnet',
 };
 
 // ─── Network Native Token Symbols ───────────────────────────────────────────
@@ -137,6 +153,9 @@ export const NETWORK_NATIVE_SYMBOL: Record<NetworkType, string> = {
   'base-sepolia': 'ETH',
   'hyperevm-mainnet': 'HYPE',
   'hyperevm-testnet': 'HYPE',
+  'xrpl-mainnet': 'XRP',
+  'xrpl-testnet': 'XRP',
+  'xrpl-devnet': 'XRP',
 };
 
 // ─── Derived Helpers for Admin UI ───────────────────────────────────────────
@@ -163,10 +182,18 @@ export const SOLANA_RPC_SETTING_KEYS: readonly string[] =
   SOLANA_NETWORK_TYPES.map((n) => n.replace(/-/g, '_'));
 
 /**
+ * RPC setting keys for Ripple (XRPL) networks (underscore format used in settings API).
+ * e.g. 'xrpl-mainnet' → 'xrpl_mainnet'
+ */
+export const RIPPLE_RPC_SETTING_KEYS: readonly string[] =
+  RIPPLE_NETWORK_TYPES.map((n) => n.replace(/-/g, '_'));
+
+/**
  * Map from RPC setting key (underscore format) to human-readable label.
  * Covers both Solana and EVM keys for the keyToLabel function.
  */
 export const RPC_KEY_LABELS: Record<string, string> = Object.fromEntries([
   ...SOLANA_NETWORK_TYPES.map((n) => [n.replace(/-/g, '_'), NETWORK_DISPLAY_NAMES[n]]),
   ...EVM_NETWORK_TYPES.map((n) => [`evm_${n.replace(/-/g, '_')}`, NETWORK_DISPLAY_NAMES[n]]),
+  ...RIPPLE_NETWORK_TYPES.map((n) => [n.replace(/-/g, '_'), NETWORK_DISPLAY_NAMES[n]]),
 ]);

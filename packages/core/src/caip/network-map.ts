@@ -28,6 +28,10 @@ export const CAIP2_TO_NETWORK: Record<string, { chain: ChainType; network: Netwo
   'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': { chain: 'solana', network: 'solana-mainnet' },
   'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1':  { chain: 'solana', network: 'solana-devnet' },
   'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z':  { chain: 'solana', network: 'solana-testnet' },
+  // XRPL (Ripple) -- chain_id: 0=mainnet, 1=testnet, 2=devnet
+  'xrpl:0': { chain: 'ripple', network: 'xrpl-mainnet' },
+  'xrpl:1': { chain: 'ripple', network: 'xrpl-testnet' },
+  'xrpl:2': { chain: 'ripple', network: 'xrpl-devnet' },
 };
 
 // ── NetworkType -> CAIP-2 (reverse mapping) ─────────────────────

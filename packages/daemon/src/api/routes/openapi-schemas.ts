@@ -896,7 +896,7 @@ export const KillSwitchRecoverRequestSchema = z
   .object({
     ownerSignature: z.string().optional(),
     ownerAddress: z.string().optional(),
-    chain: z.enum(['solana', 'ethereum']).optional(),
+    chain: z.enum(['solana', 'ethereum', 'ripple']).optional(),
     message: z.string().optional(),
   })
   .openapi('KillSwitchRecoverRequest');
@@ -1081,7 +1081,7 @@ export const SettingsUpdateResponseSchema = z
 export const TestRpcRequestSchema = z
   .object({
     url: z.string().url(),
-    chain: z.enum(['solana', 'ethereum']).optional().default('ethereum'),
+    chain: z.enum(['solana', 'ethereum', 'ripple']).optional().default('ethereum'),
   })
   .openapi('TestRpcRequest');
 

@@ -278,12 +278,12 @@ describe('CAIP-19 roundtrip', () => {
 // ─── Network Map (CAIP-2 <-> NetworkType) ───────────────────────
 
 describe('CAIP2_TO_NETWORK / NETWORK_TO_CAIP2 maps', () => {
-  it('CAIP2_TO_NETWORK has 15 entries', () => {
-    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(15);
+  it('CAIP2_TO_NETWORK has 18 entries', () => {
+    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(18);
   });
 
-  it('NETWORK_TO_CAIP2 has 15 entries', () => {
-    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(15);
+  it('NETWORK_TO_CAIP2 has 18 entries', () => {
+    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(18);
   });
 
   it('every value maps to valid ChainType and NetworkType', () => {
@@ -293,11 +293,13 @@ describe('CAIP2_TO_NETWORK / NETWORK_TO_CAIP2 maps', () => {
     }
   });
 
-  it('has 12 EVM entries and 3 Solana entries', () => {
+  it('has 12 EVM, 3 Solana, and 3 XRPL entries', () => {
     const evmEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('eip155:'));
     const solanaEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('solana:'));
+    const xrplEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('xrpl:'));
     expect(evmEntries).toHaveLength(12);
     expect(solanaEntries).toHaveLength(3);
+    expect(xrplEntries).toHaveLength(3);
   });
 
   it('bidirectional roundtrip consistency', () => {
@@ -324,7 +326,19 @@ describe('networkToCaip2()', () => {
     expect(networkToCaip2('hyperevm-testnet')).toBe('eip155:998');
   });
 
-  it('all 15 NetworkType values resolve without error', () => {
+  it('returns xrpl:0 for xrpl-mainnet', () => {
+    expect(networkToCaip2('xrpl-mainnet')).toBe('xrpl:0');
+  });
+
+  it('returns xrpl:1 for xrpl-testnet', () => {
+    expect(networkToCaip2('xrpl-testnet')).toBe('xrpl:1');
+  });
+
+  it('returns xrpl:2 for xrpl-devnet', () => {
+    expect(networkToCaip2('xrpl-devnet')).toBe('xrpl:2');
+  });
+
+  it('all 18 NetworkType values resolve without error', () => {
     for (const network of NETWORK_TYPES) {
       expect(() => networkToCaip2(network)).not.toThrow();
     }
@@ -361,6 +375,27 @@ describe('caip2ToNetwork()', () => {
     expect(caip2ToNetwork('eip155:998')).toEqual({
       chain: 'ethereum',
       network: 'hyperevm-testnet',
+    });
+  });
+
+  it('returns { chain: ripple, network: xrpl-mainnet } for xrpl:0', () => {
+    expect(caip2ToNetwork('xrpl:0')).toEqual({
+      chain: 'ripple',
+      network: 'xrpl-mainnet',
+    });
+  });
+
+  it('returns { chain: ripple, network: xrpl-testnet } for xrpl:1', () => {
+    expect(caip2ToNetwork('xrpl:1')).toEqual({
+      chain: 'ripple',
+      network: 'xrpl-testnet',
+    });
+  });
+
+  it('returns { chain: ripple, network: xrpl-devnet } for xrpl:2', () => {
+    expect(caip2ToNetwork('xrpl:2')).toEqual({
+      chain: 'ripple',
+      network: 'xrpl-devnet',
     });
   });
 
@@ -402,7 +437,19 @@ describe('nativeAssetId()', () => {
     expect(nativeAssetId('hyperevm-testnet')).toBe('eip155:998/slip44:999');
   });
 
-  it('all 15 native asset IDs are valid CAIP-19 strings', () => {
+  it('returns xrpl:0/slip44:144 for xrpl-mainnet', () => {
+    expect(nativeAssetId('xrpl-mainnet')).toBe('xrpl:0/slip44:144');
+  });
+
+  it('returns xrpl:1/slip44:144 for xrpl-testnet', () => {
+    expect(nativeAssetId('xrpl-testnet')).toBe('xrpl:1/slip44:144');
+  });
+
+  it('returns xrpl:2/slip44:144 for xrpl-devnet', () => {
+    expect(nativeAssetId('xrpl-devnet')).toBe('xrpl:2/slip44:144');
+  });
+
+  it('all 18 native asset IDs are valid CAIP-19 strings', () => {
     for (const network of NETWORK_TYPES) {
       const assetId = nativeAssetId(network);
       expect(() => Caip19Schema.parse(assetId)).not.toThrow();
@@ -441,11 +488,33 @@ describe('tokenAssetId()', () => {
     );
   });
 
+  it('generates Trust Line token ID for XRPL (3-char ISO code)', () => {
+    const result = tokenAssetId(
+      'xrpl-mainnet',
+      'USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh',
+    );
+    expect(result).toBe('xrpl:0/token:USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh');
+  });
+
+  it('generates Trust Line token ID for XRPL (40-char hex code)', () => {
+    const hexCurrency = '0158415554000000000000000000000000000000.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh';
+    const result = tokenAssetId('xrpl-testnet', hexCurrency);
+    expect(result).toBe(`xrpl:1/token:${hexCurrency}`);
+  });
+
   it('all token asset IDs are valid CAIP-19 strings', () => {
     const evmAddr = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
     const solAddr = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+    const xrplAddr = 'USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh';
     for (const network of NETWORK_TYPES) {
-      const addr = ['solana-mainnet', 'solana-devnet', 'solana-testnet'].includes(network) ? solAddr : evmAddr;
+      let addr: string;
+      if (['solana-mainnet', 'solana-devnet', 'solana-testnet'].includes(network)) {
+        addr = solAddr;
+      } else if (['xrpl-mainnet', 'xrpl-testnet', 'xrpl-devnet'].includes(network)) {
+        addr = xrplAddr;
+      } else {
+        addr = evmAddr;
+      }
       const assetId = tokenAssetId(network, addr);
       expect(() => Caip19Schema.parse(assetId)).not.toThrow();
     }
@@ -481,5 +550,13 @@ describe('isNativeAsset()', () => {
         'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       ),
     ).toBe(false);
+  });
+
+  it('returns true for XRP native asset', () => {
+    expect(isNativeAsset('xrpl:0/slip44:144')).toBe(true);
+  });
+
+  it('returns false for XRPL Trust Line token', () => {
+    expect(isNativeAsset('xrpl:0/token:USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh')).toBe(false);
   });
 });

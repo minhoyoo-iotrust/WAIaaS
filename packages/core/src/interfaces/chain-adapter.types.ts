@@ -226,14 +226,14 @@ export interface NftTransferParams {
   from: string;
   to: string;
   token: {
-    /** Contract address (EVM) or mint address (Solana). */
+    /** Contract address (EVM), mint address (Solana), or empty string (XLS-20). */
     address: string;
-    /** Token ID (EVM) or mint address (Solana). */
+    /** Token ID (EVM), mint address (Solana), or NFTokenID (XLS-20). */
     tokenId: string;
     /** NFT standard. */
-    standard: 'ERC-721' | 'ERC-1155' | 'METAPLEX';
+    standard: 'ERC-721' | 'ERC-1155' | 'METAPLEX' | 'XLS-20';
   };
-  /** 1n for ERC-721/Metaplex, variable for ERC-1155. */
+  /** 1n for ERC-721/Metaplex/XLS-20, variable for ERC-1155. */
   amount: bigint;
 }
 
@@ -244,7 +244,7 @@ export interface NftApproveParams {
   token: {
     address: string;
     tokenId: string;
-    standard: 'ERC-721' | 'ERC-1155' | 'METAPLEX';
+    standard: 'ERC-721' | 'ERC-1155' | 'METAPLEX' | 'XLS-20';
   };
   /** 'single' for approve(tokenId), 'all' for setApprovalForAll / Solana delegate. */
   approvalType: 'single' | 'all';

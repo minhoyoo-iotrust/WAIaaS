@@ -346,7 +346,7 @@ describe('generateCheckConstraint utility', () => {
 
   it('UT-06b: generates correct CHECK SQL for small enum', () => {
     const result = generateCheckConstraint('chain', CHAIN_TYPES);
-    expect(result).toBe("CHECK (chain IN ('solana', 'ethereum'))");
+    expect(result).toBe("CHECK (chain IN ('solana', 'ethereum', 'ripple'))");
   });
 
   it('UT-07: rejects values containing single quotes (SQL injection prevention)', () => {

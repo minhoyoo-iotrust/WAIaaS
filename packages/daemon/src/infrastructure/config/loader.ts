@@ -77,6 +77,11 @@ export const DaemonConfigSchema = z.object({
       // HyperEVM
       evm_hyperevm_mainnet: z.string().default('https://rpc.hyperliquid.xyz/evm'),
       evm_hyperevm_testnet: z.string().default('https://rpc.hyperliquid-testnet.xyz/evm'),
+
+      // XRPL
+      xrpl_mainnet: z.string().default('wss://xrplcluster.com'),
+      xrpl_testnet: z.string().default('wss://s.altnet.rippletest.net:51233'),
+      xrpl_devnet: z.string().default('wss://s.devnet.rippletest.net:51233'),
     })
     .default({}),
   notifications: z
