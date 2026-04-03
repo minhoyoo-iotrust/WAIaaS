@@ -101,13 +101,52 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | — |
+| INFRA-01 | Phase 470 | Pending |
+| INFRA-02 | Phase 470 | Pending |
+| INFRA-03 | Phase 470 | Pending |
+| INFRA-04 | Phase 470 | Pending |
+| INFRA-05 | Phase 470 | Pending |
+| INFRA-06 | Phase 470 | Pending |
+| INFRA-07 | Phase 470 | Pending |
+| INFRA-08 | Phase 470 | Pending |
+| ADAPT-01 | Phase 471 | Pending |
+| ADAPT-02 | Phase 471 | Pending |
+| ADAPT-03 | Phase 471 | Pending |
+| ADAPT-04 | Phase 471 | Pending |
+| ADAPT-05 | Phase 471 | Pending |
+| ADAPT-06 | Phase 471 | Pending |
+| XRP-01 | Phase 471 | Pending |
+| XRP-02 | Phase 471 | Pending |
+| XRP-03 | Phase 471 | Pending |
+| XRP-04 | Phase 471 | Pending |
+| XRP-05 | Phase 471 | Pending |
+| XRP-06 | Phase 471 | Pending |
+| XRP-07 | Phase 471 | Pending |
+| XRP-08 | Phase 471 | Pending |
+| XRP-09 | Phase 471 | Pending |
+| XRP-10 | Phase 471 | Pending |
+| TRUST-01 | Phase 472 | Pending |
+| TRUST-02 | Phase 472 | Pending |
+| TRUST-03 | Phase 472 | Pending |
+| TRUST-04 | Phase 472 | Pending |
+| TRUST-05 | Phase 472 | Pending |
+| TRUST-06 | Phase 472 | Pending |
+| NFT-01 | Phase 473 | Pending |
+| NFT-02 | Phase 473 | Pending |
+| NFT-03 | Phase 473 | Pending |
+| INTG-01 | Phase 473 | Pending |
+| INTG-02 | Phase 473 | Pending |
+| INTG-03 | Phase 473 | Pending |
+| INTG-04 | Phase 473 | Pending |
+| INTG-05 | Phase 473 | Pending |
+| INTG-06 | Phase 473 | Pending |
+| INTG-07 | Phase 473 | Pending |
 
 **Coverage:**
 - v1 requirements: 37 total
-- Mapped to phases: 0
-- Unmapped: 37
+- Mapped to phases: 37
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-03*
-*Last updated: 2026-04-03 after initial definition*
+*Last updated: 2026-04-03 after roadmap creation*
