@@ -12,6 +12,8 @@ import {
   type SolanaNetworkType,
   EVM_NETWORK_TYPES,
   type EvmNetworkType,
+  RIPPLE_NETWORK_TYPES,
+  type RippleNetworkType,
   ENVIRONMENT_TYPES,
   type EnvironmentType,
   ENVIRONMENT_NETWORK_MAP,
@@ -21,6 +23,7 @@ import {
   EVM_NETWORK_OPTIONS,
   EVM_RPC_SETTING_KEYS,
   SOLANA_RPC_SETTING_KEYS,
+  RIPPLE_RPC_SETTING_KEYS,
   RPC_KEY_LABELS,
 } from '@waiaas/shared';
 
@@ -34,6 +37,8 @@ export {
   type SolanaNetworkType,
   EVM_NETWORK_TYPES,
   type EvmNetworkType,
+  RIPPLE_NETWORK_TYPES,
+  type RippleNetworkType,
   ENVIRONMENT_TYPES,
   type EnvironmentType,
   ENVIRONMENT_NETWORK_MAP,
@@ -43,6 +48,7 @@ export {
   EVM_NETWORK_OPTIONS,
   EVM_RPC_SETTING_KEYS,
   SOLANA_RPC_SETTING_KEYS,
+  RIPPLE_RPC_SETTING_KEYS,
   RPC_KEY_LABELS,
 };
 
@@ -65,6 +71,8 @@ export const ENVIRONMENT_SINGLE_NETWORK: Record<
   'solana:testnet': 'solana-devnet',
   'ethereum:mainnet': null,
   'ethereum:testnet': null,
+  'ripple:mainnet': 'xrpl-mainnet',
+  'ripple:testnet': null, // testnet and devnet -- must be specified explicitly
 } as const;
 
 // ─── Environment Mapping Functions ──────────────────────────────
@@ -104,6 +112,7 @@ const MAINNET_NETWORKS: readonly NetworkType[] = [
   'optimism-mainnet',
   'base-mainnet',
   'hyperevm-mainnet',
+  'xrpl-mainnet',
 ];
 
 /**
