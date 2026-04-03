@@ -107,6 +107,13 @@ export function chainNetworkOptions(chain: string): { label: string; value: stri
       { label: 'Base Mainnet', value: 'base-mainnet' },
     ];
   }
+  if (chain === 'ripple') {
+    return [
+      { label: 'XRPL Testnet', value: 'xrpl-testnet' },
+      { label: 'XRPL Devnet', value: 'xrpl-devnet' },
+      { label: 'XRPL Mainnet', value: 'xrpl-mainnet' },
+    ];
+  }
   return [{ label: 'Solana Devnet', value: 'solana-devnet' }];
 }
 
@@ -2392,10 +2399,12 @@ import {
   NETWORK_DISPLAY_NAMES,
   SOLANA_NETWORK_TYPES,
   EVM_NETWORK_TYPES,
+  RIPPLE_NETWORK_TYPES,
 } from '@waiaas/shared';
 
 const SOLANA_NETWORKS: readonly string[] = SOLANA_NETWORK_TYPES;
 const EVM_NETWORKS: readonly string[] = EVM_NETWORK_TYPES;
+const RIPPLE_NETWORKS: readonly string[] = RIPPLE_NETWORK_TYPES;
 
 // UI-only: not a direct API response shape
 interface UrlEntry {
@@ -2415,8 +2424,10 @@ function formatCooldown(ms: number): string {
 }
 
 /** Determine chain from network key for test-rpc API */
-function networkToChain(network: string): 'solana' | 'ethereum' {
-  return SOLANA_NETWORKS.includes(network) ? 'solana' : 'ethereum';
+function networkToChain(network: string): 'solana' | 'ethereum' | 'ripple' {
+  if (SOLANA_NETWORKS.includes(network)) return 'solana';
+  if (network.startsWith('xrpl-')) return 'ripple';
+  return 'ethereum';
 }
 
 function RpcEndpointsTab() {
@@ -2439,7 +2450,7 @@ function RpcEndpointsTab() {
   // Build URL entries from settings data + API-provided built-in defaults (#197)
   const buildUrlEntries = (settingsData: SettingsData, builtinDefaults: Record<string, string[]> = {}): Record<string, UrlEntry[]> => {
     const result: Record<string, UrlEntry[]> = {};
-    const allNetworks = [...SOLANA_NETWORKS, ...EVM_NETWORKS];
+    const allNetworks = [...SOLANA_NETWORKS, ...EVM_NETWORKS, ...RIPPLE_NETWORKS];
 
     for (const network of allNetworks) {
       const userUrls: string[] = [];
@@ -2548,7 +2559,7 @@ function RpcEndpointsTab() {
 
   // Check if URL lists have changed from original
   const isDirty = (): boolean => {
-    for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS]) {
+    for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS, ...RIPPLE_NETWORKS]) {
       const orig = originalUrls.value[network] ?? [];
       const curr = dirtyUrls.value[network] ?? [];
       if (orig.length !== curr.length) return true;
@@ -2561,7 +2572,7 @@ function RpcEndpointsTab() {
 
   const dirtyCount = useComputed(() => {
     let count = 0;
-    for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS]) {
+    for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS, ...RIPPLE_NETWORKS]) {
       const orig = originalUrls.value[network] ?? [];
       const curr = dirtyUrls.value[network] ?? [];
       if (orig.length !== curr.length) { count++; continue; }
@@ -2578,7 +2589,7 @@ function RpcEndpointsTab() {
       const entries: { key: string; value: string }[] = [];
 
       // Collect rpc_pool.* entries (user-managed URLs only, excluding built-in-only entries)
-      for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS]) {
+      for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS, ...RIPPLE_NETWORKS]) {
         const urls = dirtyUrls.value[network] ?? [];
         // Save only user URLs (non-builtin) as JSON array
         const userOnlyUrls = urls
@@ -2861,6 +2872,11 @@ function RpcEndpointsTab() {
           <div class="settings-subgroup">
             <div class="settings-subgroup-title">EVM</div>
             {EVM_NETWORKS.map(n => <NetworkSection key={n} network={n} />)}
+          </div>
+
+          <div class="settings-subgroup">
+            <div class="settings-subgroup-title">XRPL</div>
+            {RIPPLE_NETWORKS.map(n => <NetworkSection key={n} network={n} />)}
           </div>
         </div>
       </div>
@@ -3204,7 +3220,7 @@ function WalletListContent() {
 
   const handleChainChange = (value: string | number | boolean) => {
     formChain.value = value as string;
-    if (value === 'solana') {
+    if (value === 'solana' || value === 'ripple') {
       formAccountType.value = 'eoa';
       formProvider.value = 'none';
       formApiKey.value = '';
@@ -3245,6 +3261,7 @@ function WalletListContent() {
             options={[
               { label: 'Solana', value: 'solana' },
               { label: 'Ethereum', value: 'ethereum' },
+              { label: 'Ripple', value: 'ripple' },
             ]}
           />
           {formChain.value === 'ethereum' && (
