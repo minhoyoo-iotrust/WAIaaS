@@ -121,9 +121,13 @@ See `.planning/milestones/v33.4-ROADMAP.md` for full details.
 See `.planning/milestones/v33.6-ROADMAP.md` for full details.
 
 - [x] **Phase 470: SSoT Extension + DB Migration** (3/3 plans) - ripple ChainType/NetworkType/CAIP 등록과 DB v62 마이그레이션 -- completed 2026-04-03
-- [x] **Phase 471: Adapter Package + Native XRP Transfer** (0/2 plans) - @waiaas/adapter-ripple 패키지와 XRP 네이티브 전송 전체 구현 (completed 2026-04-03)
-- [ ] **Phase 472: Trust Line Token Support** - Trust Line 설정/IOU 전송/자산 조회 구현
+- [x] **Phase 471: Adapter Package + Native XRP Transfer** (2/2 plans) - @waiaas/adapter-ripple 패키지와 XRP 네이티브 전송 전체 구현 (completed 2026-04-03)
+- [ ] **Phase 472: Trust Line Token Support** (0/2 plans) - Trust Line 설정/IOU 전송/자산 조회 구현
 - [ ] **Phase 473: XLS-20 NFT + Integration Completeness** - NFT 전송과 REST/MCP/SDK/Admin UI 전 인터페이스 통합
+
+Plans:
+- [ ] 472-01-PLAN.md — Trust Line 구현 (buildApprove TrustSet, buildTokenTransfer IOU, getTokenInfo, getAssets 확장)
+- [ ] 472-02-PLAN.md — Trust Line 단위 테스트 (currency-utils, adapter Trust Line 메서드, tx-parser IOU)
 
 ## Progress
 
@@ -131,5 +135,5 @@ See `.planning/milestones/v33.6-ROADMAP.md` for full details.
 |-------|-----------|----------------|--------|-----------|
 | 470. SSoT Extension + DB Migration | v33.6 | 3/3 | Complete | 2026-04-03 |
 | 471. Adapter Package + Native XRP Transfer | v33.6 | 2/2 | Complete    | 2026-04-03 |
-| 472. Trust Line Token Support | v33.6 | 0/TBD | Not started | - |
+| 472. Trust Line Token Support | v33.6 | 0/2 | Not started | - |
 | 473. XLS-20 NFT + Integration Completeness | v33.6 | 0/TBD | Not started | - |
