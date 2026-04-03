@@ -63,7 +63,7 @@ Requirements for XRP Ledger integration. Each maps to roadmap phases.
 - [x] **INTG-04**: Admin UI 지갑 생성 시 Ripple 체인이 선택 가능하다
 - [x] **INTG-05**: Admin UI에서 Trust Line 설정/조회 관리가 가능하다
 - [x] **INTG-06**: Pipeline Stage 5 buildByType()에서 ripple 미지원 타입(CONTRACT_CALL, BATCH)이 명시적 에러를 반환한다
-- [ ] **INTG-07**: Skill 파일이 ripple 체인 사용 가이드를 포함하도록 업데이트된다
+- [x] **INTG-07**: Skill 파일이 ripple 체인 사용 가이드를 포함하도록 업데이트된다
 
 ## v2 Requirements
 
@@ -140,7 +140,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTG-04 | Phase 473 | Complete |
 | INTG-05 | Phase 473 | Complete |
 | INTG-06 | Phase 473 | Complete |
-| INTG-07 | Phase 473 | Pending |
+| INTG-07 | Phase 473 | Complete |
 
 **Coverage:**
 - v1 requirements: 37 total
