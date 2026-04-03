@@ -140,6 +140,7 @@ export function getNativeTokenInfo(
     };
     return { decimals: 18, symbol: symbolMap[network ?? ''] ?? 'ETH' };
   }
+  if (chain === 'ripple') return { decimals: 6, symbol: 'XRP' };
   return null;
 }
 

@@ -632,8 +632,8 @@ export class RippleAdapter implements IChainAdapter {
 
     // XLS-20 NFT transfer uses NFTokenCreateOffer (sell offer with Amount=0)
     // The recipient must accept the offer to complete the transfer.
-    const offerTx = {
-      TransactionType: 'NFTokenCreateOffer' as const,
+    const offerTx: NFTokenCreateOffer = {
+      TransactionType: 'NFTokenCreateOffer',
       Account: request.from,
       NFTokenID: request.token.tokenId,
       Destination: request.to,
@@ -642,7 +642,7 @@ export class RippleAdapter implements IChainAdapter {
     };
 
     // autofill populates Sequence, Fee, LastLedgerSequence
-    const autofilled = await client.autofill(offerTx as unknown as Transaction);
+    const autofilled = await client.autofill(offerTx);
 
     // Apply fee safety margin: (Fee * 120) / 100
     const baseFee = BigInt(autofilled.Fee ?? '12');
