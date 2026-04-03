@@ -9,14 +9,14 @@ Requirements for XRP Ledger integration. Each maps to roadmap phases.
 
 ### Core Infrastructure
 
-- [ ] **INFRA-01**: ChainType `'ripple'` SSoT에 추가되어 모든 Zod 스키마/TypeScript 타입에 전파된다
-- [ ] **INFRA-02**: NetworkType `xrpl-mainnet`, `xrpl-testnet`, `xrpl-devnet` 3종이 등록된다
-- [ ] **INFRA-03**: ENVIRONMENT_NETWORK_MAP에 ripple 환경별 네트워크 매핑이 추가된다
-- [ ] **INFRA-04**: ENVIRONMENT_SINGLE_NETWORK에 ripple이 Solana와 동일하게 환경당 단일 네트워크로 등록된다
-- [ ] **INFRA-05**: CAIP-2 namespace `xrpl:0` (mainnet), `xrpl:1` (testnet), `xrpl:2` (devnet)이 등록된다
-- [ ] **INFRA-06**: CAIP-19 네이티브 자산 `xrpl:0/slip44:144`과 Trust Line `xrpl:0/token:{currency}.{issuer}` 식별자가 지원된다
-- [ ] **INFRA-07**: DB migration v62에서 chain_type CHECK 제약조건에 'ripple'이 추가된다
-- [ ] **INFRA-08**: NATIVE_DECIMALS에 XRP 6 decimals가 등록된다
+- [x] **INFRA-01**: ChainType `'ripple'` SSoT에 추가되어 모든 Zod 스키마/TypeScript 타입에 전파된다
+- [x] **INFRA-02**: NetworkType `xrpl-mainnet`, `xrpl-testnet`, `xrpl-devnet` 3종이 등록된다
+- [x] **INFRA-03**: ENVIRONMENT_NETWORK_MAP에 ripple 환경별 네트워크 매핑이 추가된다
+- [x] **INFRA-04**: ENVIRONMENT_SINGLE_NETWORK에 ripple이 Solana와 동일하게 환경당 단일 네트워크로 등록된다
+- [x] **INFRA-05**: CAIP-2 namespace `xrpl:0` (mainnet), `xrpl:1` (testnet), `xrpl:2` (devnet)이 등록된다
+- [x] **INFRA-06**: CAIP-19 네이티브 자산 `xrpl:0/slip44:144`과 Trust Line `xrpl:0/token:{currency}.{issuer}` 식별자가 지원된다
+- [x] **INFRA-07**: DB migration v62에서 chain_type CHECK 제약조건에 'ripple'이 추가된다
+- [x] **INFRA-08**: NATIVE_DECIMALS에 XRP 6 decimals가 등록된다
 
 ### Adapter & Key Management
 
@@ -101,14 +101,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 470 | Pending |
-| INFRA-02 | Phase 470 | Pending |
-| INFRA-03 | Phase 470 | Pending |
-| INFRA-04 | Phase 470 | Pending |
-| INFRA-05 | Phase 470 | Pending |
-| INFRA-06 | Phase 470 | Pending |
-| INFRA-07 | Phase 470 | Pending |
-| INFRA-08 | Phase 470 | Pending |
+| INFRA-01 | Phase 470 | Complete |
+| INFRA-02 | Phase 470 | Complete |
+| INFRA-03 | Phase 470 | Complete |
+| INFRA-04 | Phase 470 | Complete |
+| INFRA-05 | Phase 470 | Complete |
+| INFRA-06 | Phase 470 | Complete |
+| INFRA-07 | Phase 470 | Complete |
+| INFRA-08 | Phase 470 | Complete |
 | ADAPT-01 | Phase 471 | Pending |
 | ADAPT-02 | Phase 471 | Pending |
 | ADAPT-03 | Phase 471 | Pending |
