@@ -36,7 +36,7 @@ import type {
 import { ChainError } from '@waiaas/core';
 
 import { isXAddress, decodeXAddress, XRP_DECIMALS, DROPS_PER_XRP } from './address-utils.js';
-import { parseTrustLineToken, smallestUnitToIou } from './currency-utils.js';
+import { parseTrustLineToken, smallestUnitToIou, iouToSmallestUnit, IOU_DECIMALS } from './currency-utils.js';
 import { parseRippleTransaction } from './tx-parser.js';
 
 /** Average ledger close time in milliseconds (~3.5-4s). */
@@ -350,18 +350,56 @@ export class RippleAdapter implements IChainAdapter {
   // -- Asset query (1) --
 
   async getAssets(address: string): Promise<AssetInfo[]> {
-    const balanceInfo = await this.getBalance(address);
-    return [
-      {
-        mint: 'native',
-        symbol: 'XRP',
-        name: 'XRP',
-        balance: balanceInfo.balance,
-        decimals: XRP_DECIMALS,
-        isNative: true,
-      },
-    ];
-    // Trust Line tokens will be added in Phase 472
+    const client = this.getClient();
+
+    // Decode X-address if needed
+    let classicAddress = address;
+    if (isXAddress(address)) {
+      const decoded = decodeXAddress(address);
+      classicAddress = decoded.classicAddress;
+    }
+
+    const assets: AssetInfo[] = [];
+
+    // 1. Native XRP balance
+    const balanceInfo = await this.getBalance(classicAddress);
+    assets.push({
+      mint: 'native',
+      symbol: 'XRP',
+      name: 'XRP',
+      balance: balanceInfo.balance,
+      decimals: XRP_DECIMALS,
+      isNative: true,
+    });
+
+    // 2. Trust Line tokens via account_lines
+    try {
+      const response = await client.request({
+        command: 'account_lines',
+        account: classicAddress,
+        ledger_index: 'validated',
+      });
+
+      const lines = (response.result as unknown as { lines: Array<{ account: string; balance: string; currency: string; limit: string }> }).lines;
+
+      for (const line of lines) {
+        assets.push({
+          mint: `${line.currency}.${line.account}`,
+          symbol: line.currency,
+          name: `Trust Line: ${line.currency}`,
+          balance: iouToSmallestUnit(line.balance, IOU_DECIMALS),
+          decimals: IOU_DECIMALS,
+          isNative: false,
+        });
+      }
+    } catch (err) {
+      // actNotFound means no account -- return only XRP with 0 balance
+      if (!this.isActNotFound(err)) {
+        throw this.mapError(err);
+      }
+    }
+
+    return assets;
   }
 
   // -- Fee estimation (1) --
@@ -454,10 +492,16 @@ export class RippleAdapter implements IChainAdapter {
     };
   }
 
-  async getTokenInfo(_tokenAddress: string): Promise<TokenInfo> {
-    throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
-      message: 'Token info support coming in Phase 472',
-    });
+  async getTokenInfo(tokenAddress: string): Promise<TokenInfo> {
+    // Parse "{currency}.{issuer}" -- no RPC call needed for XRPL Trust Lines
+    const { currency } = parseTrustLineToken(tokenAddress);
+
+    return {
+      address: tokenAddress,
+      symbol: currency,
+      name: `Trust Line: ${currency}`,
+      decimals: IOU_DECIMALS,
+    };
   }
 
   // -- Contract operations (2) -- Unsupported

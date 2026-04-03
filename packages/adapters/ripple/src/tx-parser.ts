@@ -6,6 +6,7 @@
  */
 
 import type { ParsedTransaction, ParsedOperation, ParsedOperationType } from '@waiaas/core';
+import { iouToSmallestUnit, IOU_DECIMALS } from './currency-utils.js';
 
 /**
  * Parse a raw XRPL transaction JSON string into structured operations.
@@ -31,11 +32,10 @@ export function parseRippleTransaction(rawTx: string): ParsedTransaction {
       type = 'TOKEN_TRANSFER';
       const amountObj = amount as { currency?: string; issuer?: string; value?: string };
       token = `${amountObj.currency ?? 'unknown'}.${amountObj.issuer ?? 'unknown'}`;
-      // IOU values are decimal strings, store as-is converted to smallest unit
-      // For IOU tokens, precision varies; store raw value as bigint of the integer part
+      // IOU values: convert to 15-decimal smallest unit for full precision
       try {
         const value = amountObj.value ?? '0';
-        parsedAmount = BigInt(Math.floor(Number(value) * 1e6));
+        parsedAmount = iouToSmallestUnit(value, IOU_DECIMALS);
       } catch {
         parsedAmount = 0n;
       }
