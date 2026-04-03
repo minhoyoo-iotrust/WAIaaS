@@ -12,7 +12,7 @@
 - ✅ **v33.2 Tauri Desktop App** — Phases 459-463 (shipped 2026-04-01)
 - ✅ **v33.3 Desktop App 배포 채널 확장** — Phases 464-466 (shipped 2026-04-01)
 - ✅ **v33.4 서명 앱 명시적 선택** — Phases 467-469 (shipped 2026-04-02)
-- 🚧 **v33.6 XRP 메인넷 지원** — Phases 470-473 (in progress)
+- ✅ **v33.6 XRP 메인넷 지원** — Phases 470-473 (shipped 2026-04-03)
 
 <details>
 <summary>✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Phases 432-434) — SHIPPED 2026-03-16</summary>
@@ -114,27 +114,14 @@ See `.planning/milestones/v33.3-ROADMAP.md` for full details.
 
 See `.planning/milestones/v33.4-ROADMAP.md` for full details.
 
-### 🚧 v33.6 XRP 메인넷 지원 (In Progress)
+<details>
+<summary>✅ v33.6 XRP 메인넷 지원 (Phases 470-473) — SHIPPED 2026-04-03</summary>
 
-**Milestone Goal:** XRP Ledger를 3번째 ChainType으로 통합 — 네이티브 전송, Trust Line 토큰, XLS-20 NFT, 전 인터페이스 지원
+- [x] Phase 470: SSoT Extension + DB Migration (3/3 plans) — completed 2026-04-03
+- [x] Phase 471: Adapter Package + Native XRP Transfer (2/2 plans) — completed 2026-04-03
+- [x] Phase 472: Trust Line Token Support (2/2 plans) — completed 2026-04-03
+- [x] Phase 473: XLS-20 NFT + Integration Completeness (3/3 plans) — completed 2026-04-03
+
+</details>
 
 See `.planning/milestones/v33.6-ROADMAP.md` for full details.
-
-- [x] **Phase 470: SSoT Extension + DB Migration** (3/3 plans) - ripple ChainType/NetworkType/CAIP 등록과 DB v62 마이그레이션 -- completed 2026-04-03
-- [x] **Phase 471: Adapter Package + Native XRP Transfer** (2/2 plans) - @waiaas/adapter-ripple 패키지와 XRP 네이티브 전송 전체 구현 (completed 2026-04-03)
-- [x] **Phase 472: Trust Line Token Support** (2/2 plans) - Trust Line 설정/IOU 전송/자산 조회 구현 -- completed 2026-04-03
-- [x] **Phase 473: XLS-20 NFT + Integration Completeness** (3 plans) - NFT 전송과 REST/MCP/SDK/Admin UI 전 인터페이스 통합 (completed 2026-04-03)
-
-Plans:
-- [x] 473-01-PLAN.md — XLS-20 NFT adapter 구현 + core schema 확장 + pipeline ripple 통합
-- [x] 473-02-PLAN.md — REST/SDK/Admin UI ripple 체인 통합 (OpenAPI/SDK 타입/Admin UI chain 옵션)
-- [x] 473-03-PLAN.md — Skill 파일 ripple 체인 가이드 업데이트
-
-## Progress
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 470. SSoT Extension + DB Migration | v33.6 | 3/3 | Complete | 2026-04-03 |
-| 471. Adapter Package + Native XRP Transfer | v33.6 | 2/2 | Complete    | 2026-04-03 |
-| 472. Trust Line Token Support | v33.6 | 2/2 | Complete | 2026-04-03 |
-| 473. XLS-20 NFT + Integration Completeness | v33.6 | 3/3 | Complete    | 2026-04-03 |

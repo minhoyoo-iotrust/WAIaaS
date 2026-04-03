@@ -8,19 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v33.6 XRP 메인넷 지원
+## Current State (v33.6 shipped — ready for next milestone)
 
-**Goal:** WAIaaS의 세 번째 ChainType으로 `'ripple'`을 추가하여 XRP Ledger에서 네이티브 XRP 전송, Trust Line 토큰 관리, XLS-20 NFT를 지원
-
-**Target features:**
-- ChainType `'ripple'` + NetworkType 3종 (xrpl-mainnet, xrpl-testnet, xrpl-devnet)
-- `@waiaas/adapter-ripple` 패키지 — IChainAdapter 21/25 메서드 구현
-- KeyStore Ed25519 키 생성 + r-address 도출
-- Trust Line 토큰 지원 (TrustSet → buildApprove, IOU → buildTokenTransfer)
-- XLS-20 NFT 기본 지원 (NFTokenCreateOffer + NFTokenAcceptOffer 래핑)
-- CAIP 표준 통합 (xrpl:0/1/2 namespace, trustline 자산 식별자)
-- DB 마이그레이션 (CHECK 제약조건 + ENVIRONMENT_NETWORK_MAP 확장)
-- REST API / MCP / SDK / Admin UI에서 chain=ripple 지원
+v33.6 XRP 메인넷 지원 SHIPPED (2026-04-03). @waiaas/adapter-ripple 패키지로 XRP Ledger를 3번째 ChainType으로 통합 — IChainAdapter 25 메서드 구현, 네이티브 XRP 전송(drops 변환, 동적 reserve, Destination Tag, validated ledger 확인), Trust Line 토큰(TrustSet tfSetNoRipple, IOU 전송, 3-char/40-char hex 통화 코드), XLS-20 NFT(2-step offer 모델), CAIP-2 xrpl:0/1/2 + CAIP-19 slip44:144/token 네임스페이스, DB v62, 전 인터페이스 SSoT 자동 전파. 4 phases, 10 plans, 37 requirements, 131 adapter tests, 3,120 LOC.
 
 ## Previous Milestone: v33.4 서명 앱 명시적 선택 — SHIPPED 2026-04-02
 
