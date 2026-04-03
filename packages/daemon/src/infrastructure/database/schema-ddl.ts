@@ -54,7 +54,7 @@ export const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 61;
+export const LATEST_SCHEMA_VERSION = 62;
 
 export function getCreateTableStatements(): string[] {
   return [
