@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v33.6
 milestone_name: XRP 메인넷 지원
-status: verifying
+status: executing
 stopped_at: Completed Phase 472 (2/2 plans). Ready for Phase 473.
-last_updated: "2026-04-03T04:48:00.000Z"
+last_updated: "2026-04-03T05:00:28.300Z"
 last_activity: 2026-04-03
 progress:
-  total_phases: 178
-  completed_phases: 178
-  total_plans: 389
-  completed_plans: 389
-  percent: 25
+  total_phases: 180
+  completed_phases: 179
+  total_plans: 394
+  completed_plans: 392
+  percent: 50
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 472 — trust-line-token-support
+**Current focus:** Phase 473 — xls20-nft-integration
 
 ## Current Position
 
-Phase: 472
-Plan: 2/2 complete
-Status: Phase complete — ready for Phase 473
+Phase: 473 (xls20-nft-integration) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-03
 
 Progress: [#####░░░░░] 50%
@@ -51,6 +51,7 @@ Progress: [#####░░░░░] 50%
 | Phase 471 P02 | 10 | 2 tasks | 6 files |
 | Phase 472 P01 | 8 | 2 tasks | 4 files |
 | Phase 472 P02 | 5 | 2 tasks | 3 files |
+| Phase 473 P01 | 6 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,7 @@ Progress: [#####░░░░░] 50%
 - [Phase 471]: AdapterPool wired with dynamic import, 75 unit tests, full transfer pipeline validated
 - [Phase 472]: TrustSet tfSetNoRipple, IOU Payment {currency,issuer,value}, currency-utils, 120 tests total
 - [Phase 472]: IOU_DECIMALS=15 for Trust Line precision, getTokenInfo no-RPC, getAssets account_lines
+- [Phase 473]: XLS-20 NFT transfer uses NFTokenCreateOffer with Flags=1 and Amount=0 for free transfer
 
 ### Pending Todos
 

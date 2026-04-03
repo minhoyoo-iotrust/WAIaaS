@@ -51,9 +51,9 @@ Requirements for XRP Ledger integration. Each maps to roadmap phases.
 
 ### XLS-20 NFT
 
-- [ ] **NFT-01**: NFTokenCreateOffer + NFTokenAcceptOffer가 buildNftTransferTx/transferNft로 래핑된다
-- [ ] **NFT-02**: 수신자 Accept가 필요한 경우 pending_accept 상태가 반환된다
-- [ ] **NFT-03**: NFT 메타데이터(URI, taxon)가 조회 가능하다
+- [x] **NFT-01**: NFTokenCreateOffer + NFTokenAcceptOffer가 buildNftTransferTx/transferNft로 래핑된다
+- [x] **NFT-02**: 수신자 Accept가 필요한 경우 pending_accept 상태가 반환된다
+- [x] **NFT-03**: NFT 메타데이터(URI, taxon)가 조회 가능하다
 
 ### Integration
 
@@ -62,7 +62,7 @@ Requirements for XRP Ledger integration. Each maps to roadmap phases.
 - [ ] **INTG-03**: TypeScript SDK에서 ripple 체인 지갑 조작이 가능하다
 - [ ] **INTG-04**: Admin UI 지갑 생성 시 Ripple 체인이 선택 가능하다
 - [ ] **INTG-05**: Admin UI에서 Trust Line 설정/조회 관리가 가능하다
-- [ ] **INTG-06**: Pipeline Stage 5 buildByType()에서 ripple 미지원 타입(CONTRACT_CALL, BATCH)이 명시적 에러를 반환한다
+- [x] **INTG-06**: Pipeline Stage 5 buildByType()에서 ripple 미지원 타입(CONTRACT_CALL, BATCH)이 명시적 에러를 반환한다
 - [ ] **INTG-07**: Skill 파일이 ripple 체인 사용 가이드를 포함하도록 업데이트된다
 
 ## v2 Requirements
@@ -131,15 +131,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRUST-04 | Phase 472 | Complete |
 | TRUST-05 | Phase 472 | Complete |
 | TRUST-06 | Phase 472 | Complete |
-| NFT-01 | Phase 473 | Pending |
-| NFT-02 | Phase 473 | Pending |
-| NFT-03 | Phase 473 | Pending |
+| NFT-01 | Phase 473 | Complete |
+| NFT-02 | Phase 473 | Complete |
+| NFT-03 | Phase 473 | Complete |
 | INTG-01 | Phase 473 | Pending |
 | INTG-02 | Phase 473 | Pending |
 | INTG-03 | Phase 473 | Pending |
 | INTG-04 | Phase 473 | Pending |
 | INTG-05 | Phase 473 | Pending |
-| INTG-06 | Phase 473 | Pending |
+| INTG-06 | Phase 473 | Complete |
 | INTG-07 | Phase 473 | Pending |
 
 **Coverage:**
