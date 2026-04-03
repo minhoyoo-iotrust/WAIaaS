@@ -259,6 +259,9 @@ importers:
       '@waiaas/adapter-evm':
         specifier: workspace:*
         version: link:../adapters/evm
+      '@waiaas/adapter-ripple':
+        specifier: workspace:*
+        version: link:../adapters/ripple
       '@waiaas/adapter-solana':
         specifier: workspace:*
         version: link:../adapters/solana

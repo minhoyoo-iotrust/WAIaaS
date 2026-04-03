@@ -176,8 +176,8 @@ export class AdapterPool {
       }
       adapter = new EvmAdapter(network, entry.viemChain, entry.nativeSymbol, entry.nativeName);
     } else if (chain === 'ripple') {
-      // Phase 471: @waiaas/adapter-ripple package will provide RippleAdapter
-      throw new Error(`Ripple adapter not yet implemented. Coming in Phase 471.`);
+      const { RippleAdapter } = await import('@waiaas/adapter-ripple');
+      adapter = new RippleAdapter(network);
     } else {
       throw new Error(`Unsupported chain: ${chain}`);
     }
