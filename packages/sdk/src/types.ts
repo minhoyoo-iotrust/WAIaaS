@@ -67,8 +67,8 @@ export interface RetryOptions {
 export interface CreateWalletParams {
   /** Wallet name */
   name: string;
-  /** Chain type: solana or ethereum */
-  chain?: 'solana' | 'ethereum';
+  /** Chain type: solana, ethereum, or ripple */
+  chain?: 'solana' | 'ethereum' | 'ripple';
   /** Environment: testnet or mainnet */
   environment?: 'testnet' | 'mainnet';
   /** Account type: eoa (default) or smart (ERC-4337, EVM only) */
