@@ -4,7 +4,7 @@ milestone: v33.6
 milestone_name: XRP 메인넷 지원
 status: verifying
 stopped_at: Completed Phase 472 (2/2 plans). Ready for Phase 473.
-last_updated: "2026-04-03T05:08:33.298Z"
+last_updated: "2026-04-03T05:09:39.233Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 180
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 
 ## Current Position
 
-Phase: 473 (xls20-nft-integration) — EXECUTING
-Plan: 3 of 3
+Phase: 473
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 

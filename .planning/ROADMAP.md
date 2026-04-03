@@ -137,4 +137,4 @@ Plans:
 | 470. SSoT Extension + DB Migration | v33.6 | 3/3 | Complete | 2026-04-03 |
 | 471. Adapter Package + Native XRP Transfer | v33.6 | 2/2 | Complete    | 2026-04-03 |
 | 472. Trust Line Token Support | v33.6 | 2/2 | Complete | 2026-04-03 |
-| 473. XLS-20 NFT + Integration Completeness | v33.6 | 3/3 | Complete   | 2026-04-03 |
+| 473. XLS-20 NFT + Integration Completeness | v33.6 | 3/3 | Complete    | 2026-04-03 |
