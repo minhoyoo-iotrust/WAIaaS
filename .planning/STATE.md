@@ -4,7 +4,7 @@ milestone: v33.6
 milestone_name: XRP 메인넷 지원
 status: verifying
 stopped_at: Completed Phase 471 (2/2 plans). Ready for verification.
-last_updated: "2026-04-03T04:31:19.531Z"
+last_updated: "2026-04-03T04:32:12.745Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 178
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 
 ## Current Position
 
-Phase: 471 (adapter-package-native-xrp-transfer) — EXECUTING
-Plan: 2 of 2
+Phase: 471
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
