@@ -1,178 +1,155 @@
 # Project Research Summary
 
-**Project:** WAIaaS - XRP Ledger (Ripple) Mainnet Support (m33-06)
-**Domain:** 3rd ChainType integration into existing multi-chain AI Agent Wallet-as-a-Service
+**Project:** XRPL DEX Action Provider (v33.8)
+**Domain:** XRPL native orderbook DEX integration into WAIaaS multi-chain Action Provider framework
 **Researched:** 2026-04-03
 **Confidence:** HIGH
 
 ## Executive Summary
 
-XRP Ledger integration into WAIaaS follows a clean additive pattern: add `'ripple'` as the 3rd `ChainType` alongside `'ethereum'` and `'solana'`, implement a new `@waiaas/adapter-ripple` package with a single `xrpl` npm dependency (v4.6.0, XRPLF official), and extend SSoT enum arrays in `@waiaas/shared`. The existing `IChainAdapter` interface covers ~21 of 25 methods directly; 4 are thrown as NOT_SUPPORTED because XRPL has no smart contracts, no batch transactions, no NFT approval mechanism, and full-sweep is blocked by the reserve system. The pipeline remains completely chain-agnostic — zero stage modifications needed.
+XRPL DEX is a protocol-level native orderbook — not a smart contract protocol — which makes it fundamentally different from every other DEX integration in the current WAIaaS stack (Jupiter, 0x, DCent, LI.FI). All DEX operations use native XRPL transaction types (`OfferCreate`, `OfferCancel`) that are fully supported by the already-installed `xrpl@4.6.0` package. Zero new dependencies are required. The correct pattern is to route DEX actions through the existing 6-stage pipeline as `CONTRACT_CALL` type, with XRPL-specific parameters encoded in the `calldata` JSON field. Read-only queries (orderbook, offers) bypass the pipeline via `ApiDirectResult`. This approach avoids the costly alternative of adding a 10th discriminated union type, which would require SSoT propagation across 6 DB tables, the entire pipeline, policy engine, notifications, Admin UI, SDK, and MCP.
 
-The recommended approach is: extend SSoT enums first (shared → core → DB migration v62), then implement `@waiaas/adapter-ripple`, then wire into `AdapterPool` and `KeyStore` in the daemon. Key generation reuses the existing `sodium-native` Ed25519 path identical to Solana; only the address derivation differs (`0xED`-prefixed public key → RIPEMD-160 → Base58Check r-address via `ripple-keypairs.deriveAddress()`). The `xrpl.Client` uses WebSocket as its primary transport, which requires explicit reconnection management unlike the HTTP-based EVM and Solana adapters.
+The recommended build order follows a clear dependency chain: first extend `RippleAdapter.buildContractCall()` to parse XRPL native transactions from calldata JSON (currently throws `INVALID_INSTRUCTION`), then build `XrplDexProvider` with its 5 actions (swap, limit_order, cancel_order, get_orderbook, get_offers), then wire up read-only queries and Admin integration. The most dangerous integration risks are XRPL's dual amount format (XRP=drops string vs IOU=object), partial fill results that return `tesSUCCESS` even with zero exchange, and owner reserve requirements for limit orders that land on the ledger.
 
-The primary risks cluster around XRPL-specific concepts absent in EVM/Solana: the reserve system (base 1 XRP + 0.2 XRP per owned object) must be reflected in `getBalance()` as an `available` field or AI agents will generate transfer failures; the Destination Tag field is separate from `memo` and its omission silently loses funds at exchanges; Trust Lines require `tfSetNoRipple` flag on all `TrustSet` transactions to prevent unintended rippling; and all transactions must include `LastLedgerSequence` (via `autofill()`) to avoid permanent pending states. These are correctness requirements, not edge cases — each must be addressed in Phase 1 of implementation.
+The critical risk to address early is ensuring the `formatXrplAmount()` conversion utility correctly handles all three trading pair combinations (XRP-IOU, IOU-XRP, IOU-IOU) before any testing against live or testnet orders. A formatting error silently creates orders at wildly wrong prices that may execute immediately, resulting in irreversible fund loss. Policy integration (USD spending limits for DEX trades) must also be addressed because the current `resolveEffectiveAmountUsd()` cannot reach TakerGets amounts buried in calldata JSON — without a fix, the daily spending limit policy is bypassed for all DEX trades.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The entire XRPL integration requires one new npm package: `xrpl@^4.6.0`. This is the official XRPLF TypeScript SDK and internally bundles `ripple-keypairs` (address derivation), `ripple-address-codec` (Base58Check), and `ripple-binary-codec` (transaction serialization). No additional libraries are needed. The existing `sodium-native` continues to handle Ed25519 key generation (same as Solana), `xrpl` handles address derivation and RPC interaction, and `viem`/`@solana/kit` are untouched.
+No new packages are needed. All DEX functionality — `OfferCreate`, `OfferCancel`, `book_offers`, `account_offers`, flag enums, and Amount types — is already exported from the installed `xrpl@4.6.0` package. The existing `RippleAdapter` provides the WebSocket client, autofill, sign/submit pipeline, fee safety margin, confirmation polling, and amount conversion utilities (`xrpToDrops`, `smallestUnitToIou`, `parseTrustLineToken`). The only required changes are extending `buildContractCall()` in the adapter and adding a new `XrplDexProvider` module under `packages/actions/src/providers/xrpl-dex/`.
 
 **Core technologies:**
-- `xrpl@^4.6.0`: XRPL WebSocket client, transaction building, signing, and address derivation — the only new dependency
-- `sodium-native` (existing): Ed25519 key generation, reused identically from the Solana path
-- `ripple-keypairs` (bundled in `xrpl`): `deriveAddress()` for r-address from `0xED`-prefixed public key
-- `drizzle` + SQLite (existing): DB migration v62 adding `'ripple'` to CHECK constraints on 4 tables
-
-**Critical version note:** xrpl versions 4.2.1–4.2.4 were compromised in a supply chain attack (April 2025). Use v4.6.0 (released 2025-02-12) which is confirmed safe. Never lock to any version in the 4.2.1–4.2.4 range.
+- `xrpl@4.6.0`: OfferCreate/OfferCancel types, OfferCreateFlags enum, book_offers/account_offers RPC — already installed, zero changes needed
+- `RippleAdapter` (existing): autofill, sign, submit, confirmation, fee margin — needs `buildContractCall()` extension only
+- `ContractCallRequest` (existing): carries XRPL params via `calldata` JSON string — no schema changes needed
+- `ApiDirectResult` (existing): pipeline bypass for read-only orderbook/offers queries — already proven by Hyperliquid pattern
+- `IActionProvider` interface (existing): unchanged; `XrplDexProvider` implements it directly
 
 ### Expected Features
 
 **Must have (table stakes):**
-- XRP native transfer (Payment TX) with drops unit and Destination Tag support
-- Reserve-aware balance query — `available = total - (base_reserve + owner_count * owner_reserve)`
-- Fee estimation via `fee` RPC command (dynamic, typically 10–12 drops)
-- Sequence number management via `account_info` (analogous to EVM nonce)
-- Transaction simulation (dry-run via `autofill` + `submit({fail_hard: false})`)
-- Transaction finality confirmation polling until `validated: true` or LastLedgerSequence exceeded
-- Trust Line token transfer (IOU Payment with `{currency, issuer, value}` Amount object)
-- Trust Line setup / TrustSet mapped to `buildApprove()` — always with `tfSetNoRipple` flag
-- Asset listing: native XRP + Trust Lines via `account_lines`
-- Ed25519 key generation + r-address derivation (KeyStore extension)
-- CAIP-2/CAIP-19 identifiers: `xrpl:0/1/2`, `slip44:144`, `token:{currency}.{issuer}`, `xls20:{id}`
-- DB migration v62 (CHECK constraints expanded on 4 tables + ENVIRONMENT_NETWORK_MAP)
-- REST/MCP/SDK routing for `chain=ripple`
+- Swap (tfImmediateOrCancel OfferCreate) — core DEX primitive; immediate execution or cancel with no residual order
+- Limit order (OfferCreate without IOC) — places persistent offer on the XRPL orderbook with optional expiration
+- Cancel order (OfferCancel) — essential for managing open positions; requires accurate OfferSequence
+- Get orderbook (book_offers RPC) — price discovery before executing trades; bidirectional price labeling
+- Get offers (account_offers RPC) — agent's own open order status with seq field for cancel
 
 **Should have (differentiators):**
-- Reserve-aware balance with detailed `reserved` breakdown in API response (base + owner * N objects)
-- X-address automatic parsing to r-address + embedded Destination Tag extraction
-- XLS-20 NFT transfer (2-step CreateOffer + AcceptOffer) returning `pending_accept` status with offer ID
-- Trust Line dual currency code format (3-char ISO vs 40-char hex) transparent handling
-- WebSocket reconnection manager with exponential backoff and request concurrency limit (max 10)
+- Slippage protection for swap — pre-fetch orderbook depth, calculate effective rate, enforce minimum received amount
+- Trust Line pre-validation — check account_lines before IOU swap; offer guided 2-step flow when missing
+- Actual fill amounts in response — parse AffectedNodes metadata for real `actualAmountIn`/`actualAmountOut`
+- Limit order expiration — Ripple epoch conversion (RIPPLE_EPOCH = 946684800), default 24h TTL
+- Admin UI display labels — "XRPL DEX Swap" / "XRPL DEX Limit Order" instead of opaque CONTRACT_CALL
 
 **Defer to later milestones:**
-- XRPL DEX (OfferCreate/OfferCancel) — m33-08
-- XRPL AMM (XLS-30) — m33-10
-- Incoming transaction monitoring (IChainSubscriber XRPL impl) — separate milestone
-- RPC Pool multi-endpoint failover — separate milestone
-- Payment Channels, Escrow, Checks, Hooks (niche or unavailable on mainnet)
+- XRPL AMM (XLS-30) — scoped to m33-10
+- WebSocket subscription for real-time order fill events — separate milestone
+- RPC pool multi-endpoint failover for XRPL WebSocket — single endpoint acceptable for now
+- Cross-currency path-finding (rippling) — separate from simple DEX orderbook
 
 ### Architecture Approach
 
-The integration is purely additive: `@waiaas/adapter-ripple` is a new package following the `@waiaas/adapter-solana` / `@waiaas/adapter-evm` pattern. SSoT enum arrays in `@waiaas/shared` are extended first, propagating automatically to Zod schemas, DB CHECK constraints, and UI dropdowns. `AdapterPool` gets one new `chain === 'ripple'` branch using dynamic import. `KeyStore.generateKeyPair()` adds a `chain === 'ripple'` branch that is near-identical to the Solana path. The pipeline stages require zero changes because they dispatch through `IChainAdapter` polymorphically.
+The architecture maps cleanly onto two existing patterns proven in the codebase. On-chain actions (swap, limit_order, cancel_order) return `ContractCallRequest` with XRPL transaction parameters JSON-encoded in the `calldata` field; `RippleAdapter.buildContractCall()` parses this and dispatches to `OfferCreate`/`OfferCancel` builders. Read-only queries (get_orderbook, get_offers) return `ApiDirectResult` to bypass the pipeline entirely. This design requires zero changes to `buildByType()` in stage5, zero changes to policy stage3, and zero changes to `ActionProviderRegistry`. A separate `XrplOrderbookClient` is injected into the provider constructor — not shared with the adapter — to manage the read-only RPC connection lifecycle cleanly with daemon shutdown hooks.
 
 **Major components:**
-1. `@waiaas/adapter-ripple` — new package; `RippleAdapter` implements `IChainAdapter`; `xrpl.Client` WebSocket management; address derivation utilities; 21 implemented + 4 NOT_SUPPORTED methods
-2. `@waiaas/shared` SSoT extension — `CHAIN_TYPES`, `NETWORK_TYPES`, `RIPPLE_NETWORK_TYPES`, `ENVIRONMENT_NETWORK_MAP` additions; single point of change for all downstream validation
-3. `@waiaas/core` CAIP maps — `xrpl:0/1/2` to network mapping, CAIP-19 `slip44:144`/`token:{}.{}`/`xls20:{}` asset IDs; existing regex already compatible with XRPL formats
-4. `@waiaas/daemon` KeyStore — `generateRippleEd25519KeyPair()` method (sodium-native key gen + ripple-keypairs address derivation); KeystoreFileV1 `curve: 'ed25519'` field already supports ripple
-5. `@waiaas/daemon` DB migration v62 — `wallets`, `incoming_transactions`, `defi_positions`, `nft_metadata_cache` CHECK constraint expansion using existing table-recreate pattern
+1. **XrplDexProvider** (`packages/actions/src/providers/xrpl-dex/index.ts`) — IActionProvider with 5 actions; `resolve()` dispatches to ContractCallRequest or ApiDirectResult based on action type; registered conditionally in daemon-startup when ripple RPC URL is configured
+2. **XrplOrderbookClient** (`orderbook-client.ts`) — `book_offers`/`account_offers` RPC wrapper; injected at provider construction; manages own WebSocket lifecycle with shutdown disconnect
+3. **OfferBuilder** (`offer-builder.ts`) — builds OfferCreate/OfferCancel params; owns `formatXrplAmount()` for XRP drops-string vs IOU `{currency,issuer,value}` object conversion; owns flag calculations (tfImmediateOrCancel, tfSell, tfPassive)
+4. **RippleAdapter.buildContractCall()** (modified) — currently throws; extended to parse calldata JSON and route to `buildXrplNativeTx()` shared helper that covers autofill, fee safety margin, and serialization identically to `buildTransaction()`
+5. **tx-parser.ts** (modified) — adds OfferCreate/OfferCancel parsing cases to replace current UNKNOWN fallthrough for sign-only mode accuracy
 
 ### Critical Pitfalls
 
-1. **Reserve calculation error in getBalance()** — Returning only `balance` without subtracting base reserve (1 XRP) + owner reserves (0.2 XRP per owned object) causes AI agents to generate `tecINSUFFICIENT_XRP` failures. Reserve values must be queried dynamically from `server_info` — hardcoded values broke in December 2024 when reserves were lowered. Prevention: add `available` field to `BalanceInfo`; query `validated_ledger.reserve_base_xrp` and `reserve_inc_xrp` from `server_info` with 5-minute cache.
+1. **XRP/IOU amount format mixing** — XRP=drops string (`"50000000"`), IOU=`{currency,issuer,value}` object; wrong format causes `temBAD_AMOUNT` or silent mis-pricing at 1,000,000x wrong magnitude. Prevention: `formatXrplAmount()` utility with unit tests covering all 3 pair combinations (XRP-IOU, IOU-XRP, IOU-IOU); implement in Phase 2 before any live order testing.
 
-2. **Destination Tag omission** — Sending XRP to an exchange address without a Destination Tag causes the exchange to be unable to credit the correct user account; funds are not automatically recoverable. Prevention: add `destinationTag?: number` to `TransferRequest`; auto-parse X-addresses to extract embedded tags; pre-check `RequireDest` flag on recipient account.
+2. **tesSUCCESS does not mean full fill** — XRPL returns `tesSUCCESS` for partial fills; `tecKILLED` for zero-fill IOC swaps (after fix1578 amendment). Prevention: parse `AffectedNodes` metadata for actual exchanged amounts; handle `tecKILLED` as "no liquidity" user-facing error; include `actualAmountIn`/`actualAmountOut` in response.
 
-3. **Trust Line rippling** — Omitting `tfSetNoRipple` from `TrustSet` transactions allows the account to act as an intermediary in cross-user payments, causing unintended balance changes. Prevention: always include `Flags: TrustSetFlags.tfSetNoRipple` in `buildApprove()`.
+3. **USD spending limit bypass** — `resolveEffectiveAmountUsd()` reads `req.value` for CONTRACT_CALL; XRPL DEX puts spend amount in calldata JSON where the policy evaluator cannot reach it, resulting in $0 USD computed for all DEX trades. Prevention: set `value` field in ContractCallRequest to TakerGets drops when XRP is sold; add oracle-based valuation path for IOU sells.
 
-4. **LastLedgerSequence not set** — Transactions without `LastLedgerSequence` remain permanently pending in congestion scenarios, blocking all subsequent transactions on the same account. Prevention: always use `autofill()` which automatically sets `LastLedgerSequence = current_ledger + 20`.
+4. **Owner reserve for limit orders** — each open offer consumes 0.2 XRP owner reserve; `tecINSUF_RESERVE_OFFER` silently creates a partial order at `tesSUCCESS` with the remaining dropped. Prevention: pre-validate `available balance >= sellAmount + 200,000 drops` before limit_order execution.
 
-5. **WebSocket connection instability** — xrpl.js `Client` has known issues with concurrent requests (100+ causes `DisconnectedError`) and reconnection loops after network interruptions. Prevention: wrap `Client` in a `RippleConnectionManager` with exponential backoff, limit concurrent requests to 10, and handle `disconnected` events explicitly.
-
-6. **drops unit confusion** — XRP uses drops (1 XRP = 1,000,000 drops; 6 decimals), but IOU amounts use decimal strings. Mixing them causes 1,000,000x over/under payment. Prevention: register `ripple: 6` in `NATIVE_DECIMALS` SSoT; always use `autofill()` for Fee field; validate that all API amounts for native XRP are in drops.
+5. **Sequence number collision on concurrent orders** — `client.autofill()` called concurrently returns the same Sequence for multiple transactions, causing `tefPAST_SEQ` failures. Prevention: local sequence counter in RippleAdapter mirroring the EVM nonce management pattern; invalidate cache on reconnect.
 
 ## Implications for Roadmap
 
-Based on combined research, the natural build order follows the dependency chain identified in ARCHITECTURE.md and the feature dependencies in FEATURES.md.
+Based on research, the dependency chain is: adapter extension must precede provider implementation; on-chain actions must precede read-only integration; policy/Admin UI wiring is independent and can be last. Three phases map naturally to these dependencies.
 
-### Phase 1: SSoT Extension + DB Migration
-**Rationale:** All downstream code (adapter, daemon, UI) derives from enum arrays and Zod schemas. Extending SSoT first means DB CHECK constraints, Zod validators, and CAIP maps are all correct before any adapter code is written. DB v62 must exist before any `chain='ripple'` rows can be inserted.
-**Delivers:** `'ripple'` recognized as valid chain across all validation layers; DB accepts ripple wallets; CAIP-2 `xrpl:0/1/2` and CAIP-19 `slip44:144`/`token:{}.{}` identifiers functional
-**Addresses:** DB migration table stake, CAIP standard compliance
-**Avoids:** Cascading validation failures if adapter is wired before SSoT is extended
+### Phase 1: Adapter Extension — buildContractCall + tx-parser
+**Rationale:** `RippleAdapter.buildContractCall()` currently throws `INVALID_INSTRUCTION`. The provider cannot be tested end-to-end until the adapter can execute OfferCreate/OfferCancel. This is the hard prerequisite for everything else. Sequence management should also be resolved here since it is an adapter-level concern.
+**Delivers:** `buildContractCall()` parses calldata JSON and dispatches to OfferCreate/OfferCancel builders via shared `buildXrplNativeTx()` helper; `tx-parser.ts` recognizes OfferCreate/OfferCancel; local Sequence counter strategy implemented; calldata-less calls still throw the original error.
+**Addresses:** Pitfall 2 (CONTRACT_CALL structure mismatch), Pitfall 7 (Sequence collision), Pitfall 10 (tx-parser parsing gap)
+**Avoids:** Premature Provider integration tests running against a stub that diverges from real adapter behavior
 
-### Phase 2: Adapter Package + Core Transaction Methods
-**Rationale:** Core infrastructure (connect, getBalance with reserve, estimateFee, getCurrentNonce, buildTransaction, simulateTransaction, signTransaction, submitTransaction, waitForConfirmation) is the foundation for all subsequent features. The reserve-calculation pitfall and LastLedgerSequence pitfall must be resolved here — not deferred. WebSocket connection manager must be built here, not retrofitted.
-**Delivers:** Functional XRP native transfers end-to-end; `@waiaas/adapter-ripple` package with CI and tests; KeyStore `generateRippleEd25519KeyPair()` method; AdapterPool `chain === 'ripple'` branch; Destination Tag support in TransferRequest
-**Uses:** `xrpl@^4.6.0`, `sodium-native` (existing), `ripple-keypairs.deriveAddress()`
-**Avoids:** Reserve calculation errors (Pitfall 1), Destination Tag omission (Pitfall 2), LastLedgerSequence missing (Pitfall 4), WebSocket instability (Pitfall 5), drops unit confusion (Pitfall 6)
+### Phase 2: XrplDexProvider — On-Chain Actions (swap, limit_order, cancel_order)
+**Rationale:** Core business value lives here. Depends on Phase 1 adapter changes. Amount conversion (`formatXrplAmount`) correctness is the highest fund-loss risk in the entire milestone and must be established with comprehensive tests before any order goes near a live node. Slippage, reserve checks, and Trust Line pre-validation are also Phase 2 concerns because they protect user funds.
+**Delivers:** `XrplDexProvider` with swap, limit_order, cancel_order resolving to ContractCallRequest; `OfferBuilder` with `formatXrplAmount` covering all 3 pair combinations; slippage protection via pre-swap book_offers fetch; Trust Line existence pre-validation; owner reserve pre-check for limit_order; Ripple epoch Expiration conversion; `tecKILLED` + partial fill handling with `actualAmountIn`/`actualAmountOut`; daemon-startup registration; `ContractCallRequest.value` set to TakerGets for XRP sells.
+**Addresses:** Pitfall 1 (amount format), Pitfall 3 (reserve), Pitfall 4 (partial fill), Pitfall 5 (Trust Line missing), Pitfall 8 (OfferSequence accuracy), Pitfall 11 (expiration epoch)
+**Uses:** xrpl@4.6.0 (OfferCreate, OfferCreateFlags, Amount, IssuedCurrencyAmount), existing adapter utilities (xrpToDrops, smallestUnitToIou, parseTrustLineToken)
 
-### Phase 3: Trust Line Token Support
-**Rationale:** Trust Lines are XRPL's token model — analogous to ERC-20 but fundamentally different. This phase adds `buildApprove()` (TrustSet with mandatory `tfSetNoRipple`), `buildTokenTransfer()` (IOU Payment), `getAssets()` (XRP + Trust Lines), and `getTokenInfo()`. The rippling pitfall is resolved here through enforced flag inclusion.
-**Delivers:** Full Trust Line token lifecycle (set Trust Line → transfer IOU → query assets); currency code dual-format handler (3-char ISO vs 40-char hex); Trust Line pre-validation (freeze check, receiver Trust Line existence check)
-**Avoids:** Rippling pitfall (Pitfall 3); Trust Line deletion when balance > 0; `tecPATH_DRY` errors from missing receiver Trust Line
-
-### Phase 4: NFT + Integration Completeness
-**Rationale:** XLS-20 NFT support and the full cross-interface wiring (REST API, MCP, SDK, Admin UI, skill files) complete the milestone scope. NFT is a differentiator, not table stakes, so it follows core functionality. Interface wiring is bundled here because it is mostly automatic once SSoT is extended.
-**Delivers:** XLS-20 NFT transfer (2-step CreateOffer + AcceptOffer with `pending_accept` status and offer ID); `chain=ripple` support across REST/MCP/SDK; Admin UI wallet creation with Ripple chain option; Trust Line display; skill file for AI agents explaining XRPL concepts; sign-only external transaction support (`parseTransaction` + `signExternalTransaction`)
-**Avoids:** NFT 2-step async pitfall (explicit `pending_accept` return, mandatory Expiration on offers); Destination-less NFT offer sniping (always set `Destination` on NFT offers)
+### Phase 3: Read-Only Queries + Policy + Admin UI
+**Rationale:** get_orderbook and get_offers are ApiDirectResult bypasses — structurally independent of pipeline changes and safe to add once the on-chain path is stable. Policy USD fix and Admin UI labels are integration concerns that can be addressed cleanly once the core two phases are stable without risk of breaking already-tested functionality.
+**Delivers:** `XrplOrderbookClient` (book_offers + account_offers with bidirectional price labeling); get_orderbook/get_offers actions as ApiDirectResult; `resolveEffectiveAmountUsd()` extended for XRPL DEX TakerGets; `actions.xrpl_dex_enabled` Admin Settings toggle; builtin-metadata registration; MCP auto-exposure verification (mcpExpose: true); Admin UI displayName "XRPL DEX Swap"/"XRPL DEX Limit Order" via ContractNameRegistry.
+**Addresses:** Pitfall 6 (USD spending limit bypass), Pitfall 9 (offer quality direction confusion), Pitfall 12 (Admin UI label gap)
 
 ### Phase Ordering Rationale
 
-- SSoT first because `CHAIN_TYPES` drives CHECK constraints, Zod discriminatedUnion members, and CAIP namespace lookups — building the adapter before SSoT creates ordering bugs that mask real failures
-- Reserve + LastLedgerSequence + WebSocket reconnection addressed in Phase 2 (not deferred) because they are correctness requirements; deferring them means all subsequent testing is on a broken foundation
-- Trust Lines before NFT because owner reserve tracking (required for NFT reserve understanding) is established in Phase 3, and Trust Line is table stakes while NFT is a differentiator
-- Interface wiring (REST/MCP/SDK/Admin UI) is bundled with Phase 4 rather than Phase 2 because the integration is largely automatic via SSoT; main manual work is Admin UI Ripple-specific components and skill file prose
+- Adapter-first ordering prevents writing Provider integration tests against a stub that may differ from real behavior; Phase 1 adapter tests also serve as the reference for Phase 2 provider tests.
+- On-chain actions before read-only: `formatXrplAmount()` correctness must be established and unit tested before any live order executes — this is the irreversible fund-loss risk and warrants maximum early test coverage.
+- Policy and Admin UI in Phase 3: they are purely additive integrations that do not block functional correctness; deferring them prevents their plumbing from masking Phase 1-2 bugs.
+- Concurrent development within Phase 2: `OfferBuilder` (amount conversion + flag logic) and `XrplOrderbookClient` (RPC wrapper) can be developed in parallel since they have no dependency on each other; both feed into `XrplDexProvider.resolve()`.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 2 (WebSocket connection manager):** xrpl.js has known GitHub issues with reconnection (Issue #1185). The implementation strategy for `RippleConnectionManager` (concurrency limit of 10, backoff algorithm, client instance recycling on irrecoverable loop) warrants a pre-implementation spike before committing to a specific design.
-- **Phase 3 (currency code dual format + CAIP-19):** The 3-char ISO vs 40-char hex encoding for IOU currency codes has edge cases in CAIP-19 asset ID formatting. The `parseAssetId()` function in `asset-resolve.ts` needs verification with real Trust Line data against a live testnet node.
-- **Phase 4 (NFT auto-accept within same WAIaaS instance):** Auto-chaining sell offer + accept when both wallets are in the same WAIaaS instance is not documented in xrpl.js. Needs implementation research before coding.
+- **Phase 2 (partial fill AffectedNodes parsing):** The AffectedNodes metadata structure for OfferCreate is complex and the exact field path for `actualAmountIn`/`actualAmountOut` is not documented with worked examples. Plan time for testnet transaction inspection before committing to a parsing implementation.
+- **Phase 3 (USD valuation for IOU sells):** `resolveEffectiveAmountUsd()` for IOU TakerGets requires a price oracle lookup. The existing DeFi price oracle (`packages/daemon/src/infrastructure/price/`) covers EVM/Solana tokens; XRPL IOU pair coverage needs verification. A fallback strategy (conservative reject or skip) must be decided during Phase 3 planning.
 
 Phases with standard patterns (skip additional research):
-- **Phase 1 (SSoT + DB migration):** Exact table-recreate pattern used 15+ times in prior milestones (v61-v70.ts). CHECK constraint expansion is well-established.
-- **Phase 2 (KeyStore extension):** `generateRippleEd25519KeyPair()` is structurally identical to `generateEd25519KeyPair()` with one `deriveAddress()` call added. No unknowns.
-- **Phase 4 (REST/MCP/SDK wiring):** SSoT-driven routing is automatic once `CHAIN_TYPES` is extended. AdapterPool branch + rpcConfigKey mapping are thin mechanical changes.
+- **Phase 1 (buildContractCall extension):** calldata JSON routing is an established internal pattern (Hyperliquid precedent); the adapter modification is mechanical with a clear implementation sketch already in ARCHITECTURE.md.
+- **Phase 3 (ApiDirectResult, Admin Settings, MCP auto-exposure):** All three mechanisms are well-documented in the codebase with multiple existing examples; straightforward application of established patterns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | `xrpl@^4.6.0` npm-verified; XRPLF official SDK; TypeDoc and source confirmed for key APIs (Wallet constructor, deriveAddress, autofill, submitAndWait) |
-| Features | HIGH | All feature decisions backed by official XRPL documentation; CAIP-2/19 namespaces from chainagnostic.org official specs; existing CAIP-19 regex confirmed compatible |
-| Architecture | HIGH | Integration pattern directly mirrors existing adapter packages; existing codebase files verified by reading (adapter-pool.ts, keystore.ts, stage5-execute.ts, network-map.ts) |
-| Pitfalls | HIGH | Reserve values confirmed from December 2024 amendment; xrpl.js issues from GitHub Issues tracker; supply chain advisory from XRPLF official blog |
+| Stack | HIGH | Verified against installed xrpl@4.6.0 source; all required types (OfferCreate, OfferCancel, BookOffersRequest, AccountOffersRequest, Amount) confirmed to exist at exact import paths |
+| Features | HIGH | 5-action scope is well-defined and bounded; anti-features are explicitly deferred (AMM, subscriptions, path-finding) |
+| Architecture | HIGH | Based on direct codebase analysis of existing providers, pipeline stage5, and adapter; zero guesswork on integration points; ContractCallRequest schema field set confirmed sufficient |
+| Pitfalls | HIGH | XRPL protocol-level pitfalls sourced from official docs; WAIaaS-specific gaps (resolveEffectiveAmountUsd, buildContractCall throw) sourced by reading actual source files |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Trust Line freeze state detection:** `buildTokenTransfer()` should pre-check freeze status via `account_lines` before submitting. The exact `account_lines` response fields for frozen Trust Lines need validation against a live testnet node during Phase 3 implementation.
-- **CAIP-19 `token:` namespace spelling:** One minor inconsistency in PITFALLS.md suggests `trustline:` format; ARCHITECTURE.md and official chainagnostic.org spec both use `token:`. The official spec (`token:{CURRENCY}.{ISSUER}`) is authoritative.
-- **DB migration v62 network-column constraints:** ARCHITECTURE.md identifies 4 tables with `chain` CHECK constraints. Network-column constraints (where they exist separately) need a complete scan of schema-ddl.ts during Phase 1 — research identified the pattern but did not enumerate all affected columns exhaustively.
-- **`simulate` RPC command availability in xrpl v4.6.0:** ARCHITECTURE.md notes using `submit({fail_hard: false})` for dry-run as the primary approach. Whether the `simulate` command is available and stable in v4.6.0 should be confirmed during Phase 2 implementation.
+- **AffectedNodes metadata parsing for actual fill amounts:** Research identified the requirement and the general mechanism but did not produce a verified parsing implementation. Plan a testnet inspection spike at the start of Phase 2 for the cancel_order/swap result parsing logic.
+- **IOU USD valuation in policy evaluator:** If the DeFi price oracle does not cover XRPL IOU pairs, a fallback design decision is needed during Phase 3 planning: options are (a) skip USD check for IOU sells, (b) conservatively reject IOU sells if no USD price available, or (c) always count XRP-leg amount only.
+- **Sequence collision strategy — cache invalidation on reconnect:** The local Sequence counter approach is recommended but requires a clear invalidation policy when the WebSocket client reconnects and the ledger Sequence may have advanced (e.g., from external transactions). This edge case needs a design decision during Phase 1 implementation.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [xrpl npm package v4.6.0](https://www.npmjs.com/package/xrpl) — version confirmation, TypeScript SDK
-- [xrpl.js Wallet class API](https://js.xrpl.org/classes/Wallet.html) — constructor signature, Ed25519 default
-- [ripple-keypairs (GitHub)](https://github.com/XRPLF/xrpl.js/tree/main/packages/ripple-keypairs) — `deriveAddress()` function
-- [XRPL Cryptographic Keys](https://xrpl.org/docs/concepts/accounts/cryptographic-keys) — Ed25519 `0xED` prefix format
-- [XRPL Addresses](https://xrpl.org/docs/concepts/accounts/addresses) — r-address derivation algorithm
-- [XRPL Reserves](https://xrpl.org/docs/concepts/accounts/reserves) — base reserve + owner reserve system
-- [Lower Reserves Dec 2024](https://xrpl.org/blog/2024/lower-reserves-are-in-effect) — current reserve values (1 XRP base, 0.2 XRP owner)
-- [XRPL CAIP-2 Namespace](https://namespaces.chainagnostic.org/xrpl/caip2) — `xrpl:0` mainnet, `xrpl:1` testnet, `xrpl:2` devnet
-- [XRPL CAIP-19 Assets](https://namespaces.chainagnostic.org/xrpl/caip19) — `slip44:144`, `token:{}.{}`, `xls20:{}`
-- [TrustSet Transaction](https://xrpl.org/docs/references/protocol/transactions/types/trustset) — Trust Line setup + NoRipple flag
-- [Trust Line Tokens](https://xrpl.org/docs/concepts/tokens/fungible-tokens/trust-line-tokens) — IOU token model + rippling mechanism
-- [Non-Fungible Tokens](https://xrpl.org/docs/concepts/tokens/nfts) — XLS-20 NFT overview
-- [NFTokenCreateOffer](https://xrpl.org/docs/references/protocol/transactions/types/nftokencreateoffer) — NFT offer creation
-- [NFTokenAcceptOffer](https://xrpl.org/docs/references/protocol/transactions/types/nftokenacceptoffer) — NFT offer acceptance
-- [Reliable Transaction Submission](https://xrpl.org/docs/concepts/transactions/reliable-transaction-submission) — LastLedgerSequence pattern
-- [Transaction Cost](https://xrpl.org/docs/concepts/transactions/transaction-cost) — fee model (drops)
-- [Partial Payments](https://xrpl.org/docs/concepts/payment-types/partial-payments) — `delivered_amount` security
-- [Source and Destination Tags](https://xrpl.org/docs/concepts/transactions/source-and-destination-tags) — Destination Tag uint32
+- `packages/adapters/ripple/node_modules/xrpl/src/models/transactions/offerCreate.ts` — OfferCreate interface + OfferCreateFlags enum (installed source)
+- `packages/adapters/ripple/node_modules/xrpl/src/models/transactions/offerCancel.ts` — OfferCancel interface (installed source)
+- `packages/adapters/ripple/node_modules/xrpl/src/models/methods/bookOffers.ts` — BookOffersRequest/Response + BookOffer (installed source)
+- `packages/adapters/ripple/node_modules/xrpl/src/models/methods/accountOffers.ts` — AccountOffersRequest/Response + AccountOffer (installed source)
+- `packages/adapters/ripple/src/adapter.ts` — existing autofill/sign/submit pipeline; buildContractCall() current throw
+- `packages/daemon/src/pipeline/stage5-execute.ts` — buildByType() CONTRACT_CALL routing (unchanged)
+- `packages/core/src/interfaces/action-provider.types.ts` — IActionProvider, ApiDirectResult, isApiDirectResult()
+- `packages/core/src/schemas/transaction.schema.ts` — ContractCallRequestSchema field set confirmed sufficient
+- https://xrpl.org/docs/references/protocol/transactions/types/offercreate — OfferCreate spec + flags
+- https://xrpl.org/docs/concepts/tokens/decentralized-exchange/offers — DEX offers concept, reserve rules, partial fill behavior
+- https://xrpl.org/docs/concepts/accounts/reserves — owner reserve 0.2 XRP per offer object
 
 ### Secondary (MEDIUM confidence)
-- [xrpl.js GitHub Issue #1185](https://github.com/XRPLF/xrpl.js/issues/1185) — WebSocket reconnection loop bug
-- [xrpl.js GitHub Issue #903](https://github.com/XRPLF/xrpl.js/issues/903) — 100+ concurrent requests disconnect
-- [xrpl.js Supply Chain Advisory](https://xrpl.org/blog/2025/vulnerabilitydisclosurereport-bug-apr2025) — v4.2.1–4.2.4 compromised, v4.6.0 safe
-- Existing codebase: `adapter-pool.ts`, `keystore.ts`, `stage5-execute.ts`, `network-map.ts`, `networks.ts` — verified by reading
+- https://xrpl.org/docs/references/protocol/transactions/types/offercancel — OfferCancel spec
+- https://js.xrpl.org/enums/OfferCreateFlags.html — flag hex values
+- `packages/actions/src/providers/hyperliquid/perp-provider.ts` — ApiDirectResult + requiresSigningKey pattern (used as contrast to validate NOT using this approach)
+- `packages/actions/src/providers/jupiter-swap/index.ts` — ContractCallRequest return pattern (used as reference for Provider structure)
+- `packages/daemon/src/infrastructure/action/action-provider-registry.ts` — executeResolve(), ContractCallRequestSchema.parse() re-validation
+
+### Tertiary (LOW confidence)
+- https://github.com/XRPLF/rippled/pull/4694 — fixFillOrKill amendment (tecKILLED behavior for IOC zero-fill); confirms behavior but amendment activation date and testnet availability not independently verified
 
 ---
 *Research completed: 2026-04-03*
