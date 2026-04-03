@@ -10,7 +10,7 @@
  */
 
 import { Client, Wallet, ECDSA } from 'xrpl';
-import type { Payment, TrustSet, Transaction } from 'xrpl';
+import type { Payment, TrustSet, Transaction, NFTokenCreateOffer } from 'xrpl';
 import type {
   IChainAdapter,
   ChainType,
@@ -625,18 +625,71 @@ export class RippleAdapter implements IChainAdapter {
     };
   }
 
-  // -- NFT operations (3) -- Phase 473 stubs
+  // -- NFT operations (3) -- XLS-20
 
-  async buildNftTransferTx(_request: NftTransferParams): Promise<UnsignedTransaction> {
-    throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
-      message: 'NFT transfer support coming in Phase 473',
-    });
+  async buildNftTransferTx(request: NftTransferParams): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+
+    // XLS-20 NFT transfer uses NFTokenCreateOffer (sell offer with Amount=0)
+    // The recipient must accept the offer to complete the transfer.
+    const offerTx = {
+      TransactionType: 'NFTokenCreateOffer' as const,
+      Account: request.from,
+      NFTokenID: request.token.tokenId,
+      Destination: request.to,
+      Amount: '0', // Free transfer (not a sale)
+      Flags: 1, // tfSellNFToken
+    };
+
+    // autofill populates Sequence, Fee, LastLedgerSequence
+    const autofilled = await client.autofill(offerTx as unknown as Transaction);
+
+    // Apply fee safety margin: (Fee * 120) / 100
+    const baseFee = BigInt(autofilled.Fee ?? '12');
+    const safeFee = (baseFee * FEE_SAFETY_NUMERATOR) / FEE_SAFETY_DENOMINATOR;
+    autofilled.Fee = safeFee.toString();
+
+    // Serialize to JSON bytes
+    const txJson = JSON.stringify(autofilled);
+    const serialized = new TextEncoder().encode(txJson);
+
+    // Calculate approximate expiry
+    const lastLedgerSeq = autofilled.LastLedgerSequence ?? 0;
+    const currentLedger = this.serverInfo?.ledgerIndex ?? 0;
+    const ledgersRemaining = lastLedgerSeq - currentLedger;
+    const expiresAt = new Date(Date.now() + ledgersRemaining * LEDGER_CLOSE_MS);
+
+    return {
+      chain: 'ripple',
+      serialized,
+      estimatedFee: safeFee,
+      expiresAt,
+      metadata: {
+        Sequence: autofilled.Sequence,
+        LastLedgerSequence: autofilled.LastLedgerSequence,
+        Fee: autofilled.Fee,
+        originalTx: autofilled,
+        pendingAccept: true,
+        nftTokenId: request.token.tokenId,
+      },
+      nonce: autofilled.Sequence,
+    };
   }
 
-  async transferNft(_request: NftTransferParams, _privateKey: Uint8Array): Promise<SubmitResult> {
-    throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
-      message: 'NFT transfer support coming in Phase 473',
-    });
+  async transferNft(request: NftTransferParams, privateKey: Uint8Array): Promise<SubmitResult> {
+    // Build the NFTokenCreateOffer transaction
+    const unsignedTx = await this.buildNftTransferTx(request);
+
+    // Sign the transaction
+    const signedTx = await this.signTransaction(unsignedTx, privateKey);
+
+    // Submit the signed transaction
+    const result = await this.submitTransaction(signedTx);
+
+    return {
+      ...result,
+      status: 'submitted',
+    };
   }
 
   async approveNft(_request: NftApproveParams): Promise<UnsignedTransaction> {

@@ -937,15 +937,15 @@ describe('RippleAdapter', () => {
       ).rejects.toThrow(ChainError);
     });
 
-    it('buildNftTransferTx throws (Phase 473 stub)', async () => {
+    it('buildNftTransferTx throws when not connected', async () => {
       await expect(
-        adapter.buildNftTransferTx({ from: 'r1', to: 'r2', token: { address: 'a', tokenId: '1', standard: 'ERC-721' }, amount: 1n }),
+        adapter.buildNftTransferTx({ from: 'r1', to: 'r2', token: { address: '', tokenId: '0'.repeat(64), standard: 'XLS-20' }, amount: 1n }),
       ).rejects.toThrow(ChainError);
     });
 
-    it('transferNft throws (Phase 473 stub)', async () => {
+    it('transferNft throws when not connected', async () => {
       await expect(
-        adapter.transferNft({ from: 'r1', to: 'r2', token: { address: 'a', tokenId: '1', standard: 'ERC-721' }, amount: 1n }, new Uint8Array(32)),
+        adapter.transferNft({ from: 'r1', to: 'r2', token: { address: '', tokenId: '0'.repeat(64), standard: 'XLS-20' }, amount: 1n }, new Uint8Array(32)),
       ).rejects.toThrow(ChainError);
     });
   });
