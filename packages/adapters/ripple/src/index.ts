@@ -10,3 +10,11 @@ export {
   DROPS_PER_XRP,
 } from './address-utils.js';
 export { parseRippleTransaction } from './tx-parser.js';
+export {
+  IOU_DECIMALS,
+  isValidCurrencyCode,
+  normalizeCurrencyCode,
+  parseTrustLineToken,
+  iouToSmallestUnit,
+  smallestUnitToIou,
+} from './currency-utils.js';

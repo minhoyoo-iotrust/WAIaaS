@@ -10,7 +10,7 @@
  */
 
 import { Client, Wallet, ECDSA } from 'xrpl';
-import type { Payment, Transaction } from 'xrpl';
+import type { Payment, TrustSet, Transaction } from 'xrpl';
 import type {
   IChainAdapter,
   ChainType,
@@ -36,6 +36,7 @@ import type {
 import { ChainError } from '@waiaas/core';
 
 import { isXAddress, decodeXAddress, XRP_DECIMALS, DROPS_PER_XRP } from './address-utils.js';
+import { parseTrustLineToken, smallestUnitToIou } from './currency-utils.js';
 import { parseRippleTransaction } from './tx-parser.js';
 
 /** Average ledger close time in milliseconds (~3.5-4s). */
@@ -380,10 +381,77 @@ export class RippleAdapter implements IChainAdapter {
 
   // -- Token operations (2) -- Phase 472 stubs
 
-  async buildTokenTransfer(_request: TokenTransferParams): Promise<UnsignedTransaction> {
-    throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
-      message: 'IOU token support coming in Phase 472',
-    });
+  async buildTokenTransfer(request: TokenTransferParams): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+
+    // Parse "{currency}.{issuer}" from token address
+    const { currency, issuer } = parseTrustLineToken(request.token.address);
+
+    // Decode destination address
+    let destinationAddress = request.to;
+    let destinationTag: number | undefined;
+
+    if (isXAddress(request.to)) {
+      const decoded = decodeXAddress(request.to);
+      destinationAddress = decoded.classicAddress;
+      if (decoded.tag !== false) {
+        destinationTag = decoded.tag;
+      }
+    }
+
+    // Parse Destination Tag from memo
+    if (request.memo) {
+      const memoTag = this.parseDestinationTag(request.memo);
+      if (memoTag !== undefined) {
+        destinationTag = memoTag;
+      }
+    }
+
+    // Build IOU Payment transaction with Amount object
+    const payment: Payment = {
+      TransactionType: 'Payment',
+      Account: request.from,
+      Destination: destinationAddress,
+      Amount: {
+        currency,
+        issuer,
+        value: smallestUnitToIou(request.amount, request.token.decimals),
+      },
+      ...(destinationTag !== undefined && { DestinationTag: destinationTag }),
+    };
+
+    // autofill populates Sequence, Fee, LastLedgerSequence
+    const autofilled = await client.autofill(payment);
+
+    // Apply fee safety margin: (Fee * 120) / 100
+    const baseFee = BigInt(autofilled.Fee ?? '12');
+    const safeFee = (baseFee * FEE_SAFETY_NUMERATOR) / FEE_SAFETY_DENOMINATOR;
+    autofilled.Fee = safeFee.toString();
+
+    // Serialize to JSON bytes
+    const txJson = JSON.stringify(autofilled);
+    const serialized = new TextEncoder().encode(txJson);
+
+    // Calculate approximate expiry
+    const lastLedgerSeq = autofilled.LastLedgerSequence ?? 0;
+    const currentLedger = this.serverInfo?.ledgerIndex ?? 0;
+    const ledgersRemaining = lastLedgerSeq - currentLedger;
+    const expiresAt = new Date(Date.now() + ledgersRemaining * LEDGER_CLOSE_MS);
+
+    return {
+      chain: 'ripple',
+      serialized,
+      estimatedFee: safeFee,
+      expiresAt,
+      metadata: {
+        Sequence: autofilled.Sequence,
+        LastLedgerSequence: autofilled.LastLedgerSequence,
+        Fee: autofilled.Fee,
+        DestinationTag: destinationTag,
+        originalTx: autofilled,
+      },
+      nonce: autofilled.Sequence,
+    };
   }
 
   async getTokenInfo(_tokenAddress: string): Promise<TokenInfo> {
@@ -400,10 +468,55 @@ export class RippleAdapter implements IChainAdapter {
     });
   }
 
-  async buildApprove(_request: ApproveParams): Promise<UnsignedTransaction> {
-    throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
-      message: 'TrustSet support coming in Phase 472',
-    });
+  async buildApprove(request: ApproveParams): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+
+    // Parse "{currency}.{issuer}" from token address
+    const { currency, issuer } = parseTrustLineToken(request.token.address);
+
+    // Build TrustSet transaction with tfSetNoRipple flag
+    const trustSet: TrustSet = {
+      TransactionType: 'TrustSet',
+      Account: request.from,
+      LimitAmount: {
+        currency,
+        issuer,
+        value: smallestUnitToIou(request.amount, request.token.decimals),
+      },
+      Flags: 131072, // tfSetNoRipple (0x00020000)
+    };
+
+    // autofill populates Sequence, Fee, LastLedgerSequence
+    const autofilled = await client.autofill(trustSet);
+
+    // Apply fee safety margin: (Fee * 120) / 100
+    const baseFee = BigInt(autofilled.Fee ?? '12');
+    const safeFee = (baseFee * FEE_SAFETY_NUMERATOR) / FEE_SAFETY_DENOMINATOR;
+    autofilled.Fee = safeFee.toString();
+
+    // Serialize to JSON bytes
+    const txJson = JSON.stringify(autofilled);
+    const serialized = new TextEncoder().encode(txJson);
+
+    // Calculate approximate expiry
+    const lastLedgerSeq = autofilled.LastLedgerSequence ?? 0;
+    const currentLedger = this.serverInfo?.ledgerIndex ?? 0;
+    const ledgersRemaining = lastLedgerSeq - currentLedger;
+    const expiresAt = new Date(Date.now() + ledgersRemaining * LEDGER_CLOSE_MS);
+
+    return {
+      chain: 'ripple',
+      serialized,
+      estimatedFee: safeFee,
+      expiresAt,
+      metadata: {
+        Sequence: autofilled.Sequence,
+        LastLedgerSequence: autofilled.LastLedgerSequence,
+        Fee: autofilled.Fee,
+        originalTx: autofilled,
+      },
+      nonce: autofilled.Sequence,
+    };
   }
 
   // -- Batch operations (1) -- Unsupported
