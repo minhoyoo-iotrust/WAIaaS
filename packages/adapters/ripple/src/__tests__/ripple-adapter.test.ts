@@ -747,7 +747,7 @@ describe('RippleAdapter', () => {
       };
       mockClient.autofill.mockResolvedValueOnce(autofilledPayment);
 
-      const tx = await adapter.buildTokenTransfer({
+      await adapter.buildTokenTransfer({
         from: 'rTestSenderAddr',
         to: 'XV5sbjUmgPpvXv4ixFWZ5ptAYZ6PD28Sq49uo34VyjnmK5H', // X-address (>30 chars, starts with X)
         amount: 50_000_000_000_000_000n,
@@ -799,7 +799,7 @@ describe('RippleAdapter', () => {
       };
       mockClient.autofill.mockResolvedValueOnce(autofilledPayment);
 
-      const tx = await adapter.buildTokenTransfer({
+      await adapter.buildTokenTransfer({
         from: 'rTestSenderAddr',
         to: 'rReceiver',
         amount: 100_000_000_000_000_000n,
