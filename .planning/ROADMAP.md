@@ -130,6 +130,6 @@ See `.planning/milestones/v33.6-ROADMAP.md` for full details.
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 470. SSoT Extension + DB Migration | v33.6 | 3/3 | Complete | 2026-04-03 |
-| 471. Adapter Package + Native XRP Transfer | v33.6 | 0/2 | Planned | - |
+| 471. Adapter Package + Native XRP Transfer | v33.6 | 1/2 | In Progress|  |
 | 472. Trust Line Token Support | v33.6 | 0/TBD | Not started | - |
 | 473. XLS-20 NFT + Integration Completeness | v33.6 | 0/TBD | Not started | - |
