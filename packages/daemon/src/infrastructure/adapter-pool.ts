@@ -36,6 +36,10 @@ export function rpcConfigKey(chain: string, network: string): string {
     const suffix = network.startsWith('solana-') ? network.slice('solana-'.length) : network;
     return `solana_${suffix}`;
   }
+  if (chain === 'ripple') {
+    // xrpl-mainnet -> xrpl_mainnet, xrpl-testnet -> xrpl_testnet
+    return network.replace(/-/g, '_');
+  }
   return `evm_${network.replace(/-/g, '_')}`;
 }
 
@@ -71,6 +75,11 @@ export function configKeyToNetwork(configKey: string): string | null {
   // Solana: solana_mainnet -> solana-mainnet, solana_devnet -> solana-devnet
   if (configKey.startsWith('solana_')) {
     return `solana-${configKey.slice('solana_'.length)}`;
+  }
+
+  // XRPL: xrpl_mainnet -> xrpl-mainnet, xrpl_testnet -> xrpl-testnet
+  if (configKey.startsWith('xrpl_')) {
+    return configKey.replace(/_/g, '-');
   }
 
   // EVM: evm_ethereum_sepolia -> ethereum-sepolia (strip evm_, replace _ with -)
@@ -166,6 +175,9 @@ export class AdapterPool {
         throw new Error(`No EVM chain config for network '${network}'`);
       }
       adapter = new EvmAdapter(network, entry.viemChain, entry.nativeSymbol, entry.nativeName);
+    } else if (chain === 'ripple') {
+      // Phase 471: @waiaas/adapter-ripple package will provide RippleAdapter
+      throw new Error(`Ripple adapter not yet implemented. Coming in Phase 471.`);
     } else {
       throw new Error(`Unsupported chain: ${chain}`);
     }
