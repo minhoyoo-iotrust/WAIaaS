@@ -42,12 +42,12 @@ Requirements for XRP Ledger integration. Each maps to roadmap phases.
 
 ### Trust Line Tokens
 
-- [ ] **TRUST-01**: TrustSet 트랜잭션이 buildApprove로 매핑되어 Trust Line을 설정할 수 있다
-- [ ] **TRUST-02**: Trust Line 설정 시 tfSetNoRipple 플래그가 자동 적용된다
-- [ ] **TRUST-03**: IOU 토큰을 buildTokenTransfer로 전송할 수 있다
-- [ ] **TRUST-04**: getTokenInfo가 Trust Line 메타데이터(issuer, currency, limit)를 반환한다
-- [ ] **TRUST-05**: getAssets가 XRP + 활성 Trust Line 토큰 목록을 반환한다
-- [ ] **TRUST-06**: 3자리 통화 코드와 40자리 hex 통화 코드가 모두 지원된다
+- [x] **TRUST-01**: TrustSet 트랜잭션이 buildApprove로 매핑되어 Trust Line을 설정할 수 있다
+- [x] **TRUST-02**: Trust Line 설정 시 tfSetNoRipple 플래그가 자동 적용된다
+- [x] **TRUST-03**: IOU 토큰을 buildTokenTransfer로 전송할 수 있다
+- [x] **TRUST-04**: getTokenInfo가 Trust Line 메타데이터(issuer, currency, limit)를 반환한다
+- [x] **TRUST-05**: getAssets가 XRP + 활성 Trust Line 토큰 목록을 반환한다
+- [x] **TRUST-06**: 3자리 통화 코드와 40자리 hex 통화 코드가 모두 지원된다
 
 ### XLS-20 NFT
 
@@ -125,12 +125,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | XRP-08 | Phase 471 | Complete |
 | XRP-09 | Phase 471 | Complete |
 | XRP-10 | Phase 471 | Complete |
-| TRUST-01 | Phase 472 | Pending |
-| TRUST-02 | Phase 472 | Pending |
-| TRUST-03 | Phase 472 | Pending |
-| TRUST-04 | Phase 472 | Pending |
-| TRUST-05 | Phase 472 | Pending |
-| TRUST-06 | Phase 472 | Pending |
+| TRUST-01 | Phase 472 | Complete |
+| TRUST-02 | Phase 472 | Complete |
+| TRUST-03 | Phase 472 | Complete |
+| TRUST-04 | Phase 472 | Complete |
+| TRUST-05 | Phase 472 | Complete |
+| TRUST-06 | Phase 472 | Complete |
 | NFT-01 | Phase 473 | Pending |
 | NFT-02 | Phase 473 | Pending |
 | NFT-03 | Phase 473 | Pending |
