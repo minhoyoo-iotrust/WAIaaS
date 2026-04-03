@@ -2,7 +2,7 @@
 name: "WAIaaS Wallet Management"
 description: "Wallet queries, asset balances, session info, token list"
 category: "api"
-tags: [wallet, blockchain, solana, ethereum, sessions, tokens, waiass]
+tags: [wallet, blockchain, solana, ethereum, ripple, xrp, xrpl, sessions, tokens, waiass]
 version: "2.5.0-rc"
 dispatch:
   kind: "tool"
@@ -79,7 +79,7 @@ Response (200):
 
 ### GET /v1/wallet/balance -- Get Native Balance
 
-Returns native token balance (SOL or ETH/MATIC/etc.).
+Returns native token balance (SOL, ETH/MATIC/etc., or XRP).
 
 ```bash
 curl -s http://localhost:3100/v1/wallet/balance \
@@ -498,3 +498,18 @@ All `network` parameters accept CAIP-2 format alongside plain strings:
 | `solana-mainnet` | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | Solana |
 | `ethereum-sepolia` | `eip155:11155111` | Sepolia |
 | `solana-devnet` | `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` | Solana Devnet |
+| `xrpl-mainnet` | `xrpl:0` | XRPL Mainnet |
+| `xrpl-testnet` | `xrpl:1` | XRPL Testnet |
+| `xrpl-devnet` | `xrpl:2` | XRPL Devnet |
+
+## Ripple (XRPL) Wallet Notes
+
+- **Chain**: `ripple`, **Environment**: `testnet` or `mainnet`
+- **Networks**: xrpl-mainnet, xrpl-testnet, xrpl-devnet
+- **Key algorithm**: Ed25519 (same as Solana)
+- **Address format**: r-address (e.g., `rN7n3473SaZBCG4dFL83w7p1W9cgZw6w3c`)
+- **Reserve requirement**: 10 XRP base reserve + 2 XRP per owned object (Trust Lines, NFTs, etc.)
+- **Smart accounts (ERC-4337)**: NOT supported on ripple chain
+- **Assets**: `GET /v1/wallet/assets` returns native XRP + Trust Line tokens for ripple wallets
+- **Trust Line tokens**: Token address format is `{currency}.{issuer}` (e.g., `USD.rIssuerAddress`)
+- **NFTs**: XLS-20 standard, queried via native RPC (not external indexers)

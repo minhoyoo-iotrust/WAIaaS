@@ -2,7 +2,7 @@
 name: "WAIaaS Quickset"
 description: "End-to-end quickset: create wallet, session, check balance, send first transfer"
 category: "api"
-tags: [wallet, blockchain, solana, ethereum, quickset, quickstart, waiass]
+tags: [wallet, blockchain, solana, ethereum, ripple, xrp, xrpl, quickset, quickstart, waiass]
 version: "2.5.0-rc"
 dispatch:
   kind: "tool"
@@ -11,7 +11,7 @@ dispatch:
 
 # WAIaaS Quickset
 
-WAIaaS (Wallet-as-a-Service for AI Agents) is a self-hosted local daemon that lets AI agents execute on-chain transactions on Solana and Ethereum with policy-based security controls. This guide walks through the complete workflow from creating your first wallet to sending a transaction.
+WAIaaS (Wallet-as-a-Service for AI Agents) is a self-hosted local daemon that lets AI agents execute on-chain transactions on Solana, Ethereum, and Ripple (XRPL) with policy-based security controls. This guide walks through the complete workflow from creating your first wallet to sending a transaction.
 
 > AI agents must NEVER request the master password. Use only your session token.
 
@@ -129,7 +129,7 @@ Response:
 }
 ```
 
-Note: `balance` is in the smallest unit. For SOL, divide by 10^9 (1000000000 lamports = 1 SOL). For ETH, divide by 10^18.
+Note: `balance` is in the smallest unit. For SOL, divide by 10^9 (1000000000 lamports = 1 SOL). For ETH, divide by 10^18. For XRP, divide by 10^6 (1000000 drops = 1 XRP).
 
 ### Step 5: Check All Assets
 
@@ -281,6 +281,35 @@ To create a smart account wallet via CLI:
 waiaas wallet create --name my-smart-wallet --chain ethereum --account-type smart
 ```
 
+## Supported Chains
+
+| Chain | Native Token | Decimals | Networks |
+|-------|-------------|----------|----------|
+| **Solana** | SOL | 9 | solana-mainnet, solana-testnet, solana-devnet |
+| **Ethereum** | ETH/POL/AVAX/BNB | 18 | ethereum-mainnet, ethereum-sepolia, polygon-mainnet, etc. |
+| **Ripple (XRPL)** | XRP | 6 | xrpl-mainnet, xrpl-testnet, xrpl-devnet |
+
+### Ripple (XRPL) Quick Example
+
+Create a Ripple wallet (operator action via Admin UI or CLI):
+```bash
+waiaas wallet create --name xrp-wallet --chain ripple --environment testnet
+```
+
+Send XRP transfer (agent action with session token):
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TRANSFER",
+    "to": "rDestinationAddress",
+    "humanAmount": "1.0"
+  }'
+```
+
+Note: For Ripple, the `memo` field supports Destination Tag (numeric string like `"12345"` or JSON `{"destinationTag":12345}`).
+
 ## Error Handling
 
 All API errors return a consistent JSON format:
@@ -330,6 +359,8 @@ All `network` parameters accept CAIP-2 chain identifiers alongside plain strings
 | `arbitrum-mainnet` | `eip155:42161` | Arbitrum |
 | `base-mainnet` | `eip155:8453` | Base |
 | `solana-mainnet` | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | Solana |
+| `xrpl-mainnet` | `xrpl:0` | XRPL Mainnet |
+| `xrpl-testnet` | `xrpl:1` | XRPL Testnet |
 
 Example: `?network=eip155:1` is equivalent to `?network=ethereum-mainnet`.
 
