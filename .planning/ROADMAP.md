@@ -127,7 +127,7 @@ See `.planning/milestones/v33.6-ROADMAP.md` for full details.
 
 Plans:
 - [x] 473-01-PLAN.md — XLS-20 NFT adapter 구현 + core schema 확장 + pipeline ripple 통합
-- [ ] 473-02-PLAN.md — REST/SDK/Admin UI ripple 체인 통합 (OpenAPI/SDK 타입/Admin UI chain 옵션)
+- [x] 473-02-PLAN.md — REST/SDK/Admin UI ripple 체인 통합 (OpenAPI/SDK 타입/Admin UI chain 옵션)
 - [ ] 473-03-PLAN.md — Skill 파일 ripple 체인 가이드 업데이트
 
 ## Progress
@@ -137,4 +137,4 @@ Plans:
 | 470. SSoT Extension + DB Migration | v33.6 | 3/3 | Complete | 2026-04-03 |
 | 471. Adapter Package + Native XRP Transfer | v33.6 | 2/2 | Complete    | 2026-04-03 |
 | 472. Trust Line Token Support | v33.6 | 2/2 | Complete | 2026-04-03 |
-| 473. XLS-20 NFT + Integration Completeness | v33.6 | 1/3 | In Progress|  |
+| 473. XLS-20 NFT + Integration Completeness | v33.6 | 2/3 | In Progress|  |

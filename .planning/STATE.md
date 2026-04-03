@@ -4,13 +4,13 @@ milestone: v33.6
 milestone_name: XRP 메인넷 지원
 status: executing
 stopped_at: Completed Phase 472 (2/2 plans). Ready for Phase 473.
-last_updated: "2026-04-03T05:00:28.300Z"
+last_updated: "2026-04-03T05:05:10.735Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 180
   completed_phases: 179
   total_plans: 394
-  completed_plans: 392
+  completed_plans: 393
   percent: 50
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 ## Current Position
 
 Phase: 473 (xls20-nft-integration) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -52,6 +52,7 @@ Progress: [#####░░░░░] 50%
 | Phase 472 P01 | 8 | 2 tasks | 4 files |
 | Phase 472 P02 | 5 | 2 tasks | 3 files |
 | Phase 473 P01 | 6 | 2 tasks | 7 files |
+| Phase 473 P02 | 5 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Progress: [#####░░░░░] 50%
 - [Phase 472]: TrustSet tfSetNoRipple, IOU Payment {currency,issuer,value}, currency-utils, 120 tests total
 - [Phase 472]: IOU_DECIMALS=15 for Trust Line precision, getTokenInfo no-RPC, getAssets account_lines
 - [Phase 473]: XLS-20 NFT transfer uses NFTokenCreateOffer with Flags=1 and Amount=0 for free transfer
+- [Phase 473]: StakingPositionSchema left as ethereum/solana only -- ripple has no staking
 
 ### Pending Todos
 

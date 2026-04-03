@@ -57,11 +57,11 @@ Requirements for XRP Ledger integration. Each maps to roadmap phases.
 
 ### Integration
 
-- [ ] **INTG-01**: REST API 기존 엔드포인트에서 chain=ripple 지갑 생성/조회/전송이 동작한다
-- [ ] **INTG-02**: MCP 기존 도구에서 ripple 체인 선택이 가능하다
-- [ ] **INTG-03**: TypeScript SDK에서 ripple 체인 지갑 조작이 가능하다
-- [ ] **INTG-04**: Admin UI 지갑 생성 시 Ripple 체인이 선택 가능하다
-- [ ] **INTG-05**: Admin UI에서 Trust Line 설정/조회 관리가 가능하다
+- [x] **INTG-01**: REST API 기존 엔드포인트에서 chain=ripple 지갑 생성/조회/전송이 동작한다
+- [x] **INTG-02**: MCP 기존 도구에서 ripple 체인 선택이 가능하다
+- [x] **INTG-03**: TypeScript SDK에서 ripple 체인 지갑 조작이 가능하다
+- [x] **INTG-04**: Admin UI 지갑 생성 시 Ripple 체인이 선택 가능하다
+- [x] **INTG-05**: Admin UI에서 Trust Line 설정/조회 관리가 가능하다
 - [x] **INTG-06**: Pipeline Stage 5 buildByType()에서 ripple 미지원 타입(CONTRACT_CALL, BATCH)이 명시적 에러를 반환한다
 - [ ] **INTG-07**: Skill 파일이 ripple 체인 사용 가이드를 포함하도록 업데이트된다
 
@@ -134,11 +134,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NFT-01 | Phase 473 | Complete |
 | NFT-02 | Phase 473 | Complete |
 | NFT-03 | Phase 473 | Complete |
-| INTG-01 | Phase 473 | Pending |
-| INTG-02 | Phase 473 | Pending |
-| INTG-03 | Phase 473 | Pending |
-| INTG-04 | Phase 473 | Pending |
-| INTG-05 | Phase 473 | Pending |
+| INTG-01 | Phase 473 | Complete |
+| INTG-02 | Phase 473 | Complete |
+| INTG-03 | Phase 473 | Complete |
+| INTG-04 | Phase 473 | Complete |
+| INTG-05 | Phase 473 | Complete |
 | INTG-06 | Phase 473 | Complete |
 | INTG-07 | Phase 473 | Pending |
 
