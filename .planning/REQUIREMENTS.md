@@ -24,19 +24,19 @@ Requirements for XRP Ledger integration. Each maps to roadmap phases.
 - [x] **ADAPT-02**: 미지원 4개 메서드(buildContractCall, buildBatch, sweepAll, approveNft)가 NOT_SUPPORTED 에러를 반환한다
 - [x] **ADAPT-03**: KeyStore에서 Ed25519 키를 생성하고 ripple-keypairs로 r-address를 도출한다
 - [x] **ADAPT-04**: xrpl.Client WebSocket 연결이 자동 재연결과 health check를 지원한다
-- [ ] **ADAPT-05**: AdapterPool에 `chain === 'ripple'` 분기가 추가되어 RippleAdapter를 생성한다
+- [x] **ADAPT-05**: AdapterPool에 `chain === 'ripple'` 분기가 추가되어 RippleAdapter를 생성한다
 - [x] **ADAPT-06**: config.toml에 XRPL RPC WebSocket URL 설정이 추가된다
 
 ### Native XRP Transfer
 
-- [ ] **XRP-01**: 사용자가 XRP를 r-address로 전송할 수 있다 (drops 단위 변환 자동)
+- [x] **XRP-01**: 사용자가 XRP를 r-address로 전송할 수 있다 (drops 단위 변환 자동)
 - [x] **XRP-02**: 잔액 조회 시 총 잔액과 가용 잔액(balance - base reserve - owner reserve * objects)이 구분되어 표시된다
-- [ ] **XRP-03**: Destination Tag를 TransferRequest에 지정할 수 있다
-- [ ] **XRP-04**: 모든 트랜잭션에 LastLedgerSequence가 자동 설정되어 타임아웃이 보장된다
+- [x] **XRP-03**: Destination Tag를 TransferRequest에 지정할 수 있다
+- [x] **XRP-04**: 모든 트랜잭션에 LastLedgerSequence가 자동 설정되어 타임아웃이 보장된다
 - [x] **XRP-05**: 수수료가 drops 단위로 추정되고 가스 안전 마진(120%)이 적용된다
 - [x] **XRP-06**: Sequence 번호가 account_info에서 조회되어 getCurrentNonce()로 반환된다
-- [ ] **XRP-07**: 트랜잭션 확인이 validated ledger 기준으로 동작한다
-- [ ] **XRP-08**: simulate(dry-run)이 autofill 기반으로 트랜잭션 유효성을 검증한다
+- [x] **XRP-07**: 트랜잭션 확인이 validated ledger 기준으로 동작한다
+- [x] **XRP-08**: simulate(dry-run)이 autofill 기반으로 트랜잭션 유효성을 검증한다
 - [x] **XRP-09**: Reserve 값이 server_info에서 동적으로 조회된다 (하드코딩 금지)
 - [x] **XRP-10**: X-address가 입력되면 classic address + Destination Tag으로 자동 디코딩된다
 
@@ -113,16 +113,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADAPT-02 | Phase 471 | Complete |
 | ADAPT-03 | Phase 471 | Complete |
 | ADAPT-04 | Phase 471 | Complete |
-| ADAPT-05 | Phase 471 | Pending |
+| ADAPT-05 | Phase 471 | Complete |
 | ADAPT-06 | Phase 471 | Complete |
-| XRP-01 | Phase 471 | Pending |
+| XRP-01 | Phase 471 | Complete |
 | XRP-02 | Phase 471 | Complete |
-| XRP-03 | Phase 471 | Pending |
-| XRP-04 | Phase 471 | Pending |
+| XRP-03 | Phase 471 | Complete |
+| XRP-04 | Phase 471 | Complete |
 | XRP-05 | Phase 471 | Complete |
 | XRP-06 | Phase 471 | Complete |
-| XRP-07 | Phase 471 | Pending |
-| XRP-08 | Phase 471 | Pending |
+| XRP-07 | Phase 471 | Complete |
+| XRP-08 | Phase 471 | Complete |
 | XRP-09 | Phase 471 | Complete |
 | XRP-10 | Phase 471 | Complete |
 | TRUST-01 | Phase 472 | Pending |
