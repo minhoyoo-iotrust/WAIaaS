@@ -392,12 +392,12 @@ describe('EVM RPC config', () => {
     expect('ethereum_sepolia' in config.rpc).toBe(false);
   });
 
-  it('DaemonConfigSchema rpc section has 17 keys', () => {
+  it('DaemonConfigSchema rpc section has 20 keys', () => {
     const dir = saveTempDir(createTempDir());
     const config = loadConfig(dir);
     const rpcKeys = Object.keys(config.rpc);
-    // 5 Solana + 12 EVM (incl. hyperevm_mainnet, hyperevm_testnet) = 17
-    expect(rpcKeys).toHaveLength(17);
+    // 5 Solana + 12 EVM (incl. hyperevm_mainnet, hyperevm_testnet) + 3 XRPL = 20
+    expect(rpcKeys).toHaveLength(20);
   });
 });
 
@@ -586,9 +586,9 @@ poll_interval = 60
 
   // CFG-02 verification: incoming keys registered in setting-keys.ts
   // Superseded by network-setting-keys-completeness.test.ts (#282) for dynamic SSoT verification
-  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 23 incoming.* keys', () => {
+  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 26 incoming.* keys', () => {
     const incomingDefs = SETTING_DEFINITIONS.filter((d) => d.key.startsWith('incoming.'));
-    expect(incomingDefs).toHaveLength(23);
+    expect(incomingDefs).toHaveLength(26);
     const keys = incomingDefs.map((d) => d.key).sort();
     expect(keys).toEqual([
       'incoming.cooldown_minutes',
@@ -614,6 +614,9 @@ poll_interval = 60
       'incoming.wss_url.solana-devnet',
       'incoming.wss_url.solana-mainnet',
       'incoming.wss_url.solana-testnet',
+      'incoming.wss_url.xrpl-devnet',
+      'incoming.wss_url.xrpl-mainnet',
+      'incoming.wss_url.xrpl-testnet',
     ]);
   });
 

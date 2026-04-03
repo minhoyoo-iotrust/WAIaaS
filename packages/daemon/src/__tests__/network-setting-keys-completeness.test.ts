@@ -19,6 +19,7 @@ import {
   NETWORK_TYPES,
   SOLANA_NETWORK_TYPES,
   EVM_NETWORK_TYPES,
+  RIPPLE_NETWORK_TYPES,
   BUILT_IN_RPC_DEFAULTS,
 } from '@waiaas/core';
 import { SETTING_DEFINITIONS } from '../infrastructure/settings/setting-keys.js';
@@ -33,7 +34,9 @@ describe('Network Setting Keys Completeness (#282)', () => {
     it.each([...NETWORK_TYPES])('has rpc key for %s', (network) => {
       const chain = (SOLANA_NETWORK_TYPES as readonly string[]).includes(network)
         ? 'solana'
-        : 'ethereum';
+        : (RIPPLE_NETWORK_TYPES as readonly string[]).includes(network)
+          ? 'ripple'
+          : 'ethereum';
       const key = `rpc.${rpcConfigKey(chain, network)}`;
       expect(allKeys.has(key)).toBe(true);
     });
@@ -96,9 +99,13 @@ describe('Network Setting Keys Completeness (#282)', () => {
       expect(EVM_NETWORK_TYPES).toHaveLength(12);
     });
 
-    it('NETWORK_TYPES = SOLANA + EVM', () => {
+    it('XRPL networks have exactly RIPPLE_NETWORK_TYPES.length entries per category', () => {
+      expect(RIPPLE_NETWORK_TYPES).toHaveLength(3);
+    });
+
+    it('NETWORK_TYPES = SOLANA + EVM + RIPPLE', () => {
       expect(NETWORK_TYPES).toHaveLength(
-        SOLANA_NETWORK_TYPES.length + EVM_NETWORK_TYPES.length,
+        SOLANA_NETWORK_TYPES.length + EVM_NETWORK_TYPES.length + RIPPLE_NETWORK_TYPES.length,
       );
     });
   });

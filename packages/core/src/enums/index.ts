@@ -10,6 +10,8 @@ export {
   EvmNetworkTypeEnum,
   SOLANA_NETWORK_TYPES,
   type SolanaNetworkType,
+  RIPPLE_NETWORK_TYPES,
+  type RippleNetworkType,
   validateChainNetwork,
   NETWORK_DISPLAY_NAMES,
   NETWORK_NATIVE_SYMBOL,

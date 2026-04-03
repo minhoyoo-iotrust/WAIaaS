@@ -13,6 +13,8 @@ export {
   EvmNetworkTypeEnum,
   SOLANA_NETWORK_TYPES,
   type SolanaNetworkType,
+  RIPPLE_NETWORK_TYPES,
+  type RippleNetworkType,
   validateChainNetwork,
   ENVIRONMENT_TYPES,
   type EnvironmentType,
