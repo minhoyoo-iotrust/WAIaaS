@@ -540,6 +540,8 @@ describe('RippleAdapter', () => {
     it('returns native XRP asset', async () => {
       await connectAdapter(adapter);
       mockClient.request.mockResolvedValueOnce(MOCK_ACCOUNT_INFO);
+      // account_lines returns empty for this basic test
+      mockClient.request.mockResolvedValueOnce({ result: { lines: [] } });
 
       const assets = await adapter.getAssets('rTestAddr');
 
@@ -618,6 +620,297 @@ describe('RippleAdapter', () => {
     });
   });
 
+  // -- Trust Line: buildApprove (TrustSet) --
+
+  describe('buildApprove (TrustSet)', () => {
+    it('creates TrustSet with tfSetNoRipple flag', async () => {
+      await connectAdapter(adapter);
+
+      const autofilledTrustSet = {
+        TransactionType: 'TrustSet',
+        Account: 'rTestSenderAddr',
+        LimitAmount: {
+          currency: 'USD',
+          issuer: 'rIssuer',
+          value: '1000',
+        },
+        Flags: 131072,
+        Sequence: 10,
+        Fee: '12',
+        LastLedgerSequence: 12370,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledTrustSet);
+
+      const tx = await adapter.buildApprove({
+        from: 'rTestSenderAddr',
+        spender: 'rIssuer',
+        token: { address: 'USD.rIssuer', decimals: 15, symbol: 'USD' },
+        amount: 1000_000_000_000_000_000n, // 1000 with 15 decimals
+      });
+
+      expect(tx.chain).toBe('ripple');
+      expect(tx.estimatedFee).toBe(14n); // 12 * 120 / 100
+
+      // Verify the autofill was called with TrustSet
+      const autofillArg = mockClient.autofill.mock.calls[0]?.[0];
+      expect(autofillArg.TransactionType).toBe('TrustSet');
+      expect(autofillArg.LimitAmount.currency).toBe('USD');
+      expect(autofillArg.LimitAmount.issuer).toBe('rIssuer');
+      expect(autofillArg.LimitAmount.value).toBe('1000');
+      expect(autofillArg.Flags).toBe(131072); // tfSetNoRipple
+    });
+
+    it('applies fee safety margin', async () => {
+      await connectAdapter(adapter);
+
+      const autofilledTrustSet = {
+        TransactionType: 'TrustSet',
+        Account: 'rTestSenderAddr',
+        LimitAmount: { currency: 'USD', issuer: 'rIssuer', value: '100' },
+        Flags: 131072,
+        Sequence: 10,
+        Fee: '100',
+        LastLedgerSequence: 12370,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledTrustSet);
+
+      const tx = await adapter.buildApprove({
+        from: 'rTestSenderAddr',
+        spender: 'rIssuer',
+        token: { address: 'USD.rIssuer', decimals: 15, symbol: 'USD' },
+        amount: 100_000_000_000_000_000n,
+      });
+
+      expect(tx.estimatedFee).toBe(120n); // 100 * 120 / 100
+    });
+
+    it('throws on invalid token address', async () => {
+      await connectAdapter(adapter);
+
+      await expect(
+        adapter.buildApprove({
+          from: 'rTestSenderAddr',
+          spender: 'rIssuer',
+          token: { address: 'invalid-no-dot', decimals: 15, symbol: 'USD' },
+          amount: 100n,
+        }),
+      ).rejects.toThrow(ChainError);
+    });
+  });
+
+  // -- Trust Line: buildTokenTransfer (IOU Payment) --
+
+  describe('buildTokenTransfer (IOU Payment)', () => {
+    it('creates IOU Payment with Amount object', async () => {
+      await connectAdapter(adapter);
+
+      const autofilledPayment = {
+        TransactionType: 'Payment',
+        Account: 'rTestSenderAddr',
+        Destination: 'rReceiver',
+        Amount: { currency: 'USD', issuer: 'rIssuer', value: '100.5' },
+        Sequence: 10,
+        Fee: '12',
+        LastLedgerSequence: 12370,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledPayment);
+
+      const tx = await adapter.buildTokenTransfer({
+        from: 'rTestSenderAddr',
+        to: 'rReceiver',
+        amount: 100_500_000_000_000_000n, // 100.5 with 15 decimals
+        token: { address: 'USD.rIssuer', decimals: 15, symbol: 'USD' },
+      });
+
+      expect(tx.chain).toBe('ripple');
+
+      // Verify autofill was called with IOU Amount object
+      const autofillArg = mockClient.autofill.mock.calls[0]?.[0];
+      expect(autofillArg.TransactionType).toBe('Payment');
+      expect(typeof autofillArg.Amount).toBe('object');
+      expect(autofillArg.Amount.currency).toBe('USD');
+      expect(autofillArg.Amount.issuer).toBe('rIssuer');
+      expect(autofillArg.Amount.value).toBe('100.5');
+    });
+
+    it('handles X-address destination', async () => {
+      await connectAdapter(adapter);
+
+      const autofilledPayment = {
+        TransactionType: 'Payment',
+        Account: 'rTestSenderAddr',
+        Destination: 'rDecodedFromXAddr',
+        Amount: { currency: 'USD', issuer: 'rIssuer', value: '50' },
+        Sequence: 10,
+        Fee: '12',
+        LastLedgerSequence: 12370,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledPayment);
+
+      const tx = await adapter.buildTokenTransfer({
+        from: 'rTestSenderAddr',
+        to: 'XV5sbjUmgPpvXv4ixFWZ5ptAYZ6PD28Sq49uo34VyjnmK5H', // X-address (>30 chars, starts with X)
+        amount: 50_000_000_000_000_000n,
+        token: { address: 'USD.rIssuer', decimals: 15, symbol: 'USD' },
+      });
+
+      const autofillArg = mockClient.autofill.mock.calls[0]?.[0];
+      expect(autofillArg.Destination).toBe('rDecodedFromXAddr');
+    });
+
+    it('includes DestinationTag from memo', async () => {
+      await connectAdapter(adapter);
+
+      const autofilledPayment = {
+        TransactionType: 'Payment',
+        Account: 'rTestSenderAddr',
+        Destination: 'rReceiver',
+        DestinationTag: 42,
+        Amount: { currency: 'USD', issuer: 'rIssuer', value: '10' },
+        Sequence: 10,
+        Fee: '12',
+        LastLedgerSequence: 12370,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledPayment);
+
+      const tx = await adapter.buildTokenTransfer({
+        from: 'rTestSenderAddr',
+        to: 'rReceiver',
+        amount: 10_000_000_000_000_000n,
+        token: { address: 'USD.rIssuer', decimals: 15, symbol: 'USD' },
+        memo: '42',
+      });
+
+      expect(tx.metadata['DestinationTag']).toBe(42);
+    });
+
+    it('handles 40-char hex currency code', async () => {
+      await connectAdapter(adapter);
+      const hexCurrency = '0158415500000000000000000000000000000000';
+
+      const autofilledPayment = {
+        TransactionType: 'Payment',
+        Account: 'rTestSenderAddr',
+        Destination: 'rReceiver',
+        Amount: { currency: hexCurrency.toUpperCase(), issuer: 'rIssuer', value: '100' },
+        Sequence: 10,
+        Fee: '12',
+        LastLedgerSequence: 12370,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledPayment);
+
+      const tx = await adapter.buildTokenTransfer({
+        from: 'rTestSenderAddr',
+        to: 'rReceiver',
+        amount: 100_000_000_000_000_000n,
+        token: { address: `${hexCurrency}.rIssuer`, decimals: 15, symbol: 'HEX' },
+      });
+
+      const autofillArg = mockClient.autofill.mock.calls[0]?.[0];
+      expect(autofillArg.Amount.currency).toBe(hexCurrency.toUpperCase());
+    });
+  });
+
+  // -- Trust Line: getTokenInfo --
+
+  describe('getTokenInfo', () => {
+    it('returns Trust Line metadata without RPC call', async () => {
+      await connectAdapter(adapter);
+
+      const info = await adapter.getTokenInfo('USD.rIssuer');
+
+      expect(info.address).toBe('USD.rIssuer');
+      expect(info.symbol).toBe('USD');
+      expect(info.name).toBe('Trust Line: USD');
+      expect(info.decimals).toBe(15);
+
+      // Only 1 call from connect (server_info), no additional calls for getTokenInfo
+      expect(mockClient.request).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws on invalid token address format', async () => {
+      await connectAdapter(adapter);
+
+      await expect(adapter.getTokenInfo('invalid')).rejects.toThrow(ChainError);
+    });
+  });
+
+  // -- Trust Line: getAssets (with Trust Lines) --
+
+  describe('getAssets (with Trust Lines)', () => {
+    it('returns XRP + Trust Line tokens', async () => {
+      await connectAdapter(adapter);
+
+      // Mock account_info for XRP balance
+      mockClient.request.mockResolvedValueOnce(MOCK_ACCOUNT_INFO);
+
+      // Mock account_lines for Trust Lines
+      mockClient.request.mockResolvedValueOnce({
+        result: {
+          lines: [
+            { account: 'rIssuer1', balance: '100.5', currency: 'USD', limit: '1000' },
+            { account: 'rIssuer2', balance: '0', currency: 'EUR', limit: '500' },
+          ],
+        },
+      });
+
+      const assets = await adapter.getAssets('rTestAddr');
+
+      expect(assets).toHaveLength(3);
+
+      // XRP native
+      expect(assets[0]!.symbol).toBe('XRP');
+      expect(assets[0]!.isNative).toBe(true);
+      expect(assets[0]!.balance).toBe(50_000_000n);
+
+      // USD Trust Line
+      expect(assets[1]!.mint).toBe('USD.rIssuer1');
+      expect(assets[1]!.symbol).toBe('USD');
+      expect(assets[1]!.isNative).toBe(false);
+      expect(assets[1]!.decimals).toBe(15);
+      expect(assets[1]!.balance).toBe(100_500_000_000_000_000n);
+
+      // EUR Trust Line (zero balance, still included)
+      expect(assets[2]!.mint).toBe('EUR.rIssuer2');
+      expect(assets[2]!.symbol).toBe('EUR');
+      expect(assets[2]!.balance).toBe(0n);
+    });
+
+    it('returns only XRP for unfunded account', async () => {
+      await connectAdapter(adapter);
+
+      // Mock actNotFound for account_info
+      mockClient.request.mockRejectedValueOnce(new Error('actNotFound'));
+
+      // Mock actNotFound for account_lines too
+      mockClient.request.mockRejectedValueOnce(new Error('actNotFound'));
+
+      const assets = await adapter.getAssets('rUnfunded');
+
+      expect(assets).toHaveLength(1);
+      expect(assets[0]!.symbol).toBe('XRP');
+      expect(assets[0]!.balance).toBe(0n);
+    });
+
+    it('handles X-address input', async () => {
+      await connectAdapter(adapter);
+
+      // Mock account_info for XRP balance
+      mockClient.request.mockResolvedValueOnce(MOCK_ACCOUNT_INFO);
+
+      // Mock account_lines
+      mockClient.request.mockResolvedValueOnce({
+        result: { lines: [] },
+      });
+
+      const assets = await adapter.getAssets('XV5sbjUmgPpvXv4ixFWZ5ptAYZ6PD28Sq49uo34VyjnmK5H');
+
+      // X-address should be decoded, account_lines called with classic address
+      expect(assets).toHaveLength(1); // Only XRP, no trust lines
+      expect(assets[0]!.symbol).toBe('XRP');
+    });
+  });
+
   // -- Unsupported methods --
 
   describe('unsupported methods', () => {
@@ -641,22 +934,6 @@ describe('RippleAdapter', () => {
     it('approveNft throws', async () => {
       await expect(
         adapter.approveNft({ from: 'r1', spender: 'r2', token: { address: 'a', tokenId: '1', standard: 'ERC-721' }, approvalType: 'single' }),
-      ).rejects.toThrow(ChainError);
-    });
-
-    it('buildTokenTransfer throws (Phase 472 stub)', async () => {
-      await expect(
-        adapter.buildTokenTransfer({ from: 'r1', to: 'r2', amount: 100n, token: { address: 'a', decimals: 6, symbol: 'USD' } }),
-      ).rejects.toThrow(ChainError);
-    });
-
-    it('getTokenInfo throws (Phase 472 stub)', async () => {
-      await expect(adapter.getTokenInfo('token')).rejects.toThrow(ChainError);
-    });
-
-    it('buildApprove throws (Phase 472 stub)', async () => {
-      await expect(
-        adapter.buildApprove({ from: 'r1', spender: 'r2', token: { address: 'a', decimals: 6, symbol: 'USD' }, amount: 100n }),
       ).rejects.toThrow(ChainError);
     });
 

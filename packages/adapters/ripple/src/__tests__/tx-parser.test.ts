@@ -95,4 +95,42 @@ describe('parseRippleTransaction', () => {
     expect(result.operations[0]!.type).toBe('APPROVE');
     expect(result.operations[0]!.to).toBeUndefined();
   });
+
+  it('parses IOU Payment with improved 15-decimal precision', () => {
+    const rawTx = JSON.stringify({
+      TransactionType: 'Payment',
+      Account: 'rSender',
+      Destination: 'rReceiver',
+      Amount: {
+        currency: 'USD',
+        issuer: 'rIssuer',
+        value: '100.5',
+      },
+    });
+
+    const result = parseRippleTransaction(rawTx);
+    expect(result.operations).toHaveLength(1);
+    expect(result.operations[0]!.type).toBe('TOKEN_TRANSFER');
+    // 100.5 * 10^15 = 100_500_000_000_000_000n (15-decimal precision)
+    expect(result.operations[0]!.amount).toBe(100_500_000_000_000_000n);
+  });
+
+  it('parses TrustSet as APPROVE with token', () => {
+    const rawTx = JSON.stringify({
+      TransactionType: 'TrustSet',
+      Account: 'rSender',
+      LimitAmount: {
+        currency: 'EUR',
+        issuer: 'rEuropeanBank',
+        value: '5000',
+      },
+      Flags: 131072,
+    });
+
+    const result = parseRippleTransaction(rawTx);
+    expect(result.operations).toHaveLength(1);
+    expect(result.operations[0]!.type).toBe('APPROVE');
+    expect(result.operations[0]!.to).toBe('rEuropeanBank');
+    expect(result.operations[0]!.token).toBe('EUR.rEuropeanBank');
+  });
 });
