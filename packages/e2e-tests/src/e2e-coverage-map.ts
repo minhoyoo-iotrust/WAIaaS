@@ -30,6 +30,9 @@ export const providerCoverage: Record<string, string[]> = {
   'lido-staking': ['advanced-defi-settings-push-relay.ts'],
   'jito-staking': ['advanced-defi-settings-push-relay.ts'],
 
+  // XRPL DEX provider (mainnet-only, settings test)
+  'xrpl-dex': ['advanced-defi-settings-push-relay.ts'],
+
   // ERC-8004 provider
   'erc8004': ['advanced-x402-erc8004-erc8128.ts'],
 };

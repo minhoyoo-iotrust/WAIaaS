@@ -911,14 +911,160 @@ describe('RippleAdapter', () => {
     });
   });
 
-  // -- Unsupported methods --
+  // -- buildContractCall: XRPL native tx routing --
 
-  describe('unsupported methods', () => {
-    it('buildContractCall throws INVALID_INSTRUCTION', async () => {
+  describe('buildContractCall -- XRPL native tx routing', () => {
+    it('buildContractCall with OfferCreate calldata returns UnsignedTransaction', async () => {
+      await connectAdapter(adapter);
+
+      const autofilledOffer = {
+        TransactionType: 'OfferCreate',
+        Account: 'rTestSenderAddr',
+        TakerPays: { currency: 'USD', issuer: 'rIssuer', value: '100' },
+        TakerGets: '50000000',
+        Sequence: 20,
+        Fee: '12',
+        LastLedgerSequence: 12370,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledOffer);
+
+      const tx = await adapter.buildContractCall({
+        from: 'rTestSenderAddr',
+        to: '',
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCreate',
+          TakerPays: { currency: 'USD', issuer: 'rIssuer', value: '100' },
+          TakerGets: '50000000',
+        }),
+      });
+
+      expect(tx.chain).toBe('ripple');
+      expect(tx.estimatedFee).toBe(14n); // 12 * 120 / 100
+      expect(tx.metadata['Sequence']).toBe(20);
+      expect(tx.metadata['originalTx']).toBeDefined();
+      expect(tx.nonce).toBe(20);
+
+      // Verify serialized contains OfferCreate
+      const txJson = new TextDecoder().decode(tx.serialized);
+      expect(txJson).toContain('OfferCreate');
+
+      // Verify autofill was called with correct shape
+      const autofillArg = mockClient.autofill.mock.calls[0]?.[0];
+      expect(autofillArg.TransactionType).toBe('OfferCreate');
+      expect(autofillArg.Account).toBe('rTestSenderAddr');
+      expect(autofillArg.TakerGets).toBe('50000000');
+    });
+
+    it('buildContractCall with OfferCancel calldata returns UnsignedTransaction', async () => {
+      await connectAdapter(adapter);
+
+      const autofilledCancel = {
+        TransactionType: 'OfferCancel',
+        Account: 'rTestSenderAddr',
+        OfferSequence: 42,
+        Sequence: 21,
+        Fee: '12',
+        LastLedgerSequence: 12375,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledCancel);
+
+      const tx = await adapter.buildContractCall({
+        from: 'rTestSenderAddr',
+        to: '',
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCancel',
+          OfferSequence: 42,
+        }),
+      });
+
+      expect(tx.chain).toBe('ripple');
+      expect(tx.metadata['Sequence']).toBe(21);
+      expect(tx.nonce).toBe(21);
+
+      const txJson = new TextDecoder().decode(tx.serialized);
+      expect(txJson).toContain('OfferCancel');
+      expect(txJson).toContain('42');
+    });
+
+    it('buildContractCall with OfferCreate preserves Flags and Expiration', async () => {
+      await connectAdapter(adapter);
+
+      const autofilledOffer = {
+        TransactionType: 'OfferCreate',
+        Account: 'rTestSenderAddr',
+        TakerPays: '50000000',
+        TakerGets: { currency: 'USD', issuer: 'rIssuer', value: '100' },
+        Flags: 0x00080000, // tfImmediateOrCancel
+        Expiration: 750000000,
+        Sequence: 22,
+        Fee: '12',
+        LastLedgerSequence: 12380,
+      };
+      mockClient.autofill.mockResolvedValueOnce(autofilledOffer);
+
+      await adapter.buildContractCall({
+        from: 'rTestSenderAddr',
+        to: '',
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCreate',
+          TakerPays: '50000000',
+          TakerGets: { currency: 'USD', issuer: 'rIssuer', value: '100' },
+          Flags: 0x00080000,
+          Expiration: 750000000,
+        }),
+      });
+
+      // Verify flags and expiration were passed through to autofill
+      const autofillArg = mockClient.autofill.mock.calls[0]?.[0];
+      expect(autofillArg.Flags).toBe(0x00080000);
+      expect(autofillArg.Expiration).toBe(750000000);
+    });
+
+    it('buildContractCall without calldata throws INVALID_INSTRUCTION', async () => {
       await expect(
         adapter.buildContractCall({ from: 'r1', to: 'r2' }),
       ).rejects.toThrow(ChainError);
+
+      try {
+        await adapter.buildContractCall({ from: 'r1', to: 'r2' });
+      } catch (e) {
+        expect((e as ChainError).code).toBe('INVALID_INSTRUCTION');
+      }
     });
+
+    it('buildContractCall with unknown xrplTxType throws INVALID_INSTRUCTION', async () => {
+      try {
+        await adapter.buildContractCall({
+          from: 'r1',
+          to: '',
+          calldata: JSON.stringify({ xrplTxType: 'EscrowCreate' }),
+        });
+        expect.fail('should have thrown');
+      } catch (e) {
+        expect(e).toBeInstanceOf(ChainError);
+        expect((e as ChainError).code).toBe('INVALID_INSTRUCTION');
+        expect((e as ChainError).message).toContain('Unsupported XRPL transaction type');
+      }
+    });
+
+    it('buildContractCall with non-JSON calldata throws INVALID_INSTRUCTION', async () => {
+      try {
+        await adapter.buildContractCall({
+          from: 'r1',
+          to: '',
+          calldata: '0xabcdef1234',
+        });
+        expect.fail('should have thrown');
+      } catch (e) {
+        expect(e).toBeInstanceOf(ChainError);
+        expect((e as ChainError).code).toBe('INVALID_INSTRUCTION');
+      }
+    });
+  });
+
+  // -- Unsupported methods --
+
+  describe('unsupported methods', () => {
 
     it('buildBatch throws BATCH_NOT_SUPPORTED', async () => {
       await expect(

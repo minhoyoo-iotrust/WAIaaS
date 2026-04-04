@@ -10,7 +10,7 @@
  */
 
 import { Client, Wallet, ECDSA } from 'xrpl';
-import type { Payment, TrustSet, Transaction, NFTokenCreateOffer } from 'xrpl';
+import type { Payment, TrustSet, Transaction, NFTokenCreateOffer, OfferCreate, OfferCancel } from 'xrpl';
 import type {
   IChainAdapter,
   ChainType,
@@ -109,7 +109,7 @@ export class RippleAdapter implements IChainAdapter {
         latencyMs,
         blockHeight: BigInt(ledgerIndex),
       };
-    } catch (err) {
+    } catch (_err) {
       return {
         healthy: false,
         latencyMs: Date.now() - start,
@@ -504,11 +504,59 @@ export class RippleAdapter implements IChainAdapter {
     };
   }
 
-  // -- Contract operations (2) -- Unsupported
+  // -- Contract operations (2) -- XRPL native tx via calldata JSON
 
-  async buildContractCall(_request: ContractCallParams): Promise<UnsignedTransaction> {
+  async buildContractCall(request: ContractCallParams): Promise<UnsignedTransaction> {
+    if (request.calldata) {
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(request.calldata) as Record<string, unknown>;
+      } catch {
+        throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
+          message: 'XRPL does not support smart contracts. Invalid calldata JSON.',
+        });
+      }
+
+      const xrplTxType = parsed['xrplTxType'] as string | undefined;
+      switch (xrplTxType) {
+        case 'OfferCreate': {
+          const offer: OfferCreate = {
+            TransactionType: 'OfferCreate',
+            Account: request.from,
+            TakerPays: parsed['TakerPays'] as OfferCreate['TakerPays'],
+            TakerGets: parsed['TakerGets'] as OfferCreate['TakerGets'],
+            ...(parsed['Flags'] !== undefined && { Flags: parsed['Flags'] as number }),
+            ...(parsed['Expiration'] !== undefined && { Expiration: parsed['Expiration'] as number }),
+            ...(parsed['OfferSequence'] !== undefined && { OfferSequence: parsed['OfferSequence'] as number }),
+          };
+          return this.buildXrplNativeTx(offer);
+        }
+        case 'OfferCancel': {
+          const cancel: OfferCancel = {
+            TransactionType: 'OfferCancel',
+            Account: request.from,
+            OfferSequence: parsed['OfferSequence'] as number,
+          };
+          return this.buildXrplNativeTx(cancel);
+        }
+        case 'TrustSet': {
+          const trustSet: TrustSet = {
+            TransactionType: 'TrustSet',
+            Account: request.from,
+            LimitAmount: parsed['LimitAmount'] as TrustSet['LimitAmount'],
+            Flags: (parsed['Flags'] as number | undefined) ?? 0x00020000, // tfSetNoRipple
+          };
+          return this.buildXrplNativeTx(trustSet);
+        }
+        default:
+          throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
+            message: `Unsupported XRPL transaction type: ${xrplTxType ?? 'none'}. Use calldata with xrplTxType: OfferCreate | OfferCancel | TrustSet.`,
+          });
+      }
+    }
+
     throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
-      message: 'XRPL does not support smart contracts',
+      message: 'XRPL does not support smart contracts. Use calldata with xrplTxType for native DEX operations.',
     });
   }
 
@@ -700,6 +748,44 @@ export class RippleAdapter implements IChainAdapter {
 
   // -- Private helpers --
 
+  /**
+   * Build an XRPL native transaction from a Transaction object.
+   * Shared autofill/fee-margin/serialize pattern used by buildContractCall.
+   */
+  private async buildXrplNativeTx(tx: OfferCreate | OfferCancel | TrustSet): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+    const autofilled = await client.autofill(tx);
+
+    // Apply fee safety margin: (Fee * 120) / 100
+    const baseFee = BigInt(autofilled.Fee ?? '12');
+    const safeFee = (baseFee * FEE_SAFETY_NUMERATOR) / FEE_SAFETY_DENOMINATOR;
+    autofilled.Fee = safeFee.toString();
+
+    // Serialize to JSON bytes
+    const txJson = JSON.stringify(autofilled);
+    const serialized = new TextEncoder().encode(txJson);
+
+    // Calculate approximate expiry from LastLedgerSequence
+    const lastLedgerSeq = autofilled.LastLedgerSequence ?? 0;
+    const currentLedger = this.serverInfo?.ledgerIndex ?? 0;
+    const ledgersRemaining = lastLedgerSeq - currentLedger;
+    const expiresAt = new Date(Date.now() + ledgersRemaining * LEDGER_CLOSE_MS);
+
+    return {
+      chain: 'ripple',
+      serialized,
+      estimatedFee: safeFee,
+      expiresAt,
+      metadata: {
+        Sequence: autofilled.Sequence,
+        LastLedgerSequence: autofilled.LastLedgerSequence,
+        Fee: autofilled.Fee,
+        originalTx: autofilled,
+      },
+      nonce: autofilled.Sequence,
+    };
+  }
+
   private getClient(): Client {
     if (!this.client || !this._connected) {
       throw new ChainError('RPC_CONNECTION_ERROR', 'ripple', {
@@ -725,7 +811,7 @@ export class RippleAdapter implements IChainAdapter {
           ledgerIndex: validatedLedger.seq ?? 0,
         };
       }
-    } catch (err) {
+    } catch (_err) {
       // If we can't refresh, keep the old info or use defaults
       if (!this.serverInfo) {
         this.serverInfo = {

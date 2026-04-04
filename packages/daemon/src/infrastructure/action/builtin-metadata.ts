@@ -36,4 +36,5 @@ export const BUILTIN_PROVIDER_METADATA: ReadonlyArray<{
   { name: 'across_bridge', displayName: 'Across Bridge', description: 'Across Protocol intent-based cross-chain bridge with fast relayer fills', version: '1.0.0', chains: ['ethereum'], mcpExpose: true, requiresApiKey: false, enabledKey: 'across_bridge', category: 'Bridge' },
   { name: 'polymarket_order', displayName: 'Polymarket Order', description: 'Polymarket prediction market CLOB trading (buy/sell/cancel/update orders)', version: '1.0.0', chains: ['ethereum'], mcpExpose: true, requiresApiKey: false, enabledKey: 'polymarket', category: 'Prediction' },
   { name: 'polymarket_ctf', displayName: 'Polymarket CTF', description: 'Polymarket CTF on-chain operations (split, merge, redeem, approve)', version: '1.0.0', chains: ['ethereum'], mcpExpose: true, requiresApiKey: false, enabledKey: 'polymarket', category: 'Prediction' },
+  { name: 'xrpl_dex', displayName: 'XRPL DEX', description: 'XRPL native orderbook DEX for token swaps and limit orders', version: '1.0.0', chains: ['ripple'], mcpExpose: true, requiresApiKey: false, enabledKey: 'xrpl_dex', category: 'Swap' },
 ];

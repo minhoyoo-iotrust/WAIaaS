@@ -44,7 +44,8 @@
   "optionalDependencies": {
     "@kamino-finance/klend-sdk": "^3.2.26",
     "@drift-labs/sdk": "^2.106.0",
-    "@solana/web3.js": "^1.98.0"
+    "@solana/web3.js": "^1.98.0",
+    "xrpl": "^4.6.0"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

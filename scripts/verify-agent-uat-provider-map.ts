@@ -30,6 +30,7 @@ const PROVIDER_SCENARIO_MAP: Record<string, string> = {
   'lifi': 'defi/lifi-bridge.md',
   'pendle': 'defi/pendle-yield.md',
   'polymarket': 'defi/polymarket-prediction.md',
+  'xrpl-dex': 'defi/xrpl-dex.md',
   'zerox-swap': 'defi/0x-swap.md',
 };
 

@@ -56,6 +56,36 @@ export function parseRippleTransaction(rawTx: string): ParsedTransaction {
       to: limitAmount?.issuer,
       token: limitAmount ? `${limitAmount.currency ?? 'unknown'}.${limitAmount.issuer ?? 'unknown'}` : undefined,
     });
+  } else if (txType === 'OfferCreate') {
+    // DEX offer: TakerGets is what the Account gives (= spending amount)
+    const takerGets = tx['TakerGets'];
+    let parsedAmount: bigint | undefined;
+    let token: string | undefined;
+
+    if (typeof takerGets === 'string') {
+      // XRP in drops
+      parsedAmount = BigInt(takerGets);
+    } else if (typeof takerGets === 'object' && takerGets !== null) {
+      const iou = takerGets as { currency?: string; issuer?: string; value?: string };
+      token = `${iou.currency ?? 'unknown'}.${iou.issuer ?? 'unknown'}`;
+      try {
+        parsedAmount = iouToSmallestUnit(iou.value ?? '0', IOU_DECIMALS);
+      } catch {
+        parsedAmount = 0n;
+      }
+    }
+
+    operations.push({
+      type: 'CONTRACT_CALL',
+      amount: parsedAmount,
+      token,
+      method: 'OfferCreate',
+    });
+  } else if (txType === 'OfferCancel') {
+    operations.push({
+      type: 'CONTRACT_CALL',
+      method: 'OfferCancel',
+    });
   } else {
     operations.push({
       type: 'UNKNOWN',

@@ -115,7 +115,45 @@ export async function resolveEffectiveAmountUsd(
 
       case 'CONTRACT_CALL':
       case 'CONTRACT_DEPLOY': {
-        const req = request as { value?: string };
+        const req = request as { value?: string; actionProvider?: string; calldata?: string };
+
+        // XRPL DEX: parse calldata to extract TakerGets for accurate USD resolution
+        if (req.actionProvider === 'xrpl_dex' && typeof req.calldata === 'string') {
+          try {
+            const cd = JSON.parse(req.calldata) as {
+              xrplTxType?: string;
+              TakerGets?: string | { currency: string; issuer: string; value: string };
+            };
+
+            if (cd.xrplTxType === 'OfferCancel') {
+              return { type: 'success', usdAmount: 0, isStale: false };
+            }
+
+            if (cd.xrplTxType === 'OfferCreate' && cd.TakerGets !== undefined) {
+              if (typeof cd.TakerGets === 'string') {
+                // XRP drops -- use native price
+                const nativePrice = await priceOracle.getNativePrice(chain as ChainType);
+                const decimals = nativeDecimals(chain);
+                const humanAmount = Number(cd.TakerGets) / Math.pow(10, decimals);
+                return {
+                  type: 'success',
+                  usdAmount: humanAmount * nativePrice.usdPrice,
+                  isStale: nativePrice.isStale,
+                };
+              }
+              // IOU object -- pricing not yet supported, return notListed (safe fallback)
+              return {
+                type: 'notListed',
+                tokenAddress: `${cd.TakerGets.currency}.${cd.TakerGets.issuer}`,
+                chain,
+              };
+            }
+            // Unknown xrplTxType -- fall through to value-based logic
+          } catch {
+            // JSON parse error -- fall through to value-based logic
+          }
+        }
+
         if (!req.value || req.value === '0') {
           return { type: 'success', usdAmount: 0, isStale: false };
         }

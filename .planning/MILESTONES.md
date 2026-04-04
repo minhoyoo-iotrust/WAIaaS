@@ -1,5 +1,20 @@
 # Project Milestones: WAIaaS
 
+## v33.8 XRPL DEX 지원 (Shipped: 2026-04-04)
+
+**Phases completed:** 3 phases, 7 plans, 6 tasks
+
+**Key accomplishments:**
+
+- RippleAdapter.buildContractCall() extended with calldata JSON routing for OfferCreate/OfferCancel via shared buildXrplNativeTx helper
+- tx-parser extended to parse OfferCreate/OfferCancel as CONTRACT_CALL with TakerGets-based spending amount extraction
+- 1. [Rule 3 - Blocking] xrpl dependency missing from @waiaas/actions
+- 1. [Rule 1 - Bug] Missing requiredApis field in metadata
+- XRPL DEX CONTRACT_CALL calldata parsing for accurate USD spending limit -- XRP drops via native oracle, IOU safe fallback
+- XRPL DEX framework integration verified via 16 tests + Admin UI transaction type labels improved to human-readable format
+
+---
+
 ## v33.6 XRP 메인넷 지원 (Shipped: 2026-04-03)
 
 **Phases completed:** 4 phases (470-473), 10 plans, 37 requirements

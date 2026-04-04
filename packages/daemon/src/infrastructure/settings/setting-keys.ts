@@ -379,6 +379,10 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.across_bridge_max_slippage_pct', category: 'actions', configPath: 'actions.across_bridge_max_slippage_pct', defaultValue: '0.03', isCredential: false, label: 'Across Bridge Max Slippage %', description: 'Slippage tolerance as decimal percentage' },
   { key: 'actions.across_bridge_request_timeout_ms', category: 'actions', configPath: 'actions.across_bridge_request_timeout_ms', defaultValue: '10000', isCredential: false, label: 'Across Bridge Request Timeout ms', description: 'Request timeout in milliseconds' },
 
+  // --- XRPL DEX ---
+  { key: 'actions.xrpl_dex_enabled', category: 'actions', configPath: 'actions.xrpl_dex_enabled', defaultValue: 'false', isCredential: false, label: 'XRPL DEX Enabled', description: 'Enable XRPL native orderbook DEX action provider' },
+  { key: 'actions.xrpl_dex_rpc_url', category: 'actions', configPath: 'actions.xrpl_dex_rpc_url', defaultValue: 'wss://xrplcluster.com', isCredential: false, label: 'XRPL DEX RPC URL', description: 'XRPL WebSocket RPC URL for DEX orderbook queries' },
+
   // --- erc8128 category (ERC-8128 Signed HTTP Requests) ---
   { key: 'erc8128.enabled', category: 'erc8128', configPath: 'erc8128.enabled', defaultValue: 'false', isCredential: false, label: 'Enabled', description: 'Enable or disable this feature' },
   { key: 'erc8128.default_preset', category: 'erc8128', configPath: 'erc8128.default_preset', defaultValue: 'standard', isCredential: false, label: 'Default Preset', description: 'Default signing preset for ERC-8128 requests' },

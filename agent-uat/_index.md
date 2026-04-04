@@ -56,6 +56,7 @@ updated: "2026-03-18"
 | defi-14 | DCent 2-hop Auto-Routing (DAI→LINK) | ethereum-mainnet | mainnet | Yes | $5.00 | medium |
 | defi-15 | DCent 크로스체인 스왑 (EVM→Solana) | ethereum-mainnet, solana-mainnet | mainnet | Yes | $5.00 | medium |
 | defi-16 | DCent Solana 네이티브 스왑 (SOL→USDC) | solana-mainnet | mainnet | Yes | $0.01 | medium |
+| defi-17 | XRPL DEX Swap (XRP→USD IOU) | xrpl-mainnet | mainnet | Yes | $0.01 | medium |
 
 ### Admin-Ops
 | ID | Title | Network | Env | Funds | Cost | Risk |

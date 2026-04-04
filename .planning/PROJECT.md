@@ -8,9 +8,13 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current State (v33.6 shipped — ready for next milestone)
+## Current State (v33.8 shipped — ready for next milestone)
 
-v33.6 XRP 메인넷 지원 SHIPPED (2026-04-03). @waiaas/adapter-ripple 패키지로 XRP Ledger를 3번째 ChainType으로 통합 — IChainAdapter 25 메서드 구현, 네이티브 XRP 전송(drops 변환, 동적 reserve, Destination Tag, validated ledger 확인), Trust Line 토큰(TrustSet tfSetNoRipple, IOU 전송, 3-char/40-char hex 통화 코드), XLS-20 NFT(2-step offer 모델), CAIP-2 xrpl:0/1/2 + CAIP-19 slip44:144/token 네임스페이스, DB v62, 전 인터페이스 SSoT 자동 전파. 4 phases, 10 plans, 37 requirements, 131 adapter tests, 3,120 LOC.
+v33.8 XRPL DEX 지원 SHIPPED (2026-04-04). XrplDexProvider(IActionProvider, 5 actions: swap/limit_order/cancel_order/get_orderbook/get_offers)로 XRPL 네이티브 오더북 DEX 통합 — OfferCreate(tfImmediateOrCancel 즉시 스왑 + 지정가), OfferCancel, book_offers/account_offers RPC. RippleAdapter.buildContractCall() calldata JSON 라우팅(OfferCreate/OfferCancel/TrustSet), tx-parser OfferCreate/OfferCancel CONTRACT_CALL 파싱, resolveEffectiveAmountUsd XRPL DEX TakerGets USD 지출 인식, Trust Line 자동 선행 설정, reserve 사전 검증, ApiDirectResult 오더북/주문 조회, MCP 자동 노출, Admin UI TYPE_LABELS 개선. 3 phases, 7 plans, 21 requirements, 28 commits, 47 files, +7,058/-1,187 lines, ~184 new tests.
+
+## Previous Milestone: v33.6 XRP 메인넷 지원 — SHIPPED 2026-04-03
+
+@waiaas/adapter-ripple 패키지로 XRP Ledger를 3번째 ChainType으로 통합 — IChainAdapter 25 메서드 구현, 네이티브 XRP 전송(drops 변환, 동적 reserve, Destination Tag, validated ledger 확인), Trust Line 토큰(TrustSet tfSetNoRipple, IOU 전송, 3-char/40-char hex 통화 코드), XLS-20 NFT(2-step offer 모델), CAIP-2 xrpl:0/1/2 + CAIP-19 slip44:144/token 네임스페이스, DB v62, 전 인터페이스 SSoT 자동 전파. 4 phases, 10 plans, 37 requirements, 131 adapter tests, 3,120 LOC.
 
 ## Previous Milestone: v33.4 서명 앱 명시적 선택 — SHIPPED 2026-04-02
 

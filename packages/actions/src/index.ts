@@ -32,6 +32,8 @@ import type { AcrossConfig } from './providers/across/config.js';
 import { HyperliquidPerpProvider, HyperliquidSpotProvider, HyperliquidSubAccountService, HyperliquidSubAccountProvider, HyperliquidExchangeClient, HyperliquidMarketData, HyperliquidRateLimiter, HL_DEFAULTS, HL_MAINNET_API_URL, HL_TESTNET_API_URL } from './providers/hyperliquid/index.js';
 import { KaminoSdkWrapper } from './providers/kamino/kamino-sdk-wrapper.js';
 import { DriftSdkWrapper } from './providers/drift/drift-sdk-wrapper.js';
+import { XrplDexProvider } from './providers/xrpl-dex/index.js';
+import { XrplOrderbookClient } from './providers/xrpl-dex/orderbook-client.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -122,6 +124,11 @@ export { PolymarketCtfProvider } from './providers/polymarket/index.js';
 export { PolymarketMarketData } from './providers/polymarket/index.js';
 export { PolymarketPositionTracker } from './providers/polymarket/index.js';
 export { PolymarketPnlCalculator } from './providers/polymarket/index.js';
+
+// XRPL DEX (Phase 02)
+export { XrplDexProvider } from './providers/xrpl-dex/index.js';
+export { XrplOrderbookClient } from './providers/xrpl-dex/orderbook-client.js';
+export type { OrderbookResult, OrderbookEntry, AccountOffer as XrplAccountOffer, ReserveInfo } from './providers/xrpl-dex/orderbook-client.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -400,6 +407,15 @@ export function registerBuiltInProviders(
           requestTimeoutMs: Number(settingsReader.get('actions.across_bridge_request_timeout_ms')) || ACROSS_DEFAULTS.requestTimeoutMs,
         };
         return new AcrossBridgeActionProvider(acrossConfig, logger);
+      },
+    },
+    {
+      key: 'xrpl_dex',
+      enabledKey: 'actions.xrpl_dex_enabled',
+      factory: () => {
+        const rpcUrl = settingsReader.get('actions.xrpl_dex_rpc_url') || 'wss://xrplcluster.com';
+        const client = new XrplOrderbookClient(rpcUrl);
+        return new XrplDexProvider(client);
       },
     },
   ];
