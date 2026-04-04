@@ -600,6 +600,93 @@ describe('resolveEffectiveAmountUsd', () => {
       expect(success.usdAmount).toBe(0);
       expect(success.isStale).toBe(false);
     });
+
+    // Policy integration verification tests
+    it('XRPL DEX swap with 50 XRP TakerGets applies spending limit ($125)', async () => {
+      const mockOracle = createMockOracle({
+        getNativePrice: vi.fn().mockResolvedValue(buildPrice(2.5)),
+      });
+
+      const request = {
+        type: 'CONTRACT_CALL',
+        to: 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe',
+        value: '50000000',
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCreate',
+          TakerGets: '50000000', // 50 XRP
+          TakerPays: { currency: 'USD', issuer: 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe', value: '125' },
+          Flags: 0x00080000,
+        }),
+        actionProvider: 'xrpl_dex',
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ripple', mockOracle);
+
+      expect(result.type).toBe('success');
+      const success = result as PriceResultSuccess;
+      // 50,000,000 drops / 10^6 = 50 XRP * $2.50 = $125.00
+      expect(success.usdAmount).toBeCloseTo(125.0, 2);
+    });
+
+    it('XRPL DEX swap with IOU TakerGets triggers notListed for safe policy handling', async () => {
+      const request = {
+        type: 'CONTRACT_CALL',
+        to: 'rIssuerAddr',
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCreate',
+          TakerGets: { currency: 'EUR', issuer: 'rEuroIssuer', value: '50' },
+          TakerPays: '25000000',
+        }),
+        actionProvider: 'xrpl_dex',
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ripple', oracle);
+
+      expect(result.type).toBe('notListed');
+      const notListed = result as PriceResultNotListed;
+      expect(notListed.tokenAddress).toBe('EUR.rEuroIssuer');
+      expect(notListed.chain).toBe('ripple');
+    });
+
+    it('XRPL DEX does not interfere with non-XRPL CONTRACT_CALL (ETH)', async () => {
+      const mockOracle = createMockOracle({
+        getNativePrice: vi.fn().mockResolvedValue(buildPrice(3000)),
+      });
+
+      const request = {
+        to: '0xcontractAddr',
+        value: '1000000000000000000', // 1 ETH
+        calldata: '0xdeadbeef',
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ethereum', mockOracle);
+
+      expect(result.type).toBe('success');
+      const success = result as PriceResultSuccess;
+      expect(success.usdAmount).toBeCloseTo(3000, 2);
+    });
+
+    it('XRPL DEX with stale oracle price propagates isStale', async () => {
+      const mockOracle = createMockOracle({
+        getNativePrice: vi.fn().mockResolvedValue(buildPrice(2.5, 'cache', true)),
+      });
+
+      const request = {
+        type: 'CONTRACT_CALL',
+        to: 'rIssuer',
+        value: '10000000',
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCreate',
+          TakerGets: '10000000',
+          TakerPays: { currency: 'USD', issuer: 'rIssuer', value: '25' },
+          Flags: 0x00080000,
+        }),
+        actionProvider: 'xrpl_dex',
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ripple', mockOracle);
+
+      expect(result.type).toBe('success');
+      const success = result as PriceResultSuccess;
+      expect(success.usdAmount).toBeCloseTo(25, 2);
+      expect(success.isStale).toBe(true);
+    });
   });
 
   // -----------------------------------------------------------------------
