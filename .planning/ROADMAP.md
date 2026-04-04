@@ -147,11 +147,11 @@ See `.planning/milestones/v33.6-ROADMAP.md` for full details.
   2. buildContractCall()에 OfferCancel calldata를 전달하면 서명 가능한 트랜잭션이 반환된다
   3. calldata가 없는 buildContractCall() 호출은 기존과 동일하게 INVALID_INSTRUCTION 에러를 던진다
   4. tx-parser가 OfferCreate/OfferCancel 트랜잭션을 CONTRACT_CALL 타입으로 파싱하고 operation 필드를 포함한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — buildContractCall() OfferCreate/OfferCancel calldata JSON 라우팅
+- [ ] 01-02-PLAN.md — tx-parser OfferCreate/OfferCancel CONTRACT_CALL 파싱
 
 ### Phase 2: XrplDexProvider Core
 **Goal**: 에이전트가 XRPL DEX에서 즉시 스왑, 지정가 주문 생성/취소, 오더북 조회를 수행할 수 있다
