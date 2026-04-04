@@ -324,4 +324,66 @@ describe('XrplOrderbookClient', () => {
       expect(reserve.availableBalance).toBe('9000000');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // ensureConnected — concurrent connect guard
+  // -------------------------------------------------------------------------
+
+  describe('ensureConnected concurrent guard', () => {
+    it('deduplicates concurrent connect calls', async () => {
+      const xrpl = await import('xrpl');
+      const MockClient = xrpl.Client as unknown as ReturnType<typeof vi.fn>;
+
+      // Create a client that is initially not connected
+      let connectResolve: () => void;
+      const connectPromise = new Promise<void>((resolve) => {
+        connectResolve = resolve;
+      });
+
+      MockClient.mockImplementation(() => ({
+        connect: vi.fn().mockReturnValue(connectPromise),
+        disconnect: vi.fn().mockResolvedValue(undefined),
+        isConnected: vi.fn().mockReturnValue(false),
+        request: vi.fn(),
+      }));
+
+      const freshClient = new XrplOrderbookClient('wss://test.example.com');
+
+      // Fire two concurrent ensureConnected calls
+      const p1 = freshClient.ensureConnected();
+      const p2 = freshClient.ensureConnected();
+
+      // Resolve the connect
+      connectResolve!();
+      await p1;
+      await p2;
+
+      // Both should have resolved without creating two clients
+      expect(MockClient).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // disconnect — error handling
+  // -------------------------------------------------------------------------
+
+  describe('disconnect error handling', () => {
+    it('ignores disconnect errors gracefully', async () => {
+      const xrpl = await import('xrpl');
+      const MockClient = xrpl.Client as unknown as ReturnType<typeof vi.fn>;
+
+      MockClient.mockImplementation(() => ({
+        connect: vi.fn().mockResolvedValue(undefined),
+        disconnect: vi.fn().mockRejectedValue(new Error('WebSocket already closed')),
+        isConnected: vi.fn().mockReturnValue(false),
+        request: vi.fn(),
+      }));
+
+      const freshClient = new XrplOrderbookClient('wss://test.example.com');
+      await freshClient.ensureConnected();
+
+      // Should not throw despite disconnect error
+      await expect(freshClient.disconnect()).resolves.toBeUndefined();
+    });
+  });
 });
