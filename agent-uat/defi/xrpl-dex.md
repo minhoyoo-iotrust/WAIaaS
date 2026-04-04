@@ -26,7 +26,7 @@ tags: ["defi", "swap", "xrpl", "dex", "orderbook"]
 - XRPL wallet with XRP balance
 - XRPL DEX provider enabled in Admin Settings
 
-## Scenario
+## Scenario Steps
 
 ### Step 1: Check orderbook depth
 
@@ -52,9 +52,23 @@ Input: {}
 Expected: Empty list (immediate swap should not leave residual offers)
 ```
 
-## Success Criteria
+## Verification
 
 - Orderbook query returns funded amounts
 - Swap executes via OfferCreate with tfImmediateOrCancel
 - USD spending limit policy applies to TakerGets amount
 - No residual offers after immediate swap
+- Transaction appears in Admin UI transaction list with XRPL DEX label
+
+## Estimated Cost
+
+- Network fee: ~0.00001 XRP per transaction
+- Swap amount: configurable (test with minimal amount)
+- Total estimated: < $0.01
+
+## Troubleshooting
+
+- **Trust Line required**: If swapping to IOU, ensure Trust Line exists for the issuer
+- **Insufficient reserve**: Each open offer requires 2 XRP owner reserve
+- **tecKILLED**: Swap failed due to insufficient liquidity at requested price
+- **Provider disabled**: Check Admin Settings > Actions > xrpl_dex_enabled
