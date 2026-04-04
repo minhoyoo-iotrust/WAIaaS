@@ -31,15 +31,15 @@
 
 ### Policy Integration
 
-- [ ] **POL-01**: resolveEffectiveAmountUsd()가 XRPL DEX 스왑의 TakerGets 금액을 USD 지출로 인식한다
-- [ ] **POL-02**: 기존 정책 엔진(SPENDING_LIMIT, ALLOWED_TOKENS)이 XRPL DEX 거래에 적용된다
+- [x] **POL-01**: resolveEffectiveAmountUsd()가 XRPL DEX 스왑의 TakerGets 금액을 USD 지출로 인식한다
+- [x] **POL-02**: 기존 정책 엔진(SPENDING_LIMIT, ALLOWED_TOKENS)이 XRPL DEX 거래에 적용된다
 
 ### Interface Propagation
 
-- [ ] **INTF-01**: XrplDexProvider 액션이 MCP 도구로 자동 노출된다 (mcpExpose=true)
-- [ ] **INTF-02**: Admin Settings에서 XRPL DEX Provider를 활성화/비활성화할 수 있다
-- [ ] **INTF-03**: Admin UI에서 XRPL DEX 거래 내역이 트랜잭션 목록에 표시된다
-- [ ] **INTF-04**: SDK에서 XRPL DEX 액션을 호출할 수 있다
+- [x] **INTF-01**: XrplDexProvider 액션이 MCP 도구로 자동 노출된다 (mcpExpose=true)
+- [x] **INTF-02**: Admin Settings에서 XRPL DEX Provider를 활성화/비활성화할 수 있다
+- [x] **INTF-03**: Admin UI에서 XRPL DEX 거래 내역이 트랜잭션 목록에 표시된다
+- [x] **INTF-04**: SDK에서 XRPL DEX 액션을 호출할 수 있다
 
 ## v2 Requirements
 
@@ -78,12 +78,12 @@
 | BOOK-01 | Phase 2 | Complete |
 | BOOK-02 | Phase 2 | Complete |
 | BOOK-03 | Phase 2 | Complete |
-| POL-01 | Phase 3 | Pending |
-| POL-02 | Phase 3 | Pending |
-| INTF-01 | Phase 3 | Pending |
-| INTF-02 | Phase 3 | Pending |
-| INTF-03 | Phase 3 | Pending |
-| INTF-04 | Phase 3 | Pending |
+| POL-01 | Phase 3 | Complete |
+| POL-02 | Phase 3 | Complete |
+| INTF-01 | Phase 3 | Complete |
+| INTF-02 | Phase 3 | Complete |
+| INTF-03 | Phase 3 | Complete |
+| INTF-04 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total
@@ -92,4 +92,4 @@
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 after roadmap creation*
+*Last updated: 2026-04-04 after Phase 3 completion*
