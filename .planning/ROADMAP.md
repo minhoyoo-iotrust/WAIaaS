@@ -179,12 +179,11 @@ Plans:
   2. ALLOWED_TOKENS/SPENDING_LIMIT 정책이 XRPL DEX 거래에 동일하게 적용된다
   3. XrplDexProvider 액션이 MCP 도구로 자동 노출되고 SDK에서 호출 가능하다
   4. Admin Settings에서 XRPL DEX Provider를 활성화/비활성화할 수 있고, Admin UI에서 DEX 거래 내역이 표시된다
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — resolveEffectiveAmountUsd XRPL DEX TakerGets USD 정책 통합
+- [ ] 03-02-PLAN.md — MCP/Admin/SDK 인터페이스 통합 검증 + Admin UI 라벨 개선
 
 ## Progress
 
