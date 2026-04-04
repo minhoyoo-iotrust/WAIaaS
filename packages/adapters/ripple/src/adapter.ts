@@ -539,9 +539,18 @@ export class RippleAdapter implements IChainAdapter {
           };
           return this.buildXrplNativeTx(cancel);
         }
+        case 'TrustSet': {
+          const trustSet: TrustSet = {
+            TransactionType: 'TrustSet',
+            Account: request.from,
+            LimitAmount: parsed['LimitAmount'] as TrustSet['LimitAmount'],
+            Flags: (parsed['Flags'] as number | undefined) ?? 0x00020000, // tfSetNoRipple
+          };
+          return this.buildXrplNativeTx(trustSet);
+        }
         default:
           throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
-            message: `Unsupported XRPL transaction type: ${xrplTxType ?? 'none'}. Use calldata with xrplTxType: OfferCreate | OfferCancel.`,
+            message: `Unsupported XRPL transaction type: ${xrplTxType ?? 'none'}. Use calldata with xrplTxType: OfferCreate | OfferCancel | TrustSet.`,
           });
       }
     }
@@ -743,7 +752,7 @@ export class RippleAdapter implements IChainAdapter {
    * Build an XRPL native transaction from a Transaction object.
    * Shared autofill/fee-margin/serialize pattern used by buildContractCall.
    */
-  private async buildXrplNativeTx(tx: OfferCreate | OfferCancel): Promise<UnsignedTransaction> {
+  private async buildXrplNativeTx(tx: OfferCreate | OfferCancel | TrustSet): Promise<UnsignedTransaction> {
     const client = this.getClient();
     const autofilled = await client.autofill(tx);
 
