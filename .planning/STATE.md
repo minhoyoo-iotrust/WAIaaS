@@ -4,7 +4,7 @@ milestone: v33.8
 milestone_name: XRPL DEX 지원
 status: completed
 stopped_at: "Completed Phase 3: Policy + Interface Integration (2/2 plans) -- milestone complete"
-last_updated: "2026-04-04T01:44:40.633Z"
+last_updated: "2026-04-04T01:49:17.577Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 3

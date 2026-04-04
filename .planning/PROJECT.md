@@ -8,17 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v33.8 XRPL DEX 지원
+## Current State (v33.8 shipped — ready for next milestone)
 
-**Goal:** XRPL 내장 DEX(오더북)를 Action Provider로 구현하여 AI 에이전트가 XRPL에서 네이티브 토큰 스왑(XRP ↔ IOU, IOU ↔ IOU)을 오더북 기반으로 실행할 수 있는 상태
-
-**Target features:**
-- XrplDexProvider: swap(즉시 실행, tfImmediateOrCancel), limit_order(지정가), cancel_order, get_orderbook, get_offers
-- 호가 조회: book_offers RPC로 매수/매도 오더북 깊이 제공
-- 슬리피지 보호: tfImmediateOrCancel + 최소 수량 검증
-- 부분 체결 처리: 지정가 주문의 부분 체결 상태 추적
-- MCP/SDK 도구: xrpl_dex_swap, xrpl_dex_limit_order, xrpl_dex_cancel, xrpl_dex_orderbook
-- Admin UI: XRPL DEX 활성화 설정, 거래 내역 표시
+v33.8 XRPL DEX 지원 SHIPPED (2026-04-04). XrplDexProvider(IActionProvider, 5 actions: swap/limit_order/cancel_order/get_orderbook/get_offers)로 XRPL 네이티브 오더북 DEX 통합 — OfferCreate(tfImmediateOrCancel 즉시 스왑 + 지정가), OfferCancel, book_offers/account_offers RPC. RippleAdapter.buildContractCall() calldata JSON 라우팅(OfferCreate/OfferCancel/TrustSet), tx-parser OfferCreate/OfferCancel CONTRACT_CALL 파싱, resolveEffectiveAmountUsd XRPL DEX TakerGets USD 지출 인식, Trust Line 자동 선행 설정, reserve 사전 검증, ApiDirectResult 오더북/주문 조회, MCP 자동 노출, Admin UI TYPE_LABELS 개선. 3 phases, 7 plans, 21 requirements, 28 commits, 47 files, +7,058/-1,187 lines, ~184 new tests.
 
 ## Previous Milestone: v33.6 XRP 메인넷 지원 — SHIPPED 2026-04-03
 
