@@ -109,7 +109,7 @@ export class RippleAdapter implements IChainAdapter {
         latencyMs,
         blockHeight: BigInt(ledgerIndex),
       };
-    } catch (err) {
+    } catch (_err) {
       return {
         healthy: false,
         latencyMs: Date.now() - start,
@@ -811,7 +811,7 @@ export class RippleAdapter implements IChainAdapter {
           ledgerIndex: validatedLedger.seq ?? 0,
         };
       }
-    } catch (err) {
+    } catch (_err) {
       // If we can't refresh, keep the old info or use defaults
       if (!this.serverInfo) {
         this.serverInfo = {
