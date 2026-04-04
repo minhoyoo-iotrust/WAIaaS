@@ -150,8 +150,8 @@ See `.planning/milestones/v33.6-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — buildContractCall() OfferCreate/OfferCancel calldata JSON 라우팅
-- [ ] 01-02-PLAN.md — tx-parser OfferCreate/OfferCancel CONTRACT_CALL 파싱
+- [x] 01-01-PLAN.md — buildContractCall() OfferCreate/OfferCancel calldata JSON 라우팅
+- [x] 01-02-PLAN.md — tx-parser OfferCreate/OfferCancel CONTRACT_CALL 파싱
 
 ### Phase 2: XrplDexProvider Core
 **Goal**: 에이전트가 XRPL DEX에서 즉시 스왑, 지정가 주문 생성/취소, 오더북 조회를 수행할 수 있다

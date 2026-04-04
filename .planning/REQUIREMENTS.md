@@ -7,10 +7,10 @@
 
 ### Adapter Extension
 
-- [ ] **ADPT-01**: RippleAdapter.buildContractCall()이 calldata JSON에서 OfferCreate 트랜잭션을 빌드할 수 있다
-- [ ] **ADPT-02**: RippleAdapter.buildContractCall()이 calldata JSON에서 OfferCancel 트랜잭션을 빌드할 수 있다
-- [ ] **ADPT-03**: tx-parser가 OfferCreate 트랜잭션을 CONTRACT_CALL 타입으로 파싱하고 operation을 식별한다
-- [ ] **ADPT-04**: tx-parser가 OfferCancel 트랜잭션을 CONTRACT_CALL 타입으로 파싱하고 operation을 식별한다
+- [x] **ADPT-01**: RippleAdapter.buildContractCall()이 calldata JSON에서 OfferCreate 트랜잭션을 빌드할 수 있다
+- [x] **ADPT-02**: RippleAdapter.buildContractCall()이 calldata JSON에서 OfferCancel 트랜잭션을 빌드할 수 있다
+- [x] **ADPT-03**: tx-parser가 OfferCreate 트랜잭션을 CONTRACT_CALL 타입으로 파싱하고 operation을 식별한다
+- [x] **ADPT-04**: tx-parser가 OfferCancel 트랜잭션을 CONTRACT_CALL 타입으로 파싱하고 operation을 식별한다
 
 ### DEX Core Actions
 
@@ -63,10 +63,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADPT-01 | Phase 1 | Pending |
-| ADPT-02 | Phase 1 | Pending |
-| ADPT-03 | Phase 1 | Pending |
-| ADPT-04 | Phase 1 | Pending |
+| ADPT-01 | Phase 1 | Complete |
+| ADPT-02 | Phase 1 | Complete |
+| ADPT-03 | Phase 1 | Complete |
+| ADPT-04 | Phase 1 | Complete |
 | DEX-01 | Phase 2 | Pending |
 | DEX-02 | Phase 2 | Pending |
 | DEX-03 | Phase 2 | Pending |

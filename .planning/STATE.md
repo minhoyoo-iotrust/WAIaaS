@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v33.8
 milestone_name: XRPL DEX 지원
-status: roadmap
-stopped_at: null
-last_updated: "2026-04-04T00:00:00.000Z"
+status: executing
+stopped_at: "Completed Phase 1: Adapter Extension (2/2 plans)"
+last_updated: "2026-04-04T00:53:04.012Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 7
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,15 +26,16 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 1 of 3 (Adapter Extension)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-04-04 — Roadmap created (3 phases, 21 requirements)
+Plan: 2 of 2 in current phase
+Status: Ready to execute
+Last activity: 2026-04-04
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: —
 - Total execution time: 0 hours
@@ -47,10 +48,14 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
+| Phase 01 P01-02 | 413s | 2 tasks | 4 files |
+
 ### Decisions
 
 - CONTRACT_CALL 타입 재사용: XRPL DEX 액션을 10번째 discriminated union 타입 추가 없이 calldata JSON으로 처리
 - ApiDirectResult 패턴: 오더북/주문 조회는 파이프라인 우회 (Hyperliquid 선례)
+- [Phase 01]: calldata JSON uses xrplTxType discriminator field for OfferCreate/OfferCancel routing in buildContractCall
+- [Phase 01]: TakerGets used as spending amount in tx-parser (what account gives away) for policy evaluation
 
 ### Pending Todos
 
@@ -63,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-04
-Stopped at: Roadmap created
+Last session: 2026-04-04T00:53:04.007Z
+Stopped at: Completed Phase 1: Adapter Extension (2/2 plans)
 Resume file: None
