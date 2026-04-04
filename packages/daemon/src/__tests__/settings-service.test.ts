@@ -433,7 +433,7 @@ describe('SettingsService', () => {
 
     it('has expected number of definitions', () => {
       // 7 notifications (ntfy removed) + 18 rpc (+3 xrpl) + 15 security (+1 cors_origins) + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 11 incoming (+1 solana_mode +3 xrpl) + 2 incoming hyperevm wss + 85 actions (+2 hyperliquid_request_timeout_ms, cors_origins) + 1 policy + 5 gas_condition + 18 rpc_pool (+3 xrpl) + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 + 4 smart_account (pimlico/alchemy api_key + paymaster_policy_id) + 1 external_actions + 7 rpc_proxy = 222
-      expect(SETTING_DEFINITIONS.length).toBe(222);
+      expect(SETTING_DEFINITIONS.length).toBe(224);
     });
   });
 
@@ -612,9 +612,9 @@ describe('SettingsService', () => {
       expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
     });
 
-    it('actions category has 84 settings', () => {
+    it('actions category has 86 settings', () => {
       const actionsDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'actions');
-      expect(actionsDefs.length).toBe(84);
+      expect(actionsDefs.length).toBe(86);
     });
 
     it('actions.jupiter_swap_api_key is a credential', () => {
