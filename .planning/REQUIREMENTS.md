@@ -14,20 +14,20 @@
 
 ### DEX Core Actions
 
-- [ ] **DEX-01**: 에이전트가 XrplDexProvider를 통해 XRP ↔ IOU 즉시 스왑(tfImmediateOrCancel)을 실행할 수 있다
-- [ ] **DEX-02**: 에이전트가 XrplDexProvider를 통해 IOU ↔ IOU 즉시 스왑을 실행할 수 있다
-- [ ] **DEX-03**: 에이전트가 XrplDexProvider를 통해 지정가 주문(limit order)을 생성할 수 있다
-- [ ] **DEX-04**: 에이전트가 XrplDexProvider를 통해 활성 주문을 취소할 수 있다
-- [ ] **DEX-05**: 즉시 스왑 시 슬리피지 보호가 적용된다 (tfImmediateOrCancel + 최소 수량 검증)
-- [ ] **DEX-06**: XRP/IOU 이중 금액 포맷이 올바르게 변환된다 (drops ↔ IOU object, 3가지 조합)
-- [ ] **DEX-07**: IOU 수신 시 Trust Line이 없으면 자동으로 TrustSet을 선행 실행한다
-- [ ] **DEX-08**: Offer 생성 전 계정 reserve 충족 여부를 사전 검증한다
+- [x] **DEX-01**: 에이전트가 XrplDexProvider를 통해 XRP ↔ IOU 즉시 스왑(tfImmediateOrCancel)을 실행할 수 있다
+- [x] **DEX-02**: 에이전트가 XrplDexProvider를 통해 IOU ↔ IOU 즉시 스왑을 실행할 수 있다
+- [x] **DEX-03**: 에이전트가 XrplDexProvider를 통해 지정가 주문(limit order)을 생성할 수 있다
+- [x] **DEX-04**: 에이전트가 XrplDexProvider를 통해 활성 주문을 취소할 수 있다
+- [x] **DEX-05**: 즉시 스왑 시 슬리피지 보호가 적용된다 (tfImmediateOrCancel + 최소 수량 검증)
+- [x] **DEX-06**: XRP/IOU 이중 금액 포맷이 올바르게 변환된다 (drops ↔ IOU object, 3가지 조합)
+- [x] **DEX-07**: IOU 수신 시 Trust Line이 없으면 자동으로 TrustSet을 선행 실행한다
+- [x] **DEX-08**: Offer 생성 전 계정 reserve 충족 여부를 사전 검증한다
 
 ### Orderbook Queries
 
-- [ ] **BOOK-01**: 에이전트가 특정 토큰 쌍의 오더북(매수/매도 호가)을 조회할 수 있다
-- [ ] **BOOK-02**: 오더북 조회 시 funded amount(실제 체결 가능 수량)가 포함된다
-- [ ] **BOOK-03**: 에이전트가 자신의 활성 주문 목록을 조회할 수 있다
+- [x] **BOOK-01**: 에이전트가 특정 토큰 쌍의 오더북(매수/매도 호가)을 조회할 수 있다
+- [x] **BOOK-02**: 오더북 조회 시 funded amount(실제 체결 가능 수량)가 포함된다
+- [x] **BOOK-03**: 에이전트가 자신의 활성 주문 목록을 조회할 수 있다
 
 ### Policy Integration
 
@@ -67,17 +67,17 @@
 | ADPT-02 | Phase 1 | Complete |
 | ADPT-03 | Phase 1 | Complete |
 | ADPT-04 | Phase 1 | Complete |
-| DEX-01 | Phase 2 | Pending |
-| DEX-02 | Phase 2 | Pending |
-| DEX-03 | Phase 2 | Pending |
-| DEX-04 | Phase 2 | Pending |
-| DEX-05 | Phase 2 | Pending |
-| DEX-06 | Phase 2 | Pending |
-| DEX-07 | Phase 2 | Pending |
-| DEX-08 | Phase 2 | Pending |
-| BOOK-01 | Phase 2 | Pending |
-| BOOK-02 | Phase 2 | Pending |
-| BOOK-03 | Phase 2 | Pending |
+| DEX-01 | Phase 2 | Complete |
+| DEX-02 | Phase 2 | Complete |
+| DEX-03 | Phase 2 | Complete |
+| DEX-04 | Phase 2 | Complete |
+| DEX-05 | Phase 2 | Complete |
+| DEX-06 | Phase 2 | Complete |
+| DEX-07 | Phase 2 | Complete |
+| DEX-08 | Phase 2 | Complete |
+| BOOK-01 | Phase 2 | Complete |
+| BOOK-02 | Phase 2 | Complete |
+| BOOK-03 | Phase 2 | Complete |
 | POL-01 | Phase 3 | Pending |
 | POL-02 | Phase 3 | Pending |
 | INTF-01 | Phase 3 | Pending |

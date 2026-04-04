@@ -166,9 +166,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Schemas + OfferBuilder + OrderbookClient 기반 모듈
-- [ ] 02-02-PLAN.md — XrplDexProvider 5 actions + TrustSet adapter 확장 + 등록
-- [ ] 02-03-PLAN.md — Daemon 인프라 등록 + 통합 테스트
+- [x] 02-01-PLAN.md — Schemas + OfferBuilder + OrderbookClient 기반 모듈
+- [x] 02-02-PLAN.md — XrplDexProvider 5 actions + TrustSet adapter 확장 + 등록
+- [x] 02-03-PLAN.md — Daemon 인프라 등록 + 통합 테스트
 
 ### Phase 3: Policy + Interface Integration
 **Goal**: XRPL DEX 거래가 기존 정책 엔진에 적용되고 MCP/Admin/SDK 인터페이스를 통해 접근 가능하다
@@ -191,5 +191,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Adapter Extension | 2/2 | Complete    | 2026-04-04 |
-| 2. XrplDexProvider Core | 0/3 | Not started | - |
+| 2. XrplDexProvider Core | 3/3 | Complete    | 2026-04-04 |
 | 3. Policy + Interface Integration | 0/2 | Not started | - |
