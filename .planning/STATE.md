@@ -4,7 +4,7 @@ milestone: v33.8
 milestone_name: XRPL DEX 지원
 status: executing
 stopped_at: "Completed Phase 2: XrplDexProvider Core (3/3 plans)"
-last_updated: "2026-04-04T01:17:06Z"
+last_updated: "2026-04-04T01:18:42.183Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 3
