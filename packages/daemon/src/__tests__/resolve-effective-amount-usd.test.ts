@@ -488,6 +488,121 @@ describe('resolveEffectiveAmountUsd', () => {
   });
 
   // -----------------------------------------------------------------------
+  // XRPL DEX CONTRACT_CALL (calldata parsing)
+  // -----------------------------------------------------------------------
+
+  describe('XRPL DEX CONTRACT_CALL (calldata parsing)', () => {
+    it('XRP TakerGets: correct USD amount from drops', async () => {
+      const mockOracle = createMockOracle({
+        getNativePrice: vi.fn().mockResolvedValue(buildPrice(2.5)), // XRP $2.50
+      });
+
+      const request = {
+        type: 'CONTRACT_CALL',
+        to: 'rIssuer',
+        value: '1000000', // 1 XRP in drops
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCreate',
+          TakerGets: '1000000',
+          TakerPays: { currency: 'USD', issuer: 'rIssuer', value: '2.5' },
+          Flags: 0x00080000,
+        }),
+        actionProvider: 'xrpl_dex',
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ripple', mockOracle);
+
+      expect(result.type).toBe('success');
+      const success = result as PriceResultSuccess;
+      // 1,000,000 drops / 10^6 = 1 XRP * $2.50 = $2.50
+      expect(success.usdAmount).toBeCloseTo(2.5, 2);
+      expect(success.isStale).toBe(false);
+    });
+
+    it('IOU TakerGets: returns notListed (safe fallback)', async () => {
+      const request = {
+        type: 'CONTRACT_CALL',
+        to: 'rIssuer',
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCreate',
+          TakerGets: { currency: 'USD', issuer: 'rIssuer', value: '100' },
+          TakerPays: '5000000',
+        }),
+        actionProvider: 'xrpl_dex',
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ripple', oracle);
+
+      expect(result.type).toBe('notListed');
+      const notListed = result as PriceResultNotListed;
+      expect(notListed.tokenAddress).toBe('USD.rIssuer');
+      expect(notListed.chain).toBe('ripple');
+    });
+
+    it('OfferCancel: returns $0 (no spending)', async () => {
+      const request = {
+        type: 'CONTRACT_CALL',
+        to: 'native',
+        calldata: JSON.stringify({
+          xrplTxType: 'OfferCancel',
+          OfferSequence: 12345,
+        }),
+        actionProvider: 'xrpl_dex',
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ripple', oracle);
+
+      expect(result.type).toBe('success');
+      const success = result as PriceResultSuccess;
+      expect(success.usdAmount).toBe(0);
+      expect(success.isStale).toBe(false);
+    });
+
+    it('standard CONTRACT_CALL without actionProvider: unchanged behavior', async () => {
+      const mockOracle = createMockOracle({
+        getNativePrice: vi.fn().mockResolvedValue(buildPrice(3000)),
+      });
+
+      const request = {
+        to: '0xcontract',
+        calldata: '0x12345678',
+        value: '1000000000000000000', // 1 ETH
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ethereum', mockOracle);
+
+      expect(result.type).toBe('success');
+      const success = result as PriceResultSuccess;
+      expect(success.usdAmount).toBeCloseTo(3000, 2);
+    });
+
+    it('malformed calldata JSON: falls through to value-based logic', async () => {
+      const mockOracle = createMockOracle({
+        getNativePrice: vi.fn().mockResolvedValue(buildPrice(2.5)),
+      });
+
+      const request = {
+        to: 'rSomeAddress',
+        value: '1000000',
+        calldata: 'not-json',
+        actionProvider: 'xrpl_dex',
+      };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ripple', mockOracle);
+
+      // Falls through to existing value-based logic: 1M drops / 10^6 * $2.50 = $2.50
+      expect(result.type).toBe('success');
+      const success = result as PriceResultSuccess;
+      expect(success.usdAmount).toBeCloseTo(2.5, 2);
+    });
+
+    it('CONTRACT_CALL with value="0" and no calldata: unchanged ($0)', async () => {
+      const request = { to: 'contractAddr', value: '0' };
+      const result = await resolveEffectiveAmountUsd(request, 'CONTRACT_CALL', 'ripple', oracle);
+
+      expect(result.type).toBe('success');
+      const success = result as PriceResultSuccess;
+      expect(success.usdAmount).toBe(0);
+      expect(success.isStale).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // 18. BATCH: network is forwarded to TOKEN_TRANSFER instructions
   // -----------------------------------------------------------------------
   it('BATCH: passes network to TOKEN_TRANSFER getPrice calls', async () => {
