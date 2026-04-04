@@ -125,3 +125,71 @@ See `.planning/milestones/v33.4-ROADMAP.md` for full details.
 </details>
 
 See `.planning/milestones/v33.6-ROADMAP.md` for full details.
+
+### v33.8 XRPL DEX 지원 (In Progress)
+
+**Milestone Goal:** XRPL 네이티브 오더북 DEX를 기존 ACTION_PROVIDER 프레임워크에 통합하여 에이전트가 XRP/IOU 스왑, 지정가 주문, 오더북 조회를 수행할 수 있도록 한다.
+
+## Phases
+
+- [ ] **Phase 1: Adapter Extension** - RippleAdapter.buildContractCall() + tx-parser OfferCreate/OfferCancel 지원
+- [ ] **Phase 2: XrplDexProvider Core** - 스왑/지정가/취소 온체인 액션 + 오더북/주문 조회
+- [ ] **Phase 3: Policy + Interface Integration** - USD 지출 한도 수정 + MCP/Admin/SDK 통합
+
+## Phase Details
+
+### Phase 1: Adapter Extension
+**Goal**: RippleAdapter가 calldata JSON에서 XRPL 네이티브 트랜잭션(OfferCreate/OfferCancel)을 빌드하고 tx-parser가 이를 인식한다
+**Depends on**: Nothing (first phase)
+**Requirements**: ADPT-01, ADPT-02, ADPT-03, ADPT-04
+**Success Criteria** (what must be TRUE):
+  1. buildContractCall()에 OfferCreate calldata를 전달하면 서명 가능한 트랜잭션이 반환된다
+  2. buildContractCall()에 OfferCancel calldata를 전달하면 서명 가능한 트랜잭션이 반환된다
+  3. calldata가 없는 buildContractCall() 호출은 기존과 동일하게 INVALID_INSTRUCTION 에러를 던진다
+  4. tx-parser가 OfferCreate/OfferCancel 트랜잭션을 CONTRACT_CALL 타입으로 파싱하고 operation 필드를 포함한다
+**Plans**: TBD
+
+Plans:
+- [ ] 01-01: TBD
+- [ ] 01-02: TBD
+
+### Phase 2: XrplDexProvider Core
+**Goal**: 에이전트가 XRPL DEX에서 즉시 스왑, 지정가 주문 생성/취소, 오더북 조회를 수행할 수 있다
+**Depends on**: Phase 1
+**Requirements**: DEX-01, DEX-02, DEX-03, DEX-04, DEX-05, DEX-06, DEX-07, DEX-08, BOOK-01, BOOK-02, BOOK-03
+**Success Criteria** (what must be TRUE):
+  1. 에이전트가 XRP/IOU 및 IOU/IOU 쌍에 대해 즉시 스왑을 실행하면 tfImmediateOrCancel로 체결되고 슬리피지 초과 시 거부된다
+  2. 에이전트가 지정가 주문을 생성하면 오더북에 등록되고, 주문 취소 시 오더북에서 제거된다
+  3. IOU 수신 시 Trust Line이 없으면 자동으로 TrustSet이 선행 실행되고, reserve 부족 시 사전 검증 에러가 반환된다
+  4. 에이전트가 특정 토큰 쌍의 오더북(매수/매도 호가 + funded amount)을 조회할 수 있다
+  5. 에이전트가 자신의 활성 주문 목록(OfferSequence 포함)을 조회할 수 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 02-01: TBD
+- [ ] 02-02: TBD
+- [ ] 02-03: TBD
+
+### Phase 3: Policy + Interface Integration
+**Goal**: XRPL DEX 거래가 기존 정책 엔진에 적용되고 MCP/Admin/SDK 인터페이스를 통해 접근 가능하다
+**Depends on**: Phase 2
+**Requirements**: POL-01, POL-02, INTF-01, INTF-02, INTF-03, INTF-04
+**Success Criteria** (what must be TRUE):
+  1. XRPL DEX 스왑의 TakerGets 금액이 USD 지출 한도 정책에 반영되어 일일 한도를 초과하면 거부된다
+  2. ALLOWED_TOKENS/SPENDING_LIMIT 정책이 XRPL DEX 거래에 동일하게 적용된다
+  3. XrplDexProvider 액션이 MCP 도구로 자동 노출되고 SDK에서 호출 가능하다
+  4. Admin Settings에서 XRPL DEX Provider를 활성화/비활성화할 수 있고, Admin UI에서 DEX 거래 내역이 표시된다
+**Plans**: TBD
+**UI hint**: yes
+
+Plans:
+- [ ] 03-01: TBD
+- [ ] 03-02: TBD
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Adapter Extension | 0/2 | Not started | - |
+| 2. XrplDexProvider Core | 0/3 | Not started | - |
+| 3. Policy + Interface Integration | 0/2 | Not started | - |

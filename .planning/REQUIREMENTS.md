@@ -63,33 +63,33 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADPT-01 | TBD | Pending |
-| ADPT-02 | TBD | Pending |
-| ADPT-03 | TBD | Pending |
-| ADPT-04 | TBD | Pending |
-| DEX-01 | TBD | Pending |
-| DEX-02 | TBD | Pending |
-| DEX-03 | TBD | Pending |
-| DEX-04 | TBD | Pending |
-| DEX-05 | TBD | Pending |
-| DEX-06 | TBD | Pending |
-| DEX-07 | TBD | Pending |
-| DEX-08 | TBD | Pending |
-| BOOK-01 | TBD | Pending |
-| BOOK-02 | TBD | Pending |
-| BOOK-03 | TBD | Pending |
-| POL-01 | TBD | Pending |
-| POL-02 | TBD | Pending |
-| INTF-01 | TBD | Pending |
-| INTF-02 | TBD | Pending |
-| INTF-03 | TBD | Pending |
-| INTF-04 | TBD | Pending |
+| ADPT-01 | Phase 1 | Pending |
+| ADPT-02 | Phase 1 | Pending |
+| ADPT-03 | Phase 1 | Pending |
+| ADPT-04 | Phase 1 | Pending |
+| DEX-01 | Phase 2 | Pending |
+| DEX-02 | Phase 2 | Pending |
+| DEX-03 | Phase 2 | Pending |
+| DEX-04 | Phase 2 | Pending |
+| DEX-05 | Phase 2 | Pending |
+| DEX-06 | Phase 2 | Pending |
+| DEX-07 | Phase 2 | Pending |
+| DEX-08 | Phase 2 | Pending |
+| BOOK-01 | Phase 2 | Pending |
+| BOOK-02 | Phase 2 | Pending |
+| BOOK-03 | Phase 2 | Pending |
+| POL-01 | Phase 3 | Pending |
+| POL-02 | Phase 3 | Pending |
+| INTF-01 | Phase 3 | Pending |
+| INTF-02 | Phase 3 | Pending |
+| INTF-03 | Phase 3 | Pending |
+| INTF-04 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 after initial definition*
+*Last updated: 2026-04-04 after roadmap creation*
