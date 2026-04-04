@@ -4,7 +4,7 @@ milestone: v33.8
 milestone_name: XRPL DEX 지원
 status: executing
 stopped_at: "Completed Phase 1: Adapter Extension (2/2 plans)"
-last_updated: "2026-04-04T00:53:04.012Z"
+last_updated: "2026-04-04T00:53:37.294Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 3
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Phase: 1 of 3 (Adapter Extension)
-Plan: 2 of 2 in current phase
+Phase: 2 of 3 (xrpldexprovider core)
+Plan: Not started
 Status: Ready to execute
 Last activity: 2026-04-04
 

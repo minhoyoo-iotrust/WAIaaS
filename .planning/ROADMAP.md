@@ -132,7 +132,7 @@ See `.planning/milestones/v33.6-ROADMAP.md` for full details.
 
 ## Phases
 
-- [ ] **Phase 1: Adapter Extension** - RippleAdapter.buildContractCall() + tx-parser OfferCreate/OfferCancel 지원
+- [x] **Phase 1: Adapter Extension** - RippleAdapter.buildContractCall() + tx-parser OfferCreate/OfferCancel 지원 (completed 2026-04-04)
 - [ ] **Phase 2: XrplDexProvider Core** - 스왑/지정가/취소 온체인 액션 + 오더북/주문 조회
 - [ ] **Phase 3: Policy + Interface Integration** - USD 지출 한도 수정 + MCP/Admin/SDK 통합
 
@@ -190,6 +190,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Adapter Extension | 0/2 | Not started | - |
+| 1. Adapter Extension | 0/2 | Complete    | 2026-04-04 |
 | 2. XrplDexProvider Core | 0/3 | Not started | - |
 | 3. Policy + Interface Integration | 0/2 | Not started | - |
