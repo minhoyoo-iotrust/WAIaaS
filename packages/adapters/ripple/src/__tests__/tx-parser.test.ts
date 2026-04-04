@@ -59,16 +59,84 @@ describe('parseRippleTransaction', () => {
     expect(result.operations[0]!.token).toBe('USD.rGateway');
   });
 
-  it('parses unknown TransactionType as UNKNOWN', () => {
+  it('parses genuinely unknown TransactionType as UNKNOWN', () => {
     const rawTx = JSON.stringify({
-      TransactionType: 'OfferCreate',
+      TransactionType: 'AccountDelete',
       Account: 'rSender',
     });
 
     const result = parseRippleTransaction(rawTx);
     expect(result.operations).toHaveLength(1);
     expect(result.operations[0]!.type).toBe('UNKNOWN');
-    expect(result.operations[0]!.method).toBe('OfferCreate');
+    expect(result.operations[0]!.method).toBe('AccountDelete');
+  });
+
+  // -- OfferCreate/OfferCancel parsing --
+
+  describe('OfferCreate/OfferCancel parsing', () => {
+    it('parses OfferCreate with XRP TakerGets as CONTRACT_CALL', () => {
+      const rawTx = JSON.stringify({
+        TransactionType: 'OfferCreate',
+        Account: 'rSender',
+        TakerGets: '50000000', // 50 XRP in drops
+        TakerPays: { currency: 'USD', issuer: 'rIssuer', value: '100' },
+      });
+
+      const result = parseRippleTransaction(rawTx);
+      expect(result.operations).toHaveLength(1);
+      expect(result.operations[0]!.type).toBe('CONTRACT_CALL');
+      expect(result.operations[0]!.method).toBe('OfferCreate');
+      expect(result.operations[0]!.amount).toBe(50_000_000n);
+      expect(result.operations[0]!.token).toBeUndefined();
+    });
+
+    it('parses OfferCreate with IOU TakerGets as CONTRACT_CALL', () => {
+      const rawTx = JSON.stringify({
+        TransactionType: 'OfferCreate',
+        Account: 'rSender',
+        TakerGets: { currency: 'USD', issuer: 'rIssuer', value: '100' },
+        TakerPays: '50000000',
+      });
+
+      const result = parseRippleTransaction(rawTx);
+      expect(result.operations).toHaveLength(1);
+      expect(result.operations[0]!.type).toBe('CONTRACT_CALL');
+      expect(result.operations[0]!.method).toBe('OfferCreate');
+      // 100 * 10^15 = 100_000_000_000_000_000n
+      expect(result.operations[0]!.amount).toBe(100_000_000_000_000_000n);
+      expect(result.operations[0]!.token).toBe('USD.rIssuer');
+    });
+
+    it('parses OfferCreate with IOU/IOU pair', () => {
+      const rawTx = JSON.stringify({
+        TransactionType: 'OfferCreate',
+        Account: 'rSender',
+        TakerGets: { currency: 'EUR', issuer: 'rEuroBank', value: '200.5' },
+        TakerPays: { currency: 'USD', issuer: 'rIssuer', value: '250' },
+      });
+
+      const result = parseRippleTransaction(rawTx);
+      expect(result.operations).toHaveLength(1);
+      expect(result.operations[0]!.type).toBe('CONTRACT_CALL');
+      expect(result.operations[0]!.method).toBe('OfferCreate');
+      // 200.5 * 10^15 = 200_500_000_000_000_000n
+      expect(result.operations[0]!.amount).toBe(200_500_000_000_000_000n);
+      expect(result.operations[0]!.token).toBe('EUR.rEuroBank');
+    });
+
+    it('parses OfferCancel as CONTRACT_CALL', () => {
+      const rawTx = JSON.stringify({
+        TransactionType: 'OfferCancel',
+        Account: 'rSender',
+        OfferSequence: 12345,
+      });
+
+      const result = parseRippleTransaction(rawTx);
+      expect(result.operations).toHaveLength(1);
+      expect(result.operations[0]!.type).toBe('CONTRACT_CALL');
+      expect(result.operations[0]!.method).toBe('OfferCancel');
+      expect(result.operations[0]!.amount).toBeUndefined();
+    });
   });
 
   it('handles Payment with unexpected Amount type as UNKNOWN', () => {
