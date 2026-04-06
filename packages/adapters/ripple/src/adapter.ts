@@ -9,8 +9,10 @@
  * @see Phase 471-02 (transaction pipeline + AdapterPool wiring)
  */
 
-import { Client, Wallet, ECDSA } from 'xrpl';
-import type { Payment, TrustSet, Transaction, NFTokenCreateOffer, OfferCreate, OfferCancel } from 'xrpl';
+import xrpl from 'xrpl';
+import type { Client as ClientType, Payment, TrustSet, Transaction, NFTokenCreateOffer, OfferCreate, OfferCancel } from 'xrpl';
+
+const { Client, Wallet, ECDSA } = xrpl;
 import type {
   IChainAdapter,
   ChainType,
@@ -49,7 +51,7 @@ const FEE_SAFETY_DENOMINATOR = 100n;
 export class RippleAdapter implements IChainAdapter {
   readonly chain: ChainType = 'ripple';
   readonly network: NetworkType;
-  private client: Client | null = null;
+  private client: ClientType | null = null;
   private _connected = false;
   private serverInfo: {
     baseReserve: bigint; // in drops
@@ -786,7 +788,7 @@ export class RippleAdapter implements IChainAdapter {
     };
   }
 
-  private getClient(): Client {
+  private getClient(): ClientType {
     if (!this.client || !this._connected) {
       throw new ChainError('RPC_CONNECTION_ERROR', 'ripple', {
         message: 'Not connected to XRPL. Call connect() first.',
