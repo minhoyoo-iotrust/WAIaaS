@@ -1,5 +1,60 @@
 # Changelog
 
+## [2.14.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0...v2.14.0-rc) (2026-04-06)
+
+
+### Features
+
+* **01-01:** extend buildContractCall() with OfferCreate/OfferCancel routing ([135ed5e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/135ed5eeba083d0095b938d4f26f80994caa45c0))
+* **01-02:** add OfferCreate/OfferCancel CONTRACT_CALL parsing to tx-parser ([1d67639](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1d676390108848bb8fec46eb0ea77e5fa27debd6))
+* **02-01:** add OfferBuilder with currency amount conversion and reserve validation ([b75b003](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b75b0030a17440e2f67f93e1ae3c8bcdbab9a236))
+* **02-01:** add XrplOrderbookClient RPC wrapper for orderbook queries ([b334932](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b334932c382f1cbbbefd5142a756aa213f2ac8f4))
+* **02-01:** add Zod input schemas for 5 XRPL DEX actions ([bf58b9e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bf58b9ed8ee55dfd9fa8600d8231983c8ab41544))
+* **02-02:** extend buildContractCall for TrustSet + register XrplDexProvider ([d1b37ac](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d1b37ac8ec59e0dab72ab4b82c3de03e468137a5))
+* **02-02:** implement XrplDexProvider with 5 actions ([0448d7b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0448d7b07bca0b60b71837bc10fbdea2b4e83a5f))
+* **02-03:** register xrpl_dex in builtin-metadata and setting keys ([2b77125](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2b7712563aa2e3208fc467406dc2469d921f7c8f))
+* **03-01:** resolveEffectiveAmountUsd XRPL DEX calldata parsing ([92f86d8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/92f86d83eaaad253206e219557092a98833d45a8))
+* **03-02:** Admin UI transaction type labels + XRPL DEX display ([b360587](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b3605879f87aa0da00b22c96cf7289dddce4543f))
+* **470-01:** extend core chain enums, constants, and RPC defaults for ripple ([e33e08b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e33e08b4766a7a201120350e7461063a3db34637))
+* **470-01:** register ripple ChainType and XRPL NetworkTypes in shared SSoT ([9374c44](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9374c44f5dfa93625c5a624a403f0ea9ae25e198))
+* **470-02:** register XRPL CAIP-2 chain IDs and CAIP-19 asset identifiers ([d7329e5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d7329e54f348a4aedaaa6bf6cfbe701012c16c30))
+* **470-03:** add ripple chain stub to AdapterPool with RPC config key mapping ([ccd91f4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ccd91f4ea1d6ab75b1aaf5a1368b8789d2b35a65))
+* **470-03:** DB v62 migration -- add ripple chain and XRPL networks to CHECK constraints ([8963385](https://github.com/minhoyoo-iotrust/WAIaaS/commit/89633857592826275f2fbb6bb73613dc49e5d7af))
+* **471-01:** scaffold @waiaas/adapter-ripple package with RippleAdapter, KeyStore ripple support, and XRPL RPC config ([e67f737](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e67f73788a0ec4c5769b5b9e27f64d7951fb20c3))
+* **471-02:** wire AdapterPool for ripple chain and add unit tests ([8d304fc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8d304fc0a42658dab17b5e09f1d1284a8ab5be4b))
+* **472-01:** implement getTokenInfo, getAssets Trust Lines, and tx-parser IOU precision ([e79678a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e79678a91b32cdb44101e64657b1890963d16db2))
+* **472-01:** implement Trust Line currency utils, TrustSet, and IOU transfer ([b3b2fc5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b3b2fc50a886e0e43965b2ed45fc5677871e9066))
+* **473-01:** add ripple support to getNativeTokenInfo and NFT indexer ([2a685ed](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2a685ede8d45ebeceb4a1d6d246b6b14f9d90a6a))
+* **473-01:** implement XLS-20 NFT adapter and core schema extension ([b30e07b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b30e07bba43b28f2a8f3089dc09c0aafdcb42b11))
+* **473-02:** add Ripple chain support to Admin UI wallet creation and RPC settings ([3fdd7bd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3fdd7bd145ebe06dcf60a23e53a9de00b09b7747))
+* **473-02:** extend OpenAPI and SDK chain enums with ripple ([916adc4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/916adc41d2a7df4cba070ee4ac2d1864b9a04d35))
+* **settings:** enable XRPL DEX provider by default ([a3c7f86](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a3c7f86444fdb3ebf4cc162af3e8e976980d9ddd))
+* XRP Ledger mainnet support (v33.6) ([79fc0c4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/79fc0c47b418a32157d4c525d71546da9dd0dc47))
+
+
+### Bug Fixes
+
+* **adapter-ripple:** fix typecheck error in test mock casts ([b294075](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b2940758389e10f29f6e369e6621ac87802995a6))
+* **adapter-ripple:** remove unused variable declarations in test file ([18f4b25](https://github.com/minhoyoo-iotrust/WAIaaS/commit/18f4b25ab7df3ca1a1c21f3f281bb313eb09497f))
+* **adapter-ripple:** use default import for xrpl CJS module to fix ESM named export failure ([#481](https://github.com/minhoyoo-iotrust/WAIaaS/issues/481)) ([e7fbc18](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e7fbc18a545d9407a3fb488d16294aef8a259c16))
+* **ci:** add required sections to xrpl-dex UAT scenario ([831367c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/831367c46a756eb49696c44852257dd1b63edf2d))
+* **ci:** add xrpl-dex to E2E provider coverage map ([08e0b6a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/08e0b6ad16d1548d747f2fecba2e79488dca4026))
+* **ci:** register xrpl-dex scenario defi-17 in UAT index ([83359b6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/83359b61861a997793849e9aacfefa58e1c4dd92))
+* **ci:** remove misplaced cross-package test from actions package ([0a382cd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0a382cd04197c6c3c124e96421023cca378760f7))
+* **ci:** update enum SSoT expected counts for ripple chain ([d1ccce6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d1ccce6002aa2f6b5fc26a6248553fe423a84816))
+* **ci:** update enum SSoT expected counts for xrpl_dex settings ([79e433c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/79e433cd632c75beb88d3077d1b016c9e7154c69))
+* **daemon:** add missing ripple-keypairs dependency for XRP wallet creation ([b4f42c8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b4f42c8e4d6b81e0a715dd1347b01e08ffaf6333))
+* DB migration column order, MCP race condition, desktop dev mode ([32e3ebb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/32e3ebb8106ddc827c329d2544135c9f5b95bc1a))
+* **db:** use explicit column lists in v62 migration to fix column order mismatch ([#480](https://github.com/minhoyoo-iotrust/WAIaaS/issues/480)) ([8d3b499](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8d3b4994a4fdf753558c6f70b65a5cd3538271a0))
+* **desktop:** add beforeDevCommand and redesign tray icons ([1232089](https://github.com/minhoyoo-iotrust/WAIaaS/commit/12320899d3829ff9d1fb69f00fe2a16ef6e4a584))
+* **lint:** rename unused catch variables to _err in RippleAdapter ([a51a92a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a51a92a5a2558f94d64fe254733b4febcef4e936))
+* **mcp:** await registerActionProviderTools before server.connect ([#479](https://github.com/minhoyoo-iotrust/WAIaaS/issues/479)) ([4d1d822](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4d1d822accd9bc939f89842db31e7d5c8c701917))
+* **security:** update openclaw for GHSA-f6pf-4gjx-c94r ([762bbd4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/762bbd4b66be8e0693a124e5657c546703b1f7ac))
+* **security:** update openclaw to &gt;=2026.3.28 for GHSA-f6pf-4gjx-c94r ([f30d660](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f30d660d85fbf19140be205863b37a96311d0100))
+* XRPL stabilization — ripple-keypairs dep, ESM import fix, DEX default enable ([32efa47](https://github.com/minhoyoo-iotrust/WAIaaS/commit/32efa479b94ecf5b0fd35b0ee00f02fc0f9f3741))
+* **xrpl:** resolve 3 critical XRPL bugs and add token registry support ([4e881c8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4e881c8ba67a30a1faca97b6ba6973ae3df13a39))
+* **xrpl:** resolve 3 critical XRPL bugs and add token registry support ([fc65b22](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fc65b222f22e0e170411d0ebade0b81661052bab))
+
 ## [2.13.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.13.0...v2.13.0) (2026-04-02)
 
 
