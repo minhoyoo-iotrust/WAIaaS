@@ -40,6 +40,9 @@ jobs:
       - name: Verify Enum SSoT
         run: pnpm run verify:enums
 
+      - name: Verify Migration Safety
+        run: pnpm run verify:migrations
+
       - name: Coverage Gate
         run: bash scripts/coverage-gate.sh
         env:

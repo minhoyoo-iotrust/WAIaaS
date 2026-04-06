@@ -74,7 +74,19 @@ export const migrations: Migration[] = [
   factory_address TEXT
 )`);
 
-        sqlite.exec('INSERT INTO wallets_new SELECT * FROM wallets');
+        sqlite.exec(`INSERT INTO wallets_new (
+  id, name, chain, environment, public_key, status, owner_address, owner_verified,
+  created_at, updated_at, suspended_at, suspension_reason, monitor_incoming,
+  owner_approval_method, wallet_type, account_type, signer_key, deployed,
+  entry_point, aa_provider, aa_provider_api_key_encrypted, aa_bundler_url,
+  aa_paymaster_url, aa_paymaster_policy_id, factory_address
+) SELECT
+  id, name, chain, environment, public_key, status, owner_address, owner_verified,
+  created_at, updated_at, suspended_at, suspension_reason, monitor_incoming,
+  owner_approval_method, wallet_type, account_type, signer_key, deployed,
+  entry_point, aa_provider, aa_provider_api_key_encrypted, aa_bundler_url,
+  aa_paymaster_url, aa_paymaster_policy_id, factory_address
+FROM wallets`);
         sqlite.exec('DROP TABLE wallets');
         sqlite.exec('ALTER TABLE wallets_new RENAME TO wallets');
 
@@ -120,7 +132,19 @@ export const migrations: Migration[] = [
   external_id TEXT
 )`);
 
-        sqlite.exec(`INSERT INTO transactions_new SELECT * FROM transactions`);
+        sqlite.exec(`INSERT INTO transactions_new (
+  id, wallet_id, session_id, chain, tx_hash, type, amount, to_address,
+  token_mint, contract_address, method_signature, spender_address, approved_amount,
+  parent_id, batch_index, status, tier, queued_at, executed_at, created_at,
+  reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network,
+  bridge_status, bridge_metadata, action_kind, venue, operation, external_id
+) SELECT
+  id, wallet_id, session_id, chain, tx_hash, type, amount, to_address,
+  token_mint, contract_address, method_signature, spender_address, approved_amount,
+  parent_id, batch_index, status, tier, queued_at, executed_at, created_at,
+  reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network,
+  bridge_status, bridge_metadata, action_kind, venue, operation, external_id
+FROM transactions`);
         sqlite.exec('DROP TABLE transactions');
         sqlite.exec('ALTER TABLE transactions_new RENAME TO transactions');
 
@@ -153,7 +177,11 @@ export const migrations: Migration[] = [
   updated_at INTEGER NOT NULL
 )`);
 
-        sqlite.exec('INSERT INTO policies_new SELECT * FROM policies');
+        sqlite.exec(`INSERT INTO policies_new (
+  id, wallet_id, type, rules, priority, enabled, network, created_at, updated_at
+) SELECT
+  id, wallet_id, type, rules, priority, enabled, network, created_at, updated_at
+FROM policies`);
         sqlite.exec('DROP TABLE policies');
         sqlite.exec('ALTER TABLE policies_new RENAME TO policies');
 
@@ -180,7 +208,13 @@ export const migrations: Migration[] = [
   UNIQUE(tx_hash, wallet_id)
 )`);
 
-        sqlite.exec('INSERT INTO incoming_transactions_new SELECT * FROM incoming_transactions');
+        sqlite.exec(`INSERT INTO incoming_transactions_new (
+  id, tx_hash, wallet_id, from_address, amount, token_address, chain,
+  network, status, block_number, detected_at, confirmed_at, is_suspicious
+) SELECT
+  id, tx_hash, wallet_id, from_address, amount, token_address, chain,
+  network, status, block_number, detected_at, confirmed_at, is_suspicious
+FROM incoming_transactions`);
         sqlite.exec('DROP TABLE incoming_transactions');
         sqlite.exec('ALTER TABLE incoming_transactions_new RENAME TO incoming_transactions');
 
@@ -211,7 +245,18 @@ export const migrations: Migration[] = [
   updated_at INTEGER NOT NULL
 )`);
 
-        sqlite.exec('INSERT INTO defi_positions_new SELECT * FROM defi_positions');
+        // Explicit column list required: environment was added via ALTER TABLE ADD
+        // and sits at the end of the source table, but is defined at position 6 in
+        // the new table.  SELECT * would map columns by position and break.
+        sqlite.exec(`INSERT INTO defi_positions_new (
+  id, wallet_id, category, provider, chain, environment, network,
+  asset_id, amount, amount_usd, metadata, status,
+  opened_at, closed_at, last_synced_at, created_at, updated_at
+) SELECT
+  id, wallet_id, category, provider, chain, environment, network,
+  asset_id, amount, amount_usd, metadata, status,
+  opened_at, closed_at, last_synced_at, created_at, updated_at
+FROM defi_positions`);
         sqlite.exec('DROP TABLE defi_positions');
         sqlite.exec('ALTER TABLE defi_positions_new RENAME TO defi_positions');
 
@@ -234,7 +279,11 @@ export const migrations: Migration[] = [
   expires_at INTEGER NOT NULL
 )`);
 
-        sqlite.exec('INSERT INTO nft_metadata_cache_new SELECT * FROM nft_metadata_cache');
+        sqlite.exec(`INSERT INTO nft_metadata_cache_new (
+  id, contract_address, token_id, chain, network, metadata_json, cached_at, expires_at
+) SELECT
+  id, contract_address, token_id, chain, network, metadata_json, cached_at, expires_at
+FROM nft_metadata_cache`);
         sqlite.exec('DROP TABLE nft_metadata_cache');
         sqlite.exec('ALTER TABLE nft_metadata_cache_new RENAME TO nft_metadata_cache');
 

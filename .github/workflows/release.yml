@@ -37,6 +37,9 @@ jobs:
       - name: Verify Enum SSoT
         run: pnpm run verify:enums
 
+      - name: Verify Migration Safety
+        run: pnpm run verify:migrations
+
       - name: Validate OpenAPI Spec
         run: pnpm run validate:openapi
 

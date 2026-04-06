@@ -24,6 +24,7 @@
 | 477 | BUG | CRITICAL | MCP tools/list Zod z.record() 키 스키마 누락으로 빈 배열 반환 | — | FIXED | 2026-04-02 |
 | 478 | ENHANCEMENT | LOW | MCP 서버 버전 0.0.0 하드코딩 | — | FIXED | 2026-04-02 |
 | 479 | BUG | HIGH | MCP listTools() 레이스 컨디션: Action Provider 도구 누락 | — | OPEN | — |
+| 480 | BUG | CRITICAL | v62 마이그레이션 SELECT * 컬럼 순서 불일치로 실패 | — | FIXED | 2026-04-06 |
 
 ## Type Legend
 
