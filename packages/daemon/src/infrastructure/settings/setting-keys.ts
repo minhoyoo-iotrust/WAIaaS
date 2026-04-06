@@ -380,7 +380,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.across_bridge_request_timeout_ms', category: 'actions', configPath: 'actions.across_bridge_request_timeout_ms', defaultValue: '10000', isCredential: false, label: 'Across Bridge Request Timeout ms', description: 'Request timeout in milliseconds' },
 
   // --- XRPL DEX ---
-  { key: 'actions.xrpl_dex_enabled', category: 'actions', configPath: 'actions.xrpl_dex_enabled', defaultValue: 'false', isCredential: false, label: 'XRPL DEX Enabled', description: 'Enable XRPL native orderbook DEX action provider' },
+  { key: 'actions.xrpl_dex_enabled', category: 'actions', configPath: 'actions.xrpl_dex_enabled', defaultValue: 'true', isCredential: false, label: 'XRPL DEX Enabled', description: 'Enable XRPL native orderbook DEX action provider' },
   { key: 'actions.xrpl_dex_rpc_url', category: 'actions', configPath: 'actions.xrpl_dex_rpc_url', defaultValue: 'wss://xrplcluster.com', isCredential: false, label: 'XRPL DEX RPC URL', description: 'XRPL WebSocket RPC URL for DEX orderbook queries' },
 
   // --- erc8128 category (ERC-8128 Signed HTTP Requests) ---
