@@ -25,7 +25,7 @@ tags: ["defi", "swap", "xrpl", "dex", "orderbook", "rlusd"]
 
 - XRPL wallet with XRP balance (최소 12 XRP — 10 base reserve + 2 owner reserve for Trust Line)
 - XRPL DEX provider enabled in Admin Settings
-- RLUSD issuer: `rMxWzrFNRRfbMHMgzBSMSducd4Kp4tZyAi` (Ripple 공식)
+- RLUSD issuer: `rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De` (Ripple 공식)
 
 ## Scenario Steps
 
@@ -33,7 +33,7 @@ tags: ["defi", "swap", "xrpl", "dex", "orderbook", "rlusd"]
 
 ```
 Action: xrpl_dex / get_orderbook
-Input: { "takerGets": { "currency": "XRP" }, "takerPays": { "currency": "524C555344000000000000000000000000000000", "issuer": "rMxWzrFNRRfbMHMgzBSMSducd4Kp4tZyAi" } }
+Input: { "takerGets": { "currency": "XRP" }, "takerPays": { "currency": "524C555344000000000000000000000000000000", "issuer": "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De" } }
 Expected: Orderbook with bids and asks, funded amounts included
 Note: RLUSD uses 40-char hex currency code (non-standard currency)
 ```
@@ -42,7 +42,7 @@ Note: RLUSD uses 40-char hex currency code (non-standard currency)
 
 ```
 Action: xrpl_dex / swap
-Input: { "takerGets": "1000000", "takerPays": { "currency": "524C555344000000000000000000000000000000", "issuer": "rMxWzrFNRRfbMHMgzBSMSducd4Kp4tZyAi", "value": "0.5" }, "slippageBps": 100 }
+Input: { "takerGets": "1000000", "takerPays": { "currency": "524C555344000000000000000000000000000000", "issuer": "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De", "value": "0.5" }, "slippageBps": 100 }
 Expected: OfferCreate with tfImmediateOrCancel executed, Trust Line auto-created if needed, transaction confirmed
 ```
 

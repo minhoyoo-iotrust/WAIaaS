@@ -12,7 +12,7 @@
 import xrpl from 'xrpl';
 import type { Client as ClientType, Payment, TrustSet, Transaction, NFTokenCreateOffer, OfferCreate, OfferCancel } from 'xrpl';
 
-const { Client, Wallet, ECDSA } = xrpl;
+const { Client, Wallet } = xrpl;
 import type {
   IChainAdapter,
   ChainType,
@@ -40,6 +40,11 @@ import { ChainError } from '@waiaas/core';
 import { isXAddress, decodeXAddress, XRP_DECIMALS, DROPS_PER_XRP } from './address-utils.js';
 import { parseTrustLineToken, smallestUnitToIou, iouToSmallestUnit, IOU_DECIMALS } from './currency-utils.js';
 import { parseRippleTransaction } from './tx-parser.js';
+
+import { createPrivateKey, createPublicKey } from 'node:crypto';
+import rippleKeypairsDefault from 'ripple-keypairs';
+// CJS default export compat (same pattern as xrpl import)
+const { deriveAddress } = (rippleKeypairsDefault as unknown as { default?: typeof rippleKeypairsDefault }).default ?? rippleKeypairsDefault;
 
 /** Average ledger close time in milliseconds (~3.5-4s). */
 const LEDGER_CLOSE_MS = 4000;
@@ -255,9 +260,12 @@ export class RippleAdapter implements IChainAdapter {
     const txJson = new TextDecoder().decode(tx.serialized);
     const txObj = JSON.parse(txJson) as Transaction;
 
-    // The privateKey from KeyStore is the 32-byte Ed25519 seed
-    // Create Wallet from entropy (seed)
-    const wallet = Wallet.fromEntropy(privateKey, { algorithm: ECDSA.ed25519 });
+    // The privateKey from KeyStore is the 32-byte Ed25519 seed (from sodium-native).
+    // Reconstruct the full Ed25519 keypair from seed using sodium-native,
+    // then build an xrpl Wallet with the raw key hex.
+    // NOTE: Wallet.fromEntropy() uses XRPL-specific key derivation (HMAC-SHA512)
+    // which produces a DIFFERENT keypair than sodium-native Ed25519.
+    const wallet = walletFromSodiumSeed(privateKey);
 
     // Verify wallet address matches transaction Account
     const txAccount = (txObj as unknown as Record<string, unknown>)['Account'] as string;
@@ -666,7 +674,7 @@ export class RippleAdapter implements IChainAdapter {
 
   async signExternalTransaction(rawTx: string, privateKey: Uint8Array): Promise<SignedTransaction> {
     const txObj = JSON.parse(rawTx) as Transaction;
-    const wallet = Wallet.fromEntropy(privateKey, { algorithm: ECDSA.ed25519 });
+    const wallet = walletFromSodiumSeed(privateKey);
     const { tx_blob, hash } = wallet.sign(txObj);
 
     return {
@@ -907,4 +915,42 @@ export class RippleAdapter implements IChainAdapter {
     // Default to RPC connection error for unknown errors
     return new ChainError('RPC_CONNECTION_ERROR', 'ripple', { message, cause: err instanceof Error ? err : undefined });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Reconstruct an xrpl.js Wallet from a 32-byte sodium-native Ed25519 seed.
+ *
+ * The KeyStore stores the 32-byte Ed25519 seed (sodium secretKey[0:32]).
+ * We must use the same Ed25519 derivation (seed → keypair) that sodium-native
+ * uses, NOT Wallet.fromEntropy() which applies XRPL-specific HMAC-SHA512
+ * key derivation and produces a different keypair.
+ *
+ * Flow: seed → Node.js crypto Ed25519 → publicKey → "ED" + hex → Wallet
+ */
+function walletFromSodiumSeed(seed: Uint8Array): InstanceType<typeof Wallet> {
+  // PKCS#8 DER prefix for Ed25519 private key (RFC 8410): 16 bytes
+  const pkcs8Prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
+  const privateKeyObj = createPrivateKey({
+    key: Buffer.concat([pkcs8Prefix, Buffer.from(seed)]),
+    format: 'der',
+    type: 'pkcs8',
+  });
+
+  // Derive the public key object from private key, then export raw 32 bytes
+  const publicKeyObj = createPublicKey(privateKeyObj);
+  // SPKI DER for Ed25519 = 12-byte prefix + 32-byte raw public key
+  const spkiDer = publicKeyObj.export({ type: 'spki', format: 'der' });
+  const publicKeyRaw = spkiDer.subarray(-32);
+
+  // XRPL Ed25519 key format: "ED" prefix + 32-byte hex (uppercase)
+  const publicKeyHex = `ED${Buffer.from(publicKeyRaw).toString('hex').toUpperCase()}`;
+  const privateKeyHex = `ED${Buffer.from(seed).toString('hex').toUpperCase()}`;
+
+  const rAddress = deriveAddress(publicKeyHex);
+
+  return new Wallet(publicKeyHex, privateKeyHex, { masterAddress: rAddress });
 }

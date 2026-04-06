@@ -37,7 +37,9 @@ interface CacheEntry {
  */
 export function resolveNetwork(chain: ChainType, network?: NetworkType): NetworkType {
   if (network) return network;
-  return chain === 'solana' ? 'solana-mainnet' : 'ethereum-mainnet';
+  if (chain === 'solana') return 'solana-mainnet';
+  if (chain === 'ripple') return 'xrpl-mainnet';
+  return 'ethereum-mainnet';
 }
 
 /**

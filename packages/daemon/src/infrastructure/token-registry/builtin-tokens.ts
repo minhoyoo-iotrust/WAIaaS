@@ -1,8 +1,8 @@
 /**
- * Built-in ERC-20 token data for EVM networks (mainnet + testnet).
+ * Built-in token data for EVM networks (mainnet + testnet) and XRPL.
  *
  * Provides well-known token addresses (USDC, USDT, WETH, DAI, LINK, etc.)
- * for 5 EVM mainnet networks and 5 testnet networks.
+ * for 5 EVM mainnet networks, 5 testnet networks, and XRPL mainnet.
  *
  * Testnet token sources:
  * - Circle official (USDC) — https://faucet.circle.com/
@@ -16,7 +16,7 @@
  */
 
 export interface TokenEntry {
-  /** EIP-55 checksum address */
+  /** EIP-55 checksum address (EVM) or "CURRENCY.rISSUER" (XRPL) */
   address: string;
   /** Token ticker symbol (e.g. "USDC") */
   symbol: string;
@@ -144,6 +144,15 @@ export const BUILTIN_TOKENS: Record<string, TokenEntry[]> = {
     { address: '0xE4aB69C077896252FAFBD49EFD26B5D171A32410', symbol: 'LINK', name: 'Chainlink', decimals: 18 },
     { address: '0xD171b9694f7A2597Ed006D41f7509aaD4B485c4B', symbol: 'cbETH', name: 'Coinbase Wrapped Staked ETH', decimals: 18 },
     { address: '0xFC3e86566895Fb007c6A0d3809eb2827DF94F751', symbol: 'PIM', name: 'Pimlico Test Token', decimals: 6 },
+  ],
+
+  // ---------------------------------------------------------------------------
+  // XRPL Mainnet — Issued Currencies (address = "CURRENCY.rISSUER")
+  // ---------------------------------------------------------------------------
+  'xrpl-mainnet': [
+    { address: '524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De', symbol: 'RLUSD', name: 'Ripple USD', decimals: 15 },
+    { address: 'USD.rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B', symbol: 'USD.Bitstamp', name: 'US Dollar (Bitstamp)', decimals: 15 },
+    { address: 'USD.rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq', symbol: 'USD.GateHub', name: 'US Dollar (GateHub)', decimals: 15 },
   ],
 };
 

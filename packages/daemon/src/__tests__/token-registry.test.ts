@@ -581,7 +581,7 @@ describe('Token Registry API', () => {
     expect(res.status).toBe(400);
     const body = await json(res);
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
-    expect(String(body.message)).toContain('Invalid EVM network');
+    expect(String(body.message)).toContain('Invalid network');
   });
 });
 

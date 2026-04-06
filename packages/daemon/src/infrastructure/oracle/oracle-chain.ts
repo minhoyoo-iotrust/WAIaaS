@@ -17,6 +17,7 @@
  * Uses cache.getOrFetch() for stampede prevention.
  */
 import type { ChainType, PriceInfo, CacheStats, IPriceOracle, TokenRef } from '@waiaas/core';
+import { nativeDecimals } from '@waiaas/core';
 import type { InMemoryPriceCache } from './price-cache.js';
 import { buildCacheKey, resolveNetwork } from './price-cache.js';
 import { PriceNotAvailableError } from './oracle-errors.js';
@@ -128,16 +129,16 @@ export class OracleChain implements IPriceOracle {
   }
 
   /**
-   * Get native token price (SOL or ETH).
+   * Get native token price (SOL, ETH, XRP, etc.).
    *
    * Delegates to getPrice() with address='native' and chain-appropriate decimals.
    *
-   * @param chain - Chain type ('solana' or 'ethereum').
+   * @param chain - Chain type ('solana', 'ethereum', 'ripple').
    * @returns PriceInfo for the native token.
    */
   async getNativePrice(chain: ChainType): Promise<PriceInfo> {
     const network = resolveNetwork(chain);
-    const decimals = chain === 'solana' ? 9 : 18;
+    const decimals = nativeDecimals(chain);
     return this.getPrice({ address: 'native', decimals, chain, network });
   }
 
