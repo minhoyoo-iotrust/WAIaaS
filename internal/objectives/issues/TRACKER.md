@@ -26,7 +26,9 @@
 | 479 | BUG | HIGH | MCP listTools() 레이스 컨디션: Action Provider 도구 누락 | — | FIXED | 2026-04-06 |
 | 480 | BUG | CRITICAL | v62 마이그레이션 SELECT * 컬럼 순서 불일치로 실패 | — | FIXED | 2026-04-06 |
 | 481 | BUG | CRITICAL | xrpl ECDSA named export ESM import 실패 — XRPL 전 기능 불가 | v33.6 | FIXED | 2026-04-07 |
-| 482 | MISSING | MEDIUM | XRPL 토큰 레지스트리 지원 (드롭다운/빌트인/API) | — | OPEN | 2026-04-07 |
+| 482 | MISSING | MEDIUM | XRPL 토큰 레지스트리 지원 (드롭다운/빌트인/API) | — | FIXED | 2026-04-07 |
+| 483 | BUG | CRITICAL | XRPL Price Oracle가 ETH 가격 반환 — USD 표시/정책 ~1600배 과대 | — | FIXED | 2026-04-07 |
+| 484 | BUG | CRITICAL | XRPL 서명 주소 불일치 — fromEntropy vs sodium-native 키 파생 불일치 | — | FIXED | 2026-04-07 |
 
 ## Type Legend
 

@@ -41,11 +41,16 @@ const { mockClient, mockWallet } = vi.hoisted(() => {
 });
 
 vi.mock('xrpl', () => {
+  // Wallet as a constructor function so `new Wallet(pub, priv, opts)` works
+  const WalletCtor = vi.fn().mockImplementation((_pub: string, _priv: string, opts?: { masterAddress?: string }) => ({
+    ...mockWallet,
+    address: opts?.masterAddress ?? mockWallet.address,
+  }));
+  // Keep fromEntropy for any remaining references
+  (WalletCtor as unknown as Record<string, unknown>).fromEntropy = vi.fn().mockReturnValue(mockWallet);
   const mod = {
     Client: vi.fn().mockImplementation(() => mockClient),
-    Wallet: {
-      fromEntropy: vi.fn().mockReturnValue(mockWallet),
-    },
+    Wallet: WalletCtor,
     ECDSA: { ed25519: 'ed25519', secp256k1: 'ecdsa-secp256k1' },
     // Address validation functions used by address-utils.ts
     isValidClassicAddress: vi.fn((addr: string) => typeof addr === 'string' && addr.startsWith('r')),
@@ -57,6 +62,11 @@ vi.mock('xrpl', () => {
   };
   return { ...mod, default: mod };
 });
+
+vi.mock('ripple-keypairs', () => ({
+  deriveAddress: vi.fn().mockReturnValue('rTestSenderAddr'),
+  default: { deriveAddress: vi.fn().mockReturnValue('rTestSenderAddr') },
+}));
 
 // Import adapter after mocks
 import { RippleAdapter } from '../adapter.js';

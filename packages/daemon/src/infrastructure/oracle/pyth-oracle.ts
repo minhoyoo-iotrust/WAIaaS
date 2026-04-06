@@ -12,6 +12,7 @@
  * - Price conversion: Number(price) * 10^expo for USD value.
  */
 import type { ChainType, PriceInfo, CacheStats, IPriceOracle, TokenRef } from '@waiaas/core';
+import { nativeDecimals } from '@waiaas/core';
 import { buildCacheKey, resolveNetwork } from './price-cache.js';
 import { getFeedId } from './pyth-feed-ids.js';
 import { PriceNotAvailableError } from './oracle-errors.js';
@@ -166,7 +167,7 @@ export class PythOracle implements IPriceOracle {
    */
   async getNativePrice(chain: ChainType): Promise<PriceInfo> {
     const network = resolveNetwork(chain);
-    const decimals = chain === 'solana' ? 9 : 18;
+    const decimals = nativeDecimals(chain);
     return this.getPrice({ address: 'native', decimals, chain, network });
   }
 

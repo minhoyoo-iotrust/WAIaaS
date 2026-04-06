@@ -5,7 +5,7 @@
  * - platformId: used in /simple/token_price/{platformId} path
  * - nativeCoinId: used in /simple/price?ids={nativeCoinId} path
  *
- * Supports 6 mainnet networks: Solana, Ethereum, Polygon, Arbitrum, Optimism, Base.
+ * Supports 7 mainnet networks: Solana, Ethereum, Polygon, Arbitrum, Optimism, Base, XRPL.
  * Testnet networks are intentionally excluded (no CoinGecko prices for testnet tokens).
  */
 
@@ -20,7 +20,7 @@ export interface CoinGeckoPlatform {
 /**
  * Map from WAIaaS NetworkType to CoinGecko platform/coin IDs.
  *
- * 6 mainnet entries covering Solana + Ethereum L1 + 4 EVM L2 networks.
+ * 7 mainnet entries covering Solana + Ethereum L1 + 4 EVM L2 + XRPL networks.
  * Polygon uses 'matic-network' as nativeCoinId (POL/MATIC gas token).
  * Arbitrum/Optimism/Base use 'ethereum' as nativeCoinId (ETH gas token).
  */
@@ -34,6 +34,8 @@ export const COINGECKO_PLATFORM_MAP: Record<string, CoinGeckoPlatform> = {
   'arbitrum-mainnet': { platformId: 'arbitrum-one',        nativeCoinId: 'ethereum' },
   'optimism-mainnet': { platformId: 'optimistic-ethereum', nativeCoinId: 'ethereum' },
   'base-mainnet':     { platformId: 'base',                nativeCoinId: 'ethereum' },
+  // XRPL (mainnet only -- CoinGecko platform 'xrpl' for IOU tokens)
+  'xrpl-mainnet':     { platformId: 'xrpl',                nativeCoinId: 'ripple' },
 };
 
 /**

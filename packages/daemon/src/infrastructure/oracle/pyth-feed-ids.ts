@@ -26,6 +26,7 @@ export const PYTH_FEED_IDS: ReadonlyMap<string, string> = new Map([
   // Native tokens
   [nativeAssetId('solana-mainnet'),          'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d'],  // SOL/USD
   [nativeAssetId('ethereum-mainnet'), 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace'],  // ETH/USD
+  [nativeAssetId('xrpl-mainnet'),     'ec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8'],  // XRP/USD
 
   // Solana SPL tokens
   [tokenAssetId('solana-mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'), 'eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a'], // USDC/USD
@@ -40,6 +41,7 @@ export const PYTH_FEED_IDS: ReadonlyMap<string, string> = new Map([
 const NATIVE_FEED_MAP: ReadonlyMap<NetworkType, string> = new Map([
   ['solana-mainnet',   'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d'],  // SOL/USD
   ['ethereum-mainnet', 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace'],  // ETH/USD
+  ['xrpl-mainnet',     'ec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8'],  // XRP/USD
 ]);
 
 // ---------------------------------------------------------------------------
