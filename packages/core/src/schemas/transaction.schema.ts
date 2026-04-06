@@ -228,8 +228,8 @@ export const ContractCallRequestSchema = z.object({
 });
 export type ContractCallRequest = z.infer<typeof ContractCallRequestSchema>;
 
-/** NFT standard enum: ERC-721, ERC-1155 (EVM), METAPLEX (Solana). */
-export const NftStandardEnum = z.enum(['ERC-721', 'ERC-1155', 'METAPLEX']);
+/** NFT standard enum: ERC-721, ERC-1155 (EVM), METAPLEX (Solana), XLS-20 (XRPL). */
+export const NftStandardEnum = z.enum(['ERC-721', 'ERC-1155', 'METAPLEX', 'XLS-20']);
 export type NftStandard = z.infer<typeof NftStandardEnum>;
 
 /** NFT token info for NFT_TRANSFER requests. */

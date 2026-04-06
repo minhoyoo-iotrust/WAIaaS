@@ -27,6 +27,8 @@ import { migrations as v21to30 } from './migrations/v21-v30.js';
 import { migrations as v31to40 } from './migrations/v31-v40.js';
 import { migrations as v41to50 } from './migrations/v41-v50.js';
 import { migrations as v51to59 } from './migrations/v51-v59.js';
+import { migrations as v61 } from './migrations/v61.js';
+import { migrations as v62 } from './migrations/v62.js';
 
 // Re-export LATEST_SCHEMA_VERSION from schema-ddl
 export { LATEST_SCHEMA_VERSION } from './schema-ddl.js';
@@ -56,7 +58,7 @@ export interface Migration {
 // ---------------------------------------------------------------------------
 
 /**
- * Complete migration registry. Built by spreading all 6 version-range arrays.
+ * Complete migration registry. Built by spreading all 7 version-range arrays.
  * Each migration's version must be unique and greater than 1.
  */
 export const MIGRATIONS: Migration[] = [
@@ -66,6 +68,8 @@ export const MIGRATIONS: Migration[] = [
   ...v31to40,
   ...v41to50,
   ...v51to59,
+  ...v61,
+  ...v62,
 ];
 
 // ---------------------------------------------------------------------------

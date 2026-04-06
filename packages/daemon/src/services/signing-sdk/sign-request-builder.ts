@@ -91,17 +91,36 @@ export class SignRequestBuilder {
       throw new WAIaaSError('SIGNING_SDK_DISABLED');
     }
 
-    // 2. Determine wallet name
-    const walletName =
-      params.walletName ||
-      this.settings.get('signing_sdk.preferred_wallet') ||
-      undefined;
+    // 2. Determine signing app via wallet_type + signing_enabled=1 (Phase 468)
+    //    preferred_wallet setting is deprecated -- no longer referenced.
+    let signingApp: {
+      name: string;
+      wallet_type: string;
+      push_relay_url: string | null;
+      subscription_token: string | null;
+    } | undefined;
 
-    if (!walletName) {
+    if (this.sqlite) {
+      if (params.walletName) {
+        // walletName is treated as wallet_type (enriched by ApprovalChannelRouter)
+        signingApp = this.sqlite.prepare(
+          'SELECT name, wallet_type, push_relay_url, subscription_token FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1',
+        ).get(params.walletName) as typeof signingApp;
+      } else {
+        // No wallet_type specified -- find any signing-enabled app
+        signingApp = this.sqlite.prepare(
+          'SELECT name, wallet_type, push_relay_url, subscription_token FROM wallet_apps WHERE signing_enabled = 1 LIMIT 1',
+        ).get() as typeof signingApp;
+      }
+    }
+
+    if (!signingApp) {
       throw new WAIaaSError('WALLET_NOT_REGISTERED', {
-        message: 'No wallet name specified and no preferred_wallet configured',
+        message: 'No signing-enabled wallet app found',
       });
     }
+
+    const walletName = signingApp.name;
 
     // 3. Verify wallet exists (throws WALLET_NOT_REGISTERED if not found)
     this.walletLinkRegistry.getWallet(walletName);
@@ -152,16 +171,8 @@ export class SignRequestBuilder {
       };
     } else {
       // Default: Push Relay channel
-      // push_relay_url is looked up from wallet_apps table
-      let pushRelayUrl = '';
-      if (this.sqlite) {
-        const appRow = this.sqlite.prepare(
-          'SELECT push_relay_url FROM wallet_apps WHERE name = ?',
-        ).get(walletName) as { push_relay_url: string | null } | undefined;
-        if (appRow?.push_relay_url) {
-          pushRelayUrl = appRow.push_relay_url;
-        }
-      }
+      // push_relay_url already fetched from signing_enabled app in step 2
+      const pushRelayUrl = signingApp.push_relay_url || '';
       responseChannel = {
         type: 'push_relay' as const,
         pushRelayUrl,
@@ -213,16 +224,8 @@ export class SignRequestBuilder {
     // 10. Build universal link URL
     const universalLinkUrl = this.walletLinkRegistry.buildSignUrl(walletName, request);
 
-    // 11. Request topic: use subscription_token from wallet_apps if available (#449)
-    let requestTopic = walletName;
-    if (this.sqlite) {
-      const appRow = this.sqlite.prepare(
-        'SELECT subscription_token FROM wallet_apps WHERE name = ? AND subscription_token IS NOT NULL',
-      ).get(walletName) as { subscription_token: string } | undefined;
-      if (appRow?.subscription_token) {
-        requestTopic = appRow.subscription_token;
-      }
-    }
+    // 11. Request topic: use subscription_token already fetched from signing_enabled app (step 2)
+    const requestTopic = signingApp.subscription_token || walletName;
 
     return {
       request,

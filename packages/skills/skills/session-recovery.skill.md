@@ -3,7 +3,7 @@ name: "WAIaaS Session Recovery"
 description: "Recover from expired or permanently expired session tokens"
 category: "api"
 tags: [wallet, blockchain, session, recovery, token, expired, waiass]
-version: "2.12.0-rc.2"
+version: "2.13.0"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]

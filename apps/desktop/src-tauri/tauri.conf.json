@@ -5,7 +5,8 @@
   "identifier": "dev.waiaas.desktop",
   "build": {
     "frontendDist": "../src",
-    "devUrl": "http://localhost:1420"
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "cd ../../packages/admin && pnpm vite --port 1420 --mode desktop"
   },
   "app": {
     "windows": [

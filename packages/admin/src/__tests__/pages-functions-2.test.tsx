@@ -135,7 +135,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     // Open register modal
@@ -171,7 +171,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('+ Register App'));
@@ -195,7 +195,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     // app-1 has subscription_token set, should show Clear button
@@ -221,7 +221,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText('Custom Wallet')).toBeTruthy();
+      expect(screen.getAllByText('Custom Wallet').length).toBeGreaterThan(0);
     });
 
     // app-2 has no token, should show "Not set" with "Set" button
@@ -258,7 +258,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     const removeButtons = screen.getAllByText('Remove');
@@ -274,7 +274,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     const notifToggle = document.querySelector('[data-testid="notif-toggle"]') as HTMLInputElement;
@@ -291,7 +291,7 @@ describe('human-wallet-apps.tsx uncovered functions', () => {
 
     render(<HumanWalletAppsPage />);
     await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+      expect(screen.getAllByText("D'CENT Wallet").length).toBeGreaterThan(0);
     });
 
     fireEvent.click(screen.getByText('Test Notify'));

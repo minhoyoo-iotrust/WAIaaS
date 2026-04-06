@@ -4,6 +4,7 @@ import {
   NETWORK_TYPES,
   SOLANA_NETWORK_TYPES,
   EVM_NETWORK_TYPES,
+  RIPPLE_NETWORK_TYPES,
   ENVIRONMENT_TYPES,
   ENVIRONMENT_NETWORK_MAP,
   validateChainNetwork,
@@ -12,6 +13,7 @@ import {
   EVM_NETWORK_OPTIONS,
   EVM_RPC_SETTING_KEYS,
   SOLANA_RPC_SETTING_KEYS,
+  RIPPLE_RPC_SETTING_KEYS,
   RPC_KEY_LABELS,
 } from '../networks.js';
 
@@ -21,10 +23,11 @@ describe('Network Constants', () => {
   // =========================================================================
 
   describe('CHAIN_TYPES', () => {
-    it('contains solana and ethereum', () => {
+    it('contains solana, ethereum, and ripple', () => {
       expect(CHAIN_TYPES).toContain('solana');
       expect(CHAIN_TYPES).toContain('ethereum');
-      expect(CHAIN_TYPES).toHaveLength(2);
+      expect(CHAIN_TYPES).toContain('ripple');
+      expect(CHAIN_TYPES).toHaveLength(3);
     });
   });
 
@@ -33,15 +36,18 @@ describe('Network Constants', () => {
   // =========================================================================
 
   describe('NETWORK_TYPES', () => {
-    it('contains 15 networks (3 Solana + 12 EVM)', () => {
-      expect(NETWORK_TYPES.length).toBe(15);
+    it('contains 18 networks (3 Solana + 12 EVM + 3 XRPL)', () => {
+      expect(NETWORK_TYPES.length).toBe(18);
     });
 
-    it('includes both Solana and EVM networks', () => {
+    it('includes Solana, EVM, and XRPL networks', () => {
       expect(NETWORK_TYPES).toContain('solana-mainnet');
       expect(NETWORK_TYPES).toContain('ethereum-mainnet');
       expect(NETWORK_TYPES).toContain('base-sepolia');
       expect(NETWORK_TYPES).toContain('hyperevm-mainnet');
+      expect(NETWORK_TYPES).toContain('xrpl-mainnet');
+      expect(NETWORK_TYPES).toContain('xrpl-testnet');
+      expect(NETWORK_TYPES).toContain('xrpl-devnet');
     });
   });
 
@@ -105,9 +111,35 @@ describe('Network Constants', () => {
   // ENVIRONMENT_NETWORK_MAP
   // =========================================================================
 
+  // =========================================================================
+  // RIPPLE_NETWORK_TYPES
+  // =========================================================================
+
+  describe('RIPPLE_NETWORK_TYPES', () => {
+    it('has 3 XRPL networks', () => {
+      expect(RIPPLE_NETWORK_TYPES).toHaveLength(3);
+    });
+
+    it('all start with xrpl-', () => {
+      for (const net of RIPPLE_NETWORK_TYPES) {
+        expect(net).toMatch(/^xrpl-/);
+      }
+    });
+
+    it('all included in NETWORK_TYPES', () => {
+      for (const net of RIPPLE_NETWORK_TYPES) {
+        expect(NETWORK_TYPES).toContain(net);
+      }
+    });
+  });
+
+  // =========================================================================
+  // ENVIRONMENT_NETWORK_MAP
+  // =========================================================================
+
   describe('ENVIRONMENT_NETWORK_MAP', () => {
-    it('has 4 keys', () => {
-      expect(Object.keys(ENVIRONMENT_NETWORK_MAP)).toHaveLength(4);
+    it('has 6 keys', () => {
+      expect(Object.keys(ENVIRONMENT_NETWORK_MAP)).toHaveLength(6);
     });
 
     it('solana:mainnet maps to solana-mainnet only', () => {
@@ -129,6 +161,15 @@ describe('Network Constants', () => {
       for (const net of ENVIRONMENT_NETWORK_MAP['ethereum:testnet']) {
         expect(EVM_NETWORK_TYPES).toContain(net);
       }
+    });
+
+    it('ripple:mainnet maps to xrpl-mainnet only', () => {
+      expect(ENVIRONMENT_NETWORK_MAP['ripple:mainnet']).toEqual(['xrpl-mainnet']);
+    });
+
+    it('ripple:testnet maps to xrpl-testnet and xrpl-devnet', () => {
+      expect(ENVIRONMENT_NETWORK_MAP['ripple:testnet']).toContain('xrpl-testnet');
+      expect(ENVIRONMENT_NETWORK_MAP['ripple:testnet']).toContain('xrpl-devnet');
     });
   });
 
@@ -159,6 +200,22 @@ describe('Network Constants', () => {
 
     it('rejects ethereum + solana-devnet', () => {
       expect(() => validateChainNetwork('ethereum', 'solana-devnet')).toThrow('Invalid network');
+    });
+
+    it('accepts ripple + xrpl-mainnet', () => {
+      expect(() => validateChainNetwork('ripple', 'xrpl-mainnet')).not.toThrow();
+    });
+
+    it('accepts ripple + xrpl-devnet', () => {
+      expect(() => validateChainNetwork('ripple', 'xrpl-devnet')).not.toThrow();
+    });
+
+    it('rejects ripple + solana-mainnet', () => {
+      expect(() => validateChainNetwork('ripple', 'solana-mainnet')).toThrow('Invalid network');
+    });
+
+    it('rejects ripple + ethereum-mainnet', () => {
+      expect(() => validateChainNetwork('ripple', 'ethereum-mainnet')).toThrow('Invalid network');
     });
   });
 
@@ -195,6 +252,12 @@ describe('Network Constants', () => {
 
     it('ethereum mainnet has ETH symbol', () => {
       expect(NETWORK_NATIVE_SYMBOL['ethereum-mainnet']).toBe('ETH');
+    });
+
+    it('XRPL networks have XRP symbol', () => {
+      expect(NETWORK_NATIVE_SYMBOL['xrpl-mainnet']).toBe('XRP');
+      expect(NETWORK_NATIVE_SYMBOL['xrpl-testnet']).toBe('XRP');
+      expect(NETWORK_NATIVE_SYMBOL['xrpl-devnet']).toBe('XRP');
     });
   });
 
@@ -256,6 +319,28 @@ describe('Network Constants', () => {
   });
 
   // =========================================================================
+  // RIPPLE_RPC_SETTING_KEYS
+  // =========================================================================
+
+  describe('RIPPLE_RPC_SETTING_KEYS', () => {
+    it('has same length as RIPPLE_NETWORK_TYPES', () => {
+      expect(RIPPLE_RPC_SETTING_KEYS).toHaveLength(RIPPLE_NETWORK_TYPES.length);
+    });
+
+    it('all start with xrpl_', () => {
+      for (const key of RIPPLE_RPC_SETTING_KEYS) {
+        expect(key).toMatch(/^xrpl_/);
+      }
+    });
+
+    it('uses underscores instead of dashes', () => {
+      for (const key of RIPPLE_RPC_SETTING_KEYS) {
+        expect(key).not.toContain('-');
+      }
+    });
+  });
+
+  // =========================================================================
   // RPC_KEY_LABELS
   // =========================================================================
 
@@ -274,9 +359,16 @@ describe('Network Constants', () => {
       }
     });
 
-    it('total count matches EVM + Solana keys', () => {
+    it('has labels for all Ripple RPC keys', () => {
+      for (const key of RIPPLE_RPC_SETTING_KEYS) {
+        expect(RPC_KEY_LABELS[key]).toBeDefined();
+        expect(typeof RPC_KEY_LABELS[key]).toBe('string');
+      }
+    });
+
+    it('total count matches EVM + Solana + Ripple keys', () => {
       expect(Object.keys(RPC_KEY_LABELS)).toHaveLength(
-        EVM_RPC_SETTING_KEYS.length + SOLANA_RPC_SETTING_KEYS.length,
+        EVM_RPC_SETTING_KEYS.length + SOLANA_RPC_SETTING_KEYS.length + RIPPLE_RPC_SETTING_KEYS.length,
       );
     });
   });

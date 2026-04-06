@@ -6,13 +6,14 @@
  *
  * 1. Enable signing SDK (signing_sdk.enabled = 'true')
  * 2. Register WalletLinkConfig in WalletLinkRegistry
- * 3. Set preferred_wallet in Settings
- * 4. Set preferred_channel in Settings (based on approval method)
+ * 3. Set preferred_channel in Settings (based on approval method)
+ * 4. Register + enable signing on wallet app (via WalletAppService)
  *
  * On failure, all Settings changes are rolled back via snapshot restore.
  * The caller is responsible for wrapping DB changes in a SQLite transaction.
  *
  * @see Phase 266 — Auto-Setup Orchestration
+ * @see Phase 467 — signing_enabled column replaces preferred_wallet setting
  */
 
 import type { WalletPreset } from '@waiaas/core';
@@ -27,17 +28,15 @@ import type { WalletAppService } from './wallet-app-service.js';
 
 const STEP_SDK_ENABLED = 'signing_sdk_enabled';
 const STEP_WALLET_REGISTERED = 'wallet_registered';
-const STEP_PREFERRED_WALLET = 'preferred_wallet_set';
 const STEP_PREFERRED_CHANNEL = 'preferred_channel_set';
 const STEP_WALLET_APP_REGISTERED = 'wallet_app_registered';
 
 // ---------------------------------------------------------------------------
-// Settings keys used in snapshot
+// Settings keys used in snapshot (preferred_wallet removed in v33.4)
 // ---------------------------------------------------------------------------
 
 const SNAPSHOT_KEYS = [
   'signing_sdk.enabled',
-  'signing_sdk.preferred_wallet',
   'signing_sdk.preferred_channel',
 ] as const;
 
@@ -58,8 +57,8 @@ export class PresetAutoSetupService {
    * Steps:
    *   (1) enable signing SDK
    *   (2) register WalletLinkConfig
-   *   (3) set preferred_wallet
-   *   (4) set preferred_channel
+   *   (3) set preferred_channel
+   *   (4) register + enable signing on wallet app
    *
    * approval_method is handled by the caller (wallets.ts handler saves to DB).
    *
@@ -99,14 +98,7 @@ export class PresetAutoSetupService {
         }
       }
 
-      // Step 3: Set preferred_wallet
-      const currentPreferred = this.settingsService.get('signing_sdk.preferred_wallet');
-      if (currentPreferred !== preset.preferredWallet) {
-        this.settingsService.set('signing_sdk.preferred_wallet', preset.preferredWallet);
-        applied.push(STEP_PREFERRED_WALLET);
-      }
-
-      // Step 4: Set preferred_channel based on approval method
+      // Step 3: Set preferred_channel based on approval method
       switch (preset.approvalMethod) {
         case 'sdk_push':
           this.settingsService.set('signing_sdk.preferred_channel', 'push_relay');
@@ -124,10 +116,12 @@ export class PresetAutoSetupService {
           break;
       }
 
-      // Step 5: Register wallet app in wallet_apps registry (v29.7)
+      // Step 4: Register wallet app + enable signing (v33.4: replaces preferred_wallet setting)
       // Use preferredWallet as app name (matches wallet_type / BUILTIN_PRESETS key)
       if (this.walletAppService) {
-        this.walletAppService.ensureRegistered(preset.preferredWallet, preset.displayName, { walletType: preset.preferredWallet });
+        const app = this.walletAppService.ensureRegistered(preset.preferredWallet, preset.displayName, { walletType: preset.preferredWallet });
+        // Enable signing on this app (exclusive toggle handles disabling others)
+        this.walletAppService.update(app.id, { signingEnabled: true });
         applied.push(STEP_WALLET_APP_REGISTERED);
       }
 

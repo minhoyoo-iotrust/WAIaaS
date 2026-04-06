@@ -143,18 +143,22 @@ describe('createMcpServer', () => {
   });
 });
 
-describe('BUG-011: init order — server.connect before sessionManager.start', () => {
-  it('index.ts에서 server.connect()가 sessionManager.start() 이전에 호출된다', async () => {
+describe('Issue #479: init order — all tools registered before server.connect', () => {
+  it('index.ts에서 registerActionProviderTools()가 server.connect() 이전에 await된다', async () => {
     const { readFile } = await import('node:fs/promises');
     const { resolve } = await import('node:path');
     const src = await readFile(resolve(__dirname, '..', 'index.ts'), 'utf-8');
 
+    const registerIdx = src.indexOf('await registerActionProviderTools(');
     const connectIdx = src.indexOf('await server.connect(transport)');
     const startIdx = src.indexOf('await sessionManager.start()');
 
+    expect(registerIdx).toBeGreaterThan(-1);
     expect(connectIdx).toBeGreaterThan(-1);
     expect(startIdx).toBeGreaterThan(-1);
-    // server.connect must appear BEFORE sessionManager.start in the source
-    expect(connectIdx).toBeLessThan(startIdx);
+    // sessionManager.start() must be before registerActionProviderTools (needs valid token)
+    expect(startIdx).toBeLessThan(registerIdx);
+    // registerActionProviderTools must be before server.connect (all tools ready)
+    expect(registerIdx).toBeLessThan(connectIdx);
   });
 });

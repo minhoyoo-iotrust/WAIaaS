@@ -2,7 +2,7 @@
 name: "WAIaaS Transactions"
 description: "All 6 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH, NFT_TRANSFER) with lifecycle management"
 category: "api"
-tags: [wallet, blockchain, solana, ethereum, transactions, waiass]
+tags: [wallet, blockchain, solana, ethereum, ripple, xrp, xrpl, transactions, waiass]
 version: "2.6.0-rc"
 dispatch:
   kind: "tool"
@@ -1616,3 +1616,84 @@ curl -s "http://localhost:3100/v1/wallets/<wallet-id>/actions?venue=polymarket&s
 ```
 
 For full off-chain action documentation, see **external-actions.skill.md**.
+
+## 16. Ripple (XRPL) Transactions
+
+### TRANSFER -- Native XRP Transfer
+
+Send native XRP. Amount is in drops (1 XRP = 1,000,000 drops) when using `amount`, or human-readable when using `humanAmount`.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TRANSFER",
+    "to": "rDestinationAddress",
+    "humanAmount": "10.5",
+    "memo": "12345"
+  }'
+```
+
+- `memo`: Destination Tag as numeric string (e.g., `"12345"`) or JSON (`{"destinationTag":12345}`)
+- X-address format auto-decoded (e.g., `X7gJ5...` decoded to r-address + tag)
+
+### TOKEN_TRANSFER -- Trust Line IOU Transfer
+
+Send Trust Line (IOU) tokens. Requires the recipient to have an established Trust Line with the issuer.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TOKEN_TRANSFER",
+    "to": "rRecipientAddress",
+    "humanAmount": "100",
+    "token": {
+      "address": "USD.rIssuerAddress",
+      "decimals": 15,
+      "symbol": "USD"
+    }
+  }'
+```
+
+- Token address format: `{currency}.{issuer}` (e.g., `USD.rIssuerAddress`)
+- 3-char currency codes (e.g., `USD`) or 40-char hex currency codes supported
+- IOU_DECIMALS = 15 for Trust Line precision
+
+### APPROVE -- Trust Line Setup (TrustSet)
+
+Set up a Trust Line to an issuer. Maps to XRPL `TrustSet` transaction with `tfSetNoRipple` flag.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "APPROVE",
+    "spender": "rIssuerAddress",
+    "token": {
+      "address": "USD.rIssuerAddress",
+      "decimals": 15,
+      "symbol": "USD"
+    },
+    "humanAmount": "1000000"
+  }'
+```
+
+- `spender`: The issuer address
+- `amount`/`humanAmount`: Credit limit for the Trust Line
+
+### Unsupported Types on Ripple
+
+The following transaction types return explicit errors on ripple wallets:
+- **CONTRACT_CALL**: XRPL has no smart contracts
+- **BATCH**: XRPL does not support batch transactions
+- **CONTRACT_DEPLOY**: XRPL has no smart contracts
+
+### Ripple Fee and Confirmation
+
+- **Fees**: Typically 12 drops (~0.000012 XRP), 120% safety margin applied automatically
+- **Confirmation**: Validated ledger-based (ledger closes every ~3.5-4 seconds)
+- **Reserve**: Minimum 10 XRP base reserve + 2 XRP per owned object

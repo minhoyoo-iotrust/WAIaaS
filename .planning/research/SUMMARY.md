@@ -1,159 +1,156 @@
 # Project Research Summary
 
-**Project:** m33-04 서명 앱 명시적 선택 (Signing App Explicit Selection)
-**Domain:** Wallet-as-a-Service signing target resolution
-**Researched:** 2026-04-02
+**Project:** XRPL DEX Action Provider (v33.8)
+**Domain:** XRPL native orderbook DEX integration into WAIaaS multi-chain Action Provider framework
+**Researched:** 2026-04-03
 **Confidence:** HIGH
 
 ## Executive Summary
 
-이 마일스톤은 신규 기술 도입 없이 기존 WAIaaS 인프라를 정밀하게 수정하는 작업이다. 핵심 문제는 `SignRequestBuilder`가 wallet_type 대신 앱 name을 기반으로 서명 대상을 조회하는 반면, `ApprovalChannelRouter`는 이미 `wallet_type + signing_enabled = 1` 패턴을 사용하고 있어 두 컴포넌트 간 의미론적 불일치가 존재한다는 것이다. 같은 wallet_type에 앱이 여러 개 등록된 환경에서는 어떤 앱이 서명 대상인지 명확하지 않으며 DB 레벨 무결성 보장도 없다. 해결책은 SQLite partial unique index로 wallet_type 당 signing primary를 하나로 제한하고, WalletAppService에 트랜잭션 기반 자동 비활성화 로직을 추가하며, Admin UI를 라디오 버튼 그룹으로 전환하는 것이다.
+XRPL DEX is a protocol-level native orderbook — not a smart contract protocol — which makes it fundamentally different from every other DEX integration in the current WAIaaS stack (Jupiter, 0x, DCent, LI.FI). All DEX operations use native XRPL transaction types (`OfferCreate`, `OfferCancel`) that are fully supported by the already-installed `xrpl@4.6.0` package. Zero new dependencies are required. The correct pattern is to route DEX actions through the existing 6-stage pipeline as `CONTRACT_CALL` type, with XRPL-specific parameters encoded in the `calldata` JSON field. Read-only queries (orderbook, offers) bypass the pipeline via `ApiDirectResult`. This approach avoids the costly alternative of adding a 10th discriminated union type, which would require SSoT propagation across 6 DB tables, the entire pipeline, policy engine, notifications, Admin UI, SDK, and MCP.
 
-권장 접근법은 DB 마이그레이션 우선 전략이다. v61 마이그레이션에서 기존 데이터 정규화와 partial unique index 생성을 원자적으로 처리한 후, 서비스 레이어(WalletAppService + SignRequestBuilder + PresetAutoSetupService)를 수정하고, 마지막으로 Admin UI를 갱신한다. 전체 scope는 신규 API 엔드포인트나 라이브러리 없이 기존 패턴(sqlite.transaction(), Preact radio, raw SQL migration)의 조합으로 완성할 수 있다.
+The recommended build order follows a clear dependency chain: first extend `RippleAdapter.buildContractCall()` to parse XRPL native transactions from calldata JSON (currently throws `INVALID_INSTRUCTION`), then build `XrplDexProvider` with its 5 actions (swap, limit_order, cancel_order, get_orderbook, get_offers), then wire up read-only queries and Admin integration. The most dangerous integration risks are XRPL's dual amount format (XRP=drops string vs IOU=object), partial fill results that return `tesSUCCESS` even with zero exchange, and owner reserve requirements for limit orders that land on the ledger.
 
-가장 큰 위험은 v61 마이그레이션 실패다. 기존 `register()`가 `signing_enabled = 1`을 무조건 삽입하므로 같은 wallet_type에 복수의 primary가 존재할 수 있다. 인덱스 생성 전에 데이터 정규화가 반드시 선행되어야 하며, SQLite의 per-statement 제약 검사 특성 때문에 트랜잭션 내 UPDATE 순서(비활성화 먼저, 활성화 나중)를 엄수해야 한다.
+The critical risk to address early is ensuring the `formatXrplAmount()` conversion utility correctly handles all three trading pair combinations (XRP-IOU, IOU-XRP, IOU-IOU) before any testing against live or testnet orders. A formatting error silently creates orders at wildly wrong prices that may execute immediately, resulting in irreversible fund loss. Policy integration (USD spending limits for DEX trades) must also be addressed because the current `resolveEffectiveAmountUsd()` cannot reach TakerGets amounts buried in calldata JSON — without a fix, the daily spending limit policy is bypassed for all DEX trades.
 
 ## Key Findings
 
 ### Recommended Stack
 
-신규 라이브러리 추가 없음. 기존 스택만으로 구현 가능하며, 동일 패턴이 코드베이스에 이미 광범위하게 존재한다.
+No new packages are needed. All DEX functionality — `OfferCreate`, `OfferCancel`, `book_offers`, `account_offers`, flag enums, and Amount types — is already exported from the installed `xrpl@4.6.0` package. The existing `RippleAdapter` provides the WebSocket client, autofill, sign/submit pipeline, fee safety margin, confirmation polling, and amount conversion utilities (`xrpToDrops`, `smallestUnitToIou`, `parseTrustLineToken`). The only required changes are extending `buildContractCall()` in the adapter and adding a new `XrplDexProvider` module under `packages/actions/src/providers/xrpl-dex/`.
 
 **Core technologies:**
-- **better-sqlite3 ^12.6.0**: SQLite 드라이버 — `sqlite.transaction()` 패턴이 15곳 이상 검증됨. partial unique index는 raw SQL `exec()`으로 처리하므로 드라이버 제한 없음
-- **SQLite Partial Unique Index**: DB 무결성 보장 — `CREATE UNIQUE INDEX ... WHERE signing_enabled = 1` (SQLite 3.8.0+ 표준 기능, 프로젝트에 9개 이상 partial index 이미 사용 중)
-- **Preact 10.x + @preact/signals**: Admin UI 라디오 그룹 — `wallets.tsx:1378`에서 동일 `<input type="radio">` 패턴 이미 검증됨
-- **drizzle-orm ^0.45.0**: Schema 타입 정의만 사용, 마이그레이션은 raw SQL 유지
+- `xrpl@4.6.0`: OfferCreate/OfferCancel types, OfferCreateFlags enum, book_offers/account_offers RPC — already installed, zero changes needed
+- `RippleAdapter` (existing): autofill, sign, submit, confirmation, fee margin — needs `buildContractCall()` extension only
+- `ContractCallRequest` (existing): carries XRPL params via `calldata` JSON string — no schema changes needed
+- `ApiDirectResult` (existing): pipeline bypass for read-only orderbook/offers queries — already proven by Hyperliquid pattern
+- `IActionProvider` interface (existing): unchanged; `XrplDexProvider` implements it directly
 
 ### Expected Features
 
 **Must have (table stakes):**
-- DB v61 partial unique index (`wallet_type` 당 `signing_enabled=1` 최대 1개 DB 보장) — DB 무결성 없이는 모든 애플리케이션 레벨 보장이 무의미
-- 기존 데이터 정규화 마이그레이션 (created_at 기준 최초 앱만 primary 유지) — 인덱스 생성 전 필수
-- WalletAppService 트랜잭션 토글 (`update()`: 같은 그룹 자동 비활성화) — 핵심 백엔드 로직
-- WalletAppService `register()` 조건부 signing_enabled (기존 primary 있으면 0으로 삽입) — 미래 중복 방지
-- SignRequestBuilder wallet_type 기반 단일 쿼리 전환 (`WHERE wallet_type = ? AND signing_enabled = 1`) — 서명 라우팅 정확성
-- Admin UI wallet_type 그룹 레이아웃 + 서명 라디오 버튼 + "None" 옵션 — 운영자 UX 핵심
-- `signing_sdk.preferred_wallet` deprecated (SignRequestBuilder에서 읽기 중단, 주석 처리) — 설정 혼란 제거
-- `ApprovalChannelRouter` SIGNING_DISABLED를 WAIaaSError로 변환 — 구조화된 에러 응답
+- Swap (tfImmediateOrCancel OfferCreate) — core DEX primitive; immediate execution or cancel with no residual order
+- Limit order (OfferCreate without IOC) — places persistent offer on the XRPL orderbook with optional expiration
+- Cancel order (OfferCancel) — essential for managing open positions; requires accurate OfferSequence
+- Get orderbook (book_offers RPC) — price discovery before executing trades; bidirectional price labeling
+- Get offers (account_offers RPC) — agent's own open order status with seq field for cancel
 
-**Should have (competitive):**
-- "None" 선택 시 확인 다이얼로그 + 경고 배너 (서명 비활성화 시 운영자 인지 보장)
-- 단일 앱 그룹 자동 선택 + disabled 라디오 표시 (불필요한 조작 제거)
-- `CHECK (signing_enabled IN (0, 1))` 제약 추가 (SQLite boolean 타입 안전성)
-- wallet_type = '' 빈 문자열 정규화 (name으로 대체, v34 마이그레이션 패턴 재사용)
+**Should have (differentiators):**
+- Slippage protection for swap — pre-fetch orderbook depth, calculate effective rate, enforce minimum received amount
+- Trust Line pre-validation — check account_lines before IOU swap; offer guided 2-step flow when missing
+- Actual fill amounts in response — parse AffectedNodes metadata for real `actualAmountIn`/`actualAmountOut`
+- Limit order expiration — Ripple epoch conversion (RIPPLE_EPOCH = 946684800), default 24h TTL
+- Admin UI display labels — "XRPL DEX Swap" / "XRPL DEX Limit Order" instead of opaque CONTRACT_CALL
 
-**Defer (v2+):**
-- 그룹 축소/확장 UI (wallet_type 그룹이 3+ 이상 될 때 필요, 현재 불필요)
-- per-wallet signing app 선택 (스키마 변경 규모 큼, 현재 사용 사례 없음)
-- MCP wallet app 관리 도구 (운영 자동화 요구 발생 시)
+**Defer to later milestones:**
+- XRPL AMM (XLS-30) — scoped to m33-10
+- WebSocket subscription for real-time order fill events — separate milestone
+- RPC pool multi-endpoint failover for XRPL WebSocket — single endpoint acceptable for now
+- Cross-currency path-finding (rippling) — separate from simple DEX orderbook
 
 ### Architecture Approach
 
-이 변경은 신규 서비스나 컴포넌트 없이 기존 4개 컴포넌트를 정밀 수정하고 1개의 DB 마이그레이션을 추가하는 방식이다. ApprovalChannelRouter는 이미 올바른 패턴(`wallet_type + signing_enabled = 1`)을 사용 중이므로 변경이 없다. 핵심은 SignRequestBuilder가 "name 기반 조회"에서 "wallet_type 기반 단일 조회"로 전환하는 것이며, 이를 통해 3개의 개별 DB 조회가 1개로 통합된다.
+The architecture maps cleanly onto two existing patterns proven in the codebase. On-chain actions (swap, limit_order, cancel_order) return `ContractCallRequest` with XRPL transaction parameters JSON-encoded in the `calldata` field; `RippleAdapter.buildContractCall()` parses this and dispatches to `OfferCreate`/`OfferCancel` builders. Read-only queries (get_orderbook, get_offers) return `ApiDirectResult` to bypass the pipeline entirely. This design requires zero changes to `buildByType()` in stage5, zero changes to policy stage3, and zero changes to `ActionProviderRegistry`. A separate `XrplOrderbookClient` is injected into the provider constructor — not shared with the adapter — to manage the read-only RPC connection lifecycle cleanly with daemon shutdown hooks.
 
 **Major components:**
-1. **DB Migration v61** — partial unique index 생성 + 기존 데이터 정규화 + CHECK 제약 추가 (기반 레이어, 모든 변경의 선행 조건)
-2. **WalletAppService** — `update()` 트랜잭션 토글 + `register()` 조건부 primary 설정 (백엔드 자동화 핵심)
-3. **SignRequestBuilder** — walletName 기반 3-쿼리를 wallet_type + signing_enabled 단일 쿼리로 대체 (서명 라우팅 정확성)
-4. **PresetAutoSetupService** — preferred_wallet 설정 Step 3 제거, 명시적 `update({ signingEnabled: true })` 호출로 대체
-5. **Admin UI HumanWalletAppsPage** — flat list에서 wallet_type 그룹 레이아웃으로 전환, 서명 체크박스를 라디오 그룹으로 교체
+1. **XrplDexProvider** (`packages/actions/src/providers/xrpl-dex/index.ts`) — IActionProvider with 5 actions; `resolve()` dispatches to ContractCallRequest or ApiDirectResult based on action type; registered conditionally in daemon-startup when ripple RPC URL is configured
+2. **XrplOrderbookClient** (`orderbook-client.ts`) — `book_offers`/`account_offers` RPC wrapper; injected at provider construction; manages own WebSocket lifecycle with shutdown disconnect
+3. **OfferBuilder** (`offer-builder.ts`) — builds OfferCreate/OfferCancel params; owns `formatXrplAmount()` for XRP drops-string vs IOU `{currency,issuer,value}` object conversion; owns flag calculations (tfImmediateOrCancel, tfSell, tfPassive)
+4. **RippleAdapter.buildContractCall()** (modified) — currently throws; extended to parse calldata JSON and route to `buildXrplNativeTx()` shared helper that covers autofill, fee safety margin, and serialization identically to `buildTransaction()`
+5. **tx-parser.ts** (modified) — adds OfferCreate/OfferCancel parsing cases to replace current UNKNOWN fallthrough for sign-only mode accuracy
 
 ### Critical Pitfalls
 
-1. **Migration data integrity violation** — `register()`가 현재 `signing_enabled = 1`을 무조건 삽입하므로 기존 DB에 같은 wallet_type의 복수 primary가 존재할 수 있다. 인덱스 생성 전 반드시 `UPDATE ... WHERE id NOT IN (oldest per wallet_type)` 데이터 정규화를 선행 실행해야 한다.
+1. **XRP/IOU amount format mixing** — XRP=drops string (`"50000000"`), IOU=`{currency,issuer,value}` object; wrong format causes `temBAD_AMOUNT` or silent mis-pricing at 1,000,000x wrong magnitude. Prevention: `formatXrplAmount()` utility with unit tests covering all 3 pair combinations (XRP-IOU, IOU-XRP, IOU-IOU); implement in Phase 2 before any live order testing.
 
-2. **SQLite per-statement constraint enforcement** — PostgreSQL/MySQL과 달리 SQLite는 트랜잭션 커밋 시점이 아니라 각 DML statement 실행 즉시 제약을 검사한다. 트랜잭션 내에서 반드시 "sibling disable → target enable" 순서를 지켜야 한다. 순서가 역전되면 partial unique index가 즉시 위반 오류를 발생시킨다.
+2. **tesSUCCESS does not mean full fill** — XRPL returns `tesSUCCESS` for partial fills; `tecKILLED` for zero-fill IOC swaps (after fix1578 amendment). Prevention: parse `AffectedNodes` metadata for actual exchanged amounts; handle `tecKILLED` as "no liquidity" user-facing error; include `actualAmountIn`/`actualAmountOut` in response.
 
-3. **walletName/walletType semantic mismatch** — `BuildRequestParams.walletName`은 실제로 wallet_type 값을 담고 있다. `walletName` -> `walletType`으로 파라미터를 리네임하면 TypeScript 컴파일러가 모든 호출 지점을 강제 수정해 런타임 오류를 사전에 차단할 수 있다.
+3. **USD spending limit bypass** — `resolveEffectiveAmountUsd()` reads `req.value` for CONTRACT_CALL; XRPL DEX puts spend amount in calldata JSON where the policy evaluator cannot reach it, resulting in $0 USD computed for all DEX trades. Prevention: set `value` field in ContractCallRequest to TakerGets drops when XRP is sold; add oracle-based valuation path for IOU sells.
 
-4. **PresetAutoSetupService silent misconfiguration** — preferred_wallet 설정을 제거하면서 register()에 "기존 primary 있으면 0으로 삽입" 로직이 추가되면, preset 자동 설정이 등록 후 signing primary가 되지 않는 무음 실패가 발생한다. 명시적 `walletAppService.update(app.id, { signingEnabled: true })` 호출로 보완해야 한다.
+4. **Owner reserve for limit orders** — each open offer consumes 0.2 XRP owner reserve; `tecINSUF_RESERVE_OFFER` silently creates a partial order at `tesSUCCESS` with the remaining dropped. Prevention: pre-validate `available balance >= sellAmount + 200,000 drops` before limit_order execution.
 
-5. **"None" 옵션 시 APPROVAL 트랜잭션 무음 실패** — Admin UI에서 "None" 선택 시 즉각적인 피드백이 없으면, 며칠 후 고액 트랜잭션이 PENDING_APPROVAL에서 타임아웃되고 나서야 문제를 인지하게 된다. 선택 시 확인 다이얼로그와 페이지 상단 경고 배너가 필수다.
+5. **Sequence number collision on concurrent orders** — `client.autofill()` called concurrently returns the same Sequence for multiple transactions, causing `tefPAST_SEQ` failures. Prevention: local sequence counter in RippleAdapter mirroring the EVM nonce management pattern; invalidate cache on reconnect.
 
 ## Implications for Roadmap
 
-Based on research, the dependency graph dictates a strict 4-phase ordering. Phase 1 is the only blocker for all subsequent phases.
+Based on research, the dependency chain is: adapter extension must precede provider implementation; on-chain actions must precede read-only integration; policy/Admin UI wiring is independent and can be last. Three phases map naturally to these dependencies.
 
-### Phase 1: DB Migration v61
+### Phase 1: Adapter Extension — buildContractCall + tx-parser
+**Rationale:** `RippleAdapter.buildContractCall()` currently throws `INVALID_INSTRUCTION`. The provider cannot be tested end-to-end until the adapter can execute OfferCreate/OfferCancel. This is the hard prerequisite for everything else. Sequence management should also be resolved here since it is an adapter-level concern.
+**Delivers:** `buildContractCall()` parses calldata JSON and dispatches to OfferCreate/OfferCancel builders via shared `buildXrplNativeTx()` helper; `tx-parser.ts` recognizes OfferCreate/OfferCancel; local Sequence counter strategy implemented; calldata-less calls still throw the original error.
+**Addresses:** Pitfall 2 (CONTRACT_CALL structure mismatch), Pitfall 7 (Sequence collision), Pitfall 10 (tx-parser parsing gap)
+**Avoids:** Premature Provider integration tests running against a stub that diverges from real adapter behavior
 
-**Rationale:** 모든 변경의 기반. partial unique index가 없으면 WalletAppService 트랜잭션 토글도, SignRequestBuilder 단일 쿼리도 의미 없다. 마이그레이션 실패는 daemon 시작을 차단하므로 데이터 정규화를 마이그레이션 함수 내에서 인덱스 생성 전에 원자적으로 처리해야 한다.
-**Delivers:** DB 레벨 무결성 보장 — wallet_type당 signing primary 최대 1개, CHECK 제약, 빈 wallet_type 정규화
-**Addresses:** table stakes "partial unique index", "기존 데이터 정규화", "CHECK 제약"
-**Avoids:** Pitfall 1 (migration data integrity), Pitfall 7 (no CHECK on signing_enabled), Pitfall 10 (empty wallet_type)
+### Phase 2: XrplDexProvider — On-Chain Actions (swap, limit_order, cancel_order)
+**Rationale:** Core business value lives here. Depends on Phase 1 adapter changes. Amount conversion (`formatXrplAmount`) correctness is the highest fund-loss risk in the entire milestone and must be established with comprehensive tests before any order goes near a live node. Slippage, reserve checks, and Trust Line pre-validation are also Phase 2 concerns because they protect user funds.
+**Delivers:** `XrplDexProvider` with swap, limit_order, cancel_order resolving to ContractCallRequest; `OfferBuilder` with `formatXrplAmount` covering all 3 pair combinations; slippage protection via pre-swap book_offers fetch; Trust Line existence pre-validation; owner reserve pre-check for limit_order; Ripple epoch Expiration conversion; `tecKILLED` + partial fill handling with `actualAmountIn`/`actualAmountOut`; daemon-startup registration; `ContractCallRequest.value` set to TakerGets for XRP sells.
+**Addresses:** Pitfall 1 (amount format), Pitfall 3 (reserve), Pitfall 4 (partial fill), Pitfall 5 (Trust Line missing), Pitfall 8 (OfferSequence accuracy), Pitfall 11 (expiration epoch)
+**Uses:** xrpl@4.6.0 (OfferCreate, OfferCreateFlags, Amount, IssuedCurrencyAmount), existing adapter utilities (xrpToDrops, smallestUnitToIou, parseTrustLineToken)
 
-### Phase 2: WalletAppService + PresetAutoSetupService 백엔드 변경
-
-**Rationale:** Admin UI의 라디오 UX는 서버 사이드 자동 토글이 정확히 동작해야 의미가 있다. Phase 1의 index 존재를 전제로 트랜잭션 내 올바른 UPDATE 순서를 구현한다. PresetAutoSetupService를 이 단계에서 함께 수정해 preferred_wallet 의존성을 완전히 제거한다.
-**Delivers:** auto-exclusive 토글 동작, register() 조건부 primary 설정, SIGNING_DISABLED WAIaaSError 변환
-**Uses:** `sqlite.transaction()` 기존 패턴, Phase 1 partial unique index
-**Avoids:** Pitfall 2 (UPDATE order), Pitfall 5 (PresetAutoSetupService silent misconfiguration), Pitfall 11 (SIGNING_DISABLED plain Error), Pitfall 12 (register hardcodes signing_enabled=1)
-
-### Phase 3: SignRequestBuilder 쿼리 전환
-
-**Rationale:** Phase 2와 독립적으로 진행 가능하나 Phase 1(index) 완료 후 시작한다. walletName 파라미터를 walletType으로 리네임하면 TypeScript 컴파일러가 모든 호출 지점을 강제 수정해 런타임 오류를 차단한다. 3개 개별 DB 쿼리를 1개로 통합한다.
-**Delivers:** 올바른 signing primary 조회, preferred_wallet fallback 제거, 타입 안전한 BuildRequestParams
-**Avoids:** Pitfall 3 (walletName/walletType semantic mismatch), Pitfall 13 (test coverage gap)
-
-### Phase 4: Admin UI 라디오 그룹 레이아웃
-
-**Rationale:** 백엔드(Phase 2, 3)가 완성된 후 UI를 수정한다. flat list에서 wallet_type 그룹 레이아웃으로 전환하고 서명 체크박스를 라디오 버튼으로 교체한다. "None" 옵션 확인 다이얼로그와 경고 배너를 포함해 운영자 인지 보장.
-**Delivers:** wallet_type 그룹별 서명 라디오 선택 UI, "None" 옵션, 경고 배너
-**Avoids:** Pitfall 4 ("None" silent failure), Pitfall 6 (stale state after server-side toggle), Pitfall 8 ("None" missing for single-app groups), Pitfall 9 ("None" multi-PUT race)
+### Phase 3: Read-Only Queries + Policy + Admin UI
+**Rationale:** get_orderbook and get_offers are ApiDirectResult bypasses — structurally independent of pipeline changes and safe to add once the on-chain path is stable. Policy USD fix and Admin UI labels are integration concerns that can be addressed cleanly once the core two phases are stable without risk of breaking already-tested functionality.
+**Delivers:** `XrplOrderbookClient` (book_offers + account_offers with bidirectional price labeling); get_orderbook/get_offers actions as ApiDirectResult; `resolveEffectiveAmountUsd()` extended for XRPL DEX TakerGets; `actions.xrpl_dex_enabled` Admin Settings toggle; builtin-metadata registration; MCP auto-exposure verification (mcpExpose: true); Admin UI displayName "XRPL DEX Swap"/"XRPL DEX Limit Order" via ContractNameRegistry.
+**Addresses:** Pitfall 6 (USD spending limit bypass), Pitfall 9 (offer quality direction confusion), Pitfall 12 (Admin UI label gap)
 
 ### Phase Ordering Rationale
 
-- **DB first:** SQLite partial unique index는 애플리케이션 레이어보다 먼저 배치해야 한다. 코드 레벨 제약(트랜잭션 토글)이 실패해도 DB 제약이 최후 방어선 역할을 한다.
-- **Backend before UI:** Admin UI의 라디오 선택 후 단순 리패치 패턴은 서버 사이드 자동 토글이 정확해야 올바르게 동작한다.
-- **SignRequestBuilder parallel with Phase 2:** 읽기 전용 쿼리 변경이므로 Phase 2와 병행 개발 가능. 단, Phase 1 완료 후 시작.
-- **전체 4단계 scope:** 각 phase는 독립적으로 테스트 가능하며 total LOC 변경 규모가 작다 (DB 15줄, 서비스 20-30줄, UI 50-80줄).
+- Adapter-first ordering prevents writing Provider integration tests against a stub that may differ from real behavior; Phase 1 adapter tests also serve as the reference for Phase 2 provider tests.
+- On-chain actions before read-only: `formatXrplAmount()` correctness must be established and unit tested before any live order executes — this is the irreversible fund-loss risk and warrants maximum early test coverage.
+- Policy and Admin UI in Phase 3: they are purely additive integrations that do not block functional correctness; deferring them prevents their plumbing from masking Phase 1-2 bugs.
+- Concurrent development within Phase 2: `OfferBuilder` (amount conversion + flag logic) and `XrplOrderbookClient` (RPC wrapper) can be developed in parallel since they have no dependency on each other; both feed into `XrplDexProvider.resolve()`.
 
 ### Research Flags
 
-Phases with standard patterns (skip research-phase — patterns fully documented):
-- **Phase 1 (DB Migration):** SQLite partial unique index는 공식 문서 확인 + 프로젝트 내 9개 기존 사례 검증. 완전히 표준 패턴.
-- **Phase 2 (WalletAppService):** `sqlite.transaction()` 패턴이 프로젝트 15곳에서 검증됨. 신규 패턴 없음.
-- **Phase 3 (SignRequestBuilder):** 기존 코드 리팩토링 + TypeScript 리네임. 표준 패턴.
-- **Phase 4 (Admin UI):** Preact radio 패턴이 `wallets.tsx:1378`에서 검증됨. 신규 컴포넌트 없음.
+Phases likely needing deeper research during planning:
+- **Phase 2 (partial fill AffectedNodes parsing):** The AffectedNodes metadata structure for OfferCreate is complex and the exact field path for `actualAmountIn`/`actualAmountOut` is not documented with worked examples. Plan time for testnet transaction inspection before committing to a parsing implementation.
+- **Phase 3 (USD valuation for IOU sells):** `resolveEffectiveAmountUsd()` for IOU TakerGets requires a price oracle lookup. The existing DeFi price oracle (`packages/daemon/src/infrastructure/price/`) covers EVM/Solana tokens; XRPL IOU pair coverage needs verification. A fallback strategy (conservative reject or skip) must be decided during Phase 3 planning.
 
-이 마일스톤은 전 phase에서 research-phase가 필요 없다. 모든 기술적 결정이 이미 검증된 기존 코드 패턴을 따르며, 연구 결과 confidence가 HIGH다.
+Phases with standard patterns (skip additional research):
+- **Phase 1 (buildContractCall extension):** calldata JSON routing is an established internal pattern (Hyperliquid precedent); the adapter modification is mechanical with a clear implementation sketch already in ARCHITECTURE.md.
+- **Phase 3 (ApiDirectResult, Admin Settings, MCP auto-exposure):** All three mechanisms are well-documented in the codebase with multiple existing examples; straightforward application of established patterns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | 신규 라이브러리 없음. 모든 기술이 프로젝트에서 이미 광범위하게 사용 중. |
-| Features | HIGH | 마일스톤 목표 문서(m33-04-signing-app-explicit-selection.md)와 기존 코드 분석으로 완전히 검증됨. |
-| Architecture | HIGH | ApprovalChannelRouter가 이미 올바른 패턴을 사용 중이라는 핵심 인사이트 코드 직접 확인. 데이터 플로우 변경 범위 명확. |
-| Pitfalls | HIGH | SQLite 공식 문서 + 코드베이스 직접 분석으로 13개 pitfall 식별. 특히 per-statement constraint enforcement와 UPDATE 순서 이슈는 높은 재현 가능성. |
+| Stack | HIGH | Verified against installed xrpl@4.6.0 source; all required types (OfferCreate, OfferCancel, BookOffersRequest, AccountOffersRequest, Amount) confirmed to exist at exact import paths |
+| Features | HIGH | 5-action scope is well-defined and bounded; anti-features are explicitly deferred (AMM, subscriptions, path-finding) |
+| Architecture | HIGH | Based on direct codebase analysis of existing providers, pipeline stage5, and adapter; zero guesswork on integration points; ContractCallRequest schema field set confirmed sufficient |
+| Pitfalls | HIGH | XRPL protocol-level pitfalls sourced from official docs; WAIaaS-specific gaps (resolveEffectiveAmountUsd, buildContractCall throw) sourced by reading actual source files |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **signing_sdk.preferred_wallet 설정 키 보존 여부:** 기존 `config.toml`에 이 설정이 있는 사용자를 위해 키는 유지하되 무시(deprecated)로 처리. SettingsService에서 경고 로그 출력 여부는 구현 시 결정.
-- **단일 앱 그룹 auto-select 동작:** Phase 4 구현 시 "1개 그룹의 라디오 disabled 표시 vs. 항상 enabled 표시" 선택. Pitfall 8에 따르면 "None" 옵션은 항상 표시해야 함.
-- **migration 파일 배치:** v61을 기존 `v51-v59.ts`에 추가할지 신규 파일(`v61-v70.ts`)로 생성할지는 프로젝트 관례 확인 필요 (현재 파일명이 버전 범위로 명명됨).
+- **AffectedNodes metadata parsing for actual fill amounts:** Research identified the requirement and the general mechanism but did not produce a verified parsing implementation. Plan a testnet inspection spike at the start of Phase 2 for the cancel_order/swap result parsing logic.
+- **IOU USD valuation in policy evaluator:** If the DeFi price oracle does not cover XRPL IOU pairs, a fallback design decision is needed during Phase 3 planning: options are (a) skip USD check for IOU sells, (b) conservatively reject IOU sells if no USD price available, or (c) always count XRP-leg amount only.
+- **Sequence collision strategy — cache invalidation on reconnect:** The local Sequence counter approach is recommended but requires a clear invalidation policy when the WebSocket client reconnects and the ledger Sequence may have advanced (e.g., from external transactions). This edge case needs a design decision during Phase 1 implementation.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- `internal/objectives/m33-04-signing-app-explicit-selection.md` — 마일스톤 목표 문서, 요구사항, 변경 범위
-- `packages/daemon/src/services/signing-sdk/wallet-app-service.ts` — WalletApp 인터페이스, register/update 로직 직접 분석
-- `packages/daemon/src/services/signing-sdk/sign-request-builder.ts` — walletName 기반 조회, preferred_wallet 참조 직접 분석
-- `packages/daemon/src/services/signing-sdk/approval-channel-router.ts` — wallet_type + signing_enabled 조회 패턴 (라인 93-106) 직접 확인
-- `packages/admin/src/pages/human-wallet-apps.tsx` — 현재 체크박스 UI 패턴 분석
-- `packages/daemon/src/infrastructure/database/schema.ts` — wallet_apps 테이블 정의 (라인 551-564) 직접 확인
-- `packages/daemon/src/infrastructure/database/migrations/v21-v30.ts`, `v31-v40.ts`, `v51-v59.ts` — 기존 partial index 패턴 9개 확인
-- SQLite 공식 문서: Partial Indexes (https://www.sqlite.org/partialindex.html) — SQLite 3.8.0+ partial unique index 지원 확인
-- better-sqlite3 API 문서 (https://github.com/WiseLibs/better-sqlite3/blob/master/docs/api.md) — `transaction()` API 동기 실행 특성 확인
+- `packages/adapters/ripple/node_modules/xrpl/src/models/transactions/offerCreate.ts` — OfferCreate interface + OfferCreateFlags enum (installed source)
+- `packages/adapters/ripple/node_modules/xrpl/src/models/transactions/offerCancel.ts` — OfferCancel interface (installed source)
+- `packages/adapters/ripple/node_modules/xrpl/src/models/methods/bookOffers.ts` — BookOffersRequest/Response + BookOffer (installed source)
+- `packages/adapters/ripple/node_modules/xrpl/src/models/methods/accountOffers.ts` — AccountOffersRequest/Response + AccountOffer (installed source)
+- `packages/adapters/ripple/src/adapter.ts` — existing autofill/sign/submit pipeline; buildContractCall() current throw
+- `packages/daemon/src/pipeline/stage5-execute.ts` — buildByType() CONTRACT_CALL routing (unchanged)
+- `packages/core/src/interfaces/action-provider.types.ts` — IActionProvider, ApiDirectResult, isApiDirectResult()
+- `packages/core/src/schemas/transaction.schema.ts` — ContractCallRequestSchema field set confirmed sufficient
+- https://xrpl.org/docs/references/protocol/transactions/types/offercreate — OfferCreate spec + flags
+- https://xrpl.org/docs/concepts/tokens/decentralized-exchange/offers — DEX offers concept, reserve rules, partial fill behavior
+- https://xrpl.org/docs/concepts/accounts/reserves — owner reserve 0.2 XRP per offer object
 
 ### Secondary (MEDIUM confidence)
+- https://xrpl.org/docs/references/protocol/transactions/types/offercancel — OfferCancel spec
+- https://js.xrpl.org/enums/OfferCreateFlags.html — flag hex values
+- `packages/actions/src/providers/hyperliquid/perp-provider.ts` — ApiDirectResult + requiresSigningKey pattern (used as contrast to validate NOT using this approach)
+- `packages/actions/src/providers/jupiter-swap/index.ts` — ContractCallRequest return pattern (used as reference for Provider structure)
+- `packages/daemon/src/infrastructure/action/action-provider-registry.ts` — executeResolve(), ContractCallRequestSchema.parse() re-validation
 
-- `packages/admin/src/pages/wallets.tsx:1378` — Preact radio 버튼 기존 구현 패턴 참조
-- `packages/daemon/src/services/signing-sdk/preset-auto-setup.ts` — preferred_wallet Step 3 설정 코드 확인
+### Tertiary (LOW confidence)
+- https://github.com/XRPLF/rippled/pull/4694 — fixFillOrKill amendment (tecKILLED behavior for IOC zero-fill); confirms behavior but amendment activation date and testnet availability not independently verified
 
 ---
-*Research completed: 2026-04-02*
+*Research completed: 2026-04-03*
 *Ready for roadmap: yes*

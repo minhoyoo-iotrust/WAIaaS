@@ -1,354 +1,447 @@
-# Architecture Patterns: Signing App Explicit Selection
+# Architecture Research
 
-**Domain:** Wallet-as-a-Service signing target resolution
-**Researched:** 2026-04-02
+**Domain:** XRPL DEX Action Provider -- WAIaaS 기존 Action Provider + Pipeline 아키텍처에 XRPL 네이티브 오더북 DEX 통합
+**Researched:** 2026-04-03
+**Confidence:** HIGH
 
-## Recommended Architecture
-
-### Overview
-
-The signing app explicit selection feature modifies 4 existing components and adds 1 DB migration. No new services or components are needed -- this is purely a refinement of existing data flow from "name-based lookup" to "wallet_type group + signing_enabled primary" lookup.
-
-### Current Data Flow (Before)
+## System Overview
 
 ```
-ApprovalChannelRouter.route(walletId)
-  -> reads wallet.wallet_type from wallets table
-  -> checks wallet_apps WHERE wallet_type = ? AND signing_enabled = 1 (already exists!)
-  -> enriches params.walletName = wallet_type
-  -> calls PushRelaySigningChannel.sendRequest(enrichedParams)
-       -> calls SignRequestBuilder.buildRequest(params)
-            -> walletName = params.walletName || settings.get('signing_sdk.preferred_wallet')
-            -> WalletLinkRegistry.getWallet(walletName) -- name-based lookup in settings JSON
-            -> queries wallet_apps WHERE name = walletName for push_relay_url
-            -> queries wallet_apps WHERE name = walletName for subscription_token
+┌─────────────────────────────────────────────────────────────────────┐
+│                        API / MCP Layer                               │
+│  POST /v1/actions/xrpl_dex/{action}                                  │
+│  MCP: xrpl_dex_swap, xrpl_dex_limit_order, xrpl_dex_cancel,         │
+│       xrpl_dex_orderbook, xrpl_dex_offers                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                    ActionProviderRegistry                            │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                    XrplDexProvider                            │    │
+│  │  actions: swap, limit_order, cancel_order,                    │    │
+│  │           get_orderbook, get_offers                           │    │
+│  │  resolve() -> ContractCallRequest | ApiDirectResult           │    │
+│  └──────────────────────┬───────────────────────────────────────┘    │
+├─────────────────────────┼───────────────────────────────────────────┤
+│                  Pipeline (6-stage)                                   │
+│                         │                                            │
+│  ┌──────────┐    ┌──────┴─────┐    ┌────────────────────────┐       │
+│  │ Stage 1  │    │  Stage 5   │    │   ApiDirectResult      │       │
+│  │ Validate │    │ buildByType│    │   (read-only bypass)   │       │
+│  └────┬─────┘    └──────┬─────┘    └────────────────────────┘       │
+│       │                 │                                            │
+├───────┴─────────────────┴────────────────────────────────────────────┤
+│                    RippleAdapter (IChainAdapter)                      │
+│  ┌───────────────────────────────────────────────────────────────┐   │
+│  │ buildContractCall() -- XRPL native tx routing                 │   │
+│  │   metadata.xrplTxType: 'OfferCreate' | 'OfferCancel'         │   │
+│  │   -> client.autofill() -> UnsignedTransaction                 │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+│  ┌───────────────────────────────────────────────────────────────┐   │
+│  │ xrpl.Client (WebSocket RPC)                                   │   │
+│  │   book_offers / account_offers / autofill / submit             │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Problem:** SignRequestBuilder uses `walletName` (individual app name) to resolve push_relay_url and subscription_token. When multiple apps share the same wallet_type, the `walletName` param is set to wallet_type by ApprovalChannelRouter, but the wallet_apps query uses `WHERE name = ?` which may not match any row (wallet_type != name).
+### Component Responsibilities
 
-### Target Data Flow (After)
+| Component | Responsibility | New/Modified |
+|-----------|----------------|--------------|
+| **XrplDexProvider** | Action Provider: resolve swap/limit/cancel into ContractCallRequest, resolve orderbook/offers into ApiDirectResult | **NEW** (`packages/actions/src/providers/xrpl-dex/`) |
+| **RippleAdapter.buildContractCall()** | XRPL native tx builder: OfferCreate/OfferCancel via metadata routing | **MODIFIED** (현재 throws -> XRPL tx 빌드) |
+| **stage5 buildByType()** | CONTRACT_CALL -> adapter.buildContractCall() 라우팅 (변경 불필요) | UNCHANGED |
+| **Pipeline stage3 policy** | CONTRACT_CALL 정책 평가 (actionProvider trust bypass) | UNCHANGED |
+| **ActionProviderRegistry** | Provider 등록/실행 (변경 불필요) | UNCHANGED |
+| **Admin Settings** | `actions.xrpl_dex_enabled` 토글 | **MODIFIED** (설정 키 추가) |
+| **MCP tools** | xrpl_dex_* 5개 도구 자동 노출 (mcpExpose: true) | AUTO (기존 메커니즘) |
+
+## Recommended Project Structure
 
 ```
-ApprovalChannelRouter.route(walletId)
-  -> reads wallet.wallet_type from wallets table
-  -> checks wallet_apps WHERE wallet_type = ? AND signing_enabled = 1 (unchanged)
-  -> enriches params.walletName = wallet_type (unchanged)
-  -> calls PushRelaySigningChannel.sendRequest(enrichedParams)
-       -> calls SignRequestBuilder.buildRequest(params)
-            -> walletType = params.walletName (already set to wallet_type by router)
-            -> queries wallet_apps WHERE wallet_type = ? AND signing_enabled = 1
-            -> gets push_relay_url, subscription_token, name from the signing primary app
-            -> WalletLinkRegistry.getWallet(appRow.name) -- uses actual app name
+packages/actions/src/providers/xrpl-dex/
+├── index.ts                # XrplDexProvider class (IActionProvider)
+├── schemas.ts              # Zod input schemas (swap, limit, cancel, orderbook, offers)
+├── orderbook-client.ts     # book_offers / account_offers RPC wrapper
+├── offer-builder.ts        # OfferCreate / OfferCancel params builder
+└── __tests__/
+    ├── xrpl-dex-provider.test.ts
+    ├── orderbook-client.test.ts
+    └── offer-builder.test.ts
+
+packages/adapters/ripple/src/
+├── adapter.ts              # MODIFIED: buildContractCall() XRPL native tx routing
+├── tx-parser.ts            # MODIFIED: OfferCreate/OfferCancel parsing (currently UNKNOWN)
+└── __tests__/
+    └── ripple-adapter.test.ts  # MODIFIED: buildContractCall OfferCreate/Cancel tests
 ```
 
-**Key insight:** The ApprovalChannelRouter already sets `walletName = wallet_type`. The fix is making SignRequestBuilder query by `wallet_type + signing_enabled` instead of `name`.
+### Structure Rationale
 
-### Component Boundaries
+- **xrpl-dex/ in packages/actions/:** 기존 DEX 프로바이더(jupiter-swap, zerox-swap, dcent-swap)와 동일한 패턴. Action Provider 계층에 위치하여 비즈니스 로직(슬리피지, 호가 조회) 담당.
+- **orderbook-client.ts 분리:** RPC 호출(book_offers, account_offers)을 Provider 로직에서 분리하여 테스트 용이성 확보. xrpl.Client 인스턴스는 ActionContext에서 주입 불가 -> 별도 클라이언트 필요.
+- **offer-builder.ts 분리:** OfferCreate/OfferCancel 파라미터 빌드 로직 격리. Currency Amount 변환(XRP drops vs IOU object), Flag 계산(tfImmediateOrCancel, tfSell 등) 복잡성 캡슐화.
 
-| Component | Responsibility | Change Type | Communicates With |
-|-----------|---------------|-------------|-------------------|
-| DB Migration v61 | Enforce single signing primary per wallet_type | NEW | wallet_apps table |
-| WalletAppService | CRUD for wallet_apps + auto-toggle signing primary | MODIFY | SQLite, Routes |
-| SignRequestBuilder | Build SignRequest with correct push_relay_url/token | MODIFY | wallet_apps table, WalletLinkRegistry |
-| Admin UI HumanWalletAppsPage | Group by wallet_type, radio for signing | MODIFY | REST API |
-| ApprovalChannelRouter | Route PENDING_APPROVAL to channel | NO CHANGE | Already uses wallet_type + signing_enabled |
-| WalletLinkRegistry | Universal link URL generation | NO CHANGE | Still needed for buildSignUrl() |
-| PushRelaySigningChannel | Send push to relay | NO CHANGE | Delegates to SignRequestBuilder |
-| REST API routes (wallet-apps.ts) | HTTP handlers | NO CHANGE | WalletAppService handles auto-toggle |
+## Architectural Patterns
 
-### Data Flow Changes
+### Pattern 1: ContractCallRequest + calldata JSON encoding for XRPL native tx
 
-#### 1. DB Layer: Partial Unique Index
+**What:** XrplDexProvider.resolve()가 ContractCallRequest를 반환하되, calldata 필드에 XRPL 네이티브 트랜잭션 파라미터를 JSON으로 인코딩. RippleAdapter.buildContractCall()이 calldata를 파싱하여 xrplTxType으로 분기하고 OfferCreate/OfferCancel을 빌드.
 
-```sql
--- Migration v61: Enforce at most one signing_enabled=1 per wallet_type
-CREATE UNIQUE INDEX idx_wallet_apps_signing_primary
-  ON wallet_apps(wallet_type) WHERE signing_enabled = 1;
-```
+**When to use:** on-chain 트랜잭션이 필요한 action (swap, limit_order, cancel_order)
 
-Data migration for existing rows:
-```sql
--- For each wallet_type with multiple signing_enabled=1, keep oldest (min created_at)
-UPDATE wallet_apps SET signing_enabled = 0
-  WHERE signing_enabled = 1
-    AND id NOT IN (
-      SELECT id FROM (
-        SELECT id, ROW_NUMBER() OVER (PARTITION BY wallet_type ORDER BY created_at ASC) as rn
-        FROM wallet_apps WHERE signing_enabled = 1
-      ) WHERE rn = 1
-    );
-```
+**Trade-offs:**
+- 장점: 기존 6-stage pipeline 완전 활용 (정책 엔진, 서명, 알림 모두 동작)
+- 장점: ContractCallRequestSchema 재검증을 통과하므로 타입 안전성 유지
+- 장점: buildByType()의 CONTRACT_CALL -> buildContractCall() 경로 그대로 사용 -- pipeline 코드 변경 0
+- 단점: calldata의 의미가 EVM hex calldata에서 XRPL JSON params로 확장됨 (semantically overloaded)
 
-**Note:** SQLite supports partial indexes via `WHERE` clause since 3.8.0 (2013). The WAIaaS project uses better-sqlite3 which bundles a modern SQLite version. HIGH confidence.
-
-#### 2. WalletAppService: Auto-Toggle in update()
-
-Current `update()` is a simple field-setter. Two changes needed:
-
-**2a. update() with transactional auto-toggle:**
+**Example:**
 ```typescript
-update(id: string, fields: { signingEnabled?: boolean; ... }): WalletApp {
-  // ... existing validation ...
+// XrplDexProvider.resolve() -- swap action
+const contractCall: ContractCallRequest = {
+  type: 'CONTRACT_CALL',
+  to: takerPaysIssuer || 'native',  // destination for pipeline tracking
+  value: isXrpTakerGets ? takerGetsDrops : undefined,
+  actionProvider: 'xrpl_dex',
+  actionName: 'swap',
+  calldata: JSON.stringify({
+    xrplTxType: 'OfferCreate',
+    TakerPays: { currency: 'USD', issuer: 'rIssuer...', value: '100' },
+    TakerGets: '1000000',  // 1 XRP in drops
+    Flags: 0x00080000,     // tfImmediateOrCancel
+  }),
+};
 
-  if (fields.signingEnabled === true) {
-    // Wrap in transaction: disable others in same wallet_type, then enable this one
-    this.sqlite.transaction(() => {
-      this.sqlite.prepare(
-        'UPDATE wallet_apps SET signing_enabled = 0, updated_at = ? WHERE wallet_type = ? AND id != ? AND signing_enabled = 1'
-      ).run(now, existingApp.wallet_type, id);
-      // ... existing SET logic with signing_enabled = 1 ...
-    })();
-  } else {
-    // ... existing non-transactional logic (signingEnabled=false or other fields) ...
-  }
-}
-```
-
-**2b. register() with conditional signing_enabled:**
-```typescript
-register(name, displayName, opts) {
-  // Check if wallet_type already has a signing primary
-  const walletType = opts?.walletType || name;
-  const existingPrimary = this.sqlite.prepare(
-    'SELECT id FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1'
-  ).get(walletType);
-
-  const signingEnabled = existingPrimary ? 0 : 1;  // New app is secondary if primary exists
-  // ... rest of register with signingEnabled ...
-}
-```
-
-#### 3. SignRequestBuilder: wallet_type-Based Lookup
-
-Three query sites in `buildRequest()` currently use `WHERE name = ?` and must change to `WHERE wallet_type = ? AND signing_enabled = 1`:
-
-| Line | Current Query | New Query |
-|------|--------------|-----------|
-| L97 | `settings.get('signing_sdk.preferred_wallet')` | `wallet_apps WHERE wallet_type = ? AND signing_enabled = 1` |
-| L158-163 | `wallet_apps WHERE name = ?` (push_relay_url) | Merged into single query above |
-| L219-224 | `wallet_apps WHERE name = ? AND subscription_token IS NOT NULL` | Merged into single query above |
-
-Refactored flow:
-```typescript
-buildRequest(params: BuildRequestParams): BuildRequestResult {
-  // 1. Check signing SDK enabled (unchanged)
-  // 2. Determine wallet type (replaces wallet name resolution)
-  const walletType = params.walletName; // Already set to wallet_type by ApprovalChannelRouter
-
-  if (!walletType) {
-    throw new WAIaaSError('WALLET_NOT_REGISTERED', {
-      message: 'No wallet type specified for signing',
+// RippleAdapter.buildContractCall() -- previously threw INVALID_INSTRUCTION
+async buildContractCall(request: ContractCallParams): Promise<UnsignedTransaction> {
+  if (!request.calldata) {
+    throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
+      message: 'XRPL does not support smart contracts. Use calldata with xrplTxType for native DEX operations.',
     });
   }
 
-  // 3. Single query: get signing primary app for this wallet_type
-  const appRow = this.sqlite.prepare(
-    'SELECT name, push_relay_url, subscription_token FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1'
-  ).get(walletType);
+  const xrplParams = JSON.parse(request.calldata);
 
-  if (!appRow) {
-    throw new WAIaaSError('WALLET_NOT_REGISTERED', {
-      message: `No signing-enabled app for wallet type: ${walletType}`,
-    });
+  switch (xrplParams.xrplTxType) {
+    case 'OfferCreate': {
+      const offer: OfferCreate = {
+        TransactionType: 'OfferCreate',
+        Account: request.from,
+        TakerPays: xrplParams.TakerPays,
+        TakerGets: xrplParams.TakerGets,
+        Flags: xrplParams.Flags ?? 0,
+        ...(xrplParams.Expiration && { Expiration: xrplParams.Expiration }),
+      };
+      return this.buildXrplNativeTx(offer);
+    }
+    case 'OfferCancel': {
+      const cancel: OfferCancel = {
+        TransactionType: 'OfferCancel',
+        Account: request.from,
+        OfferSequence: xrplParams.OfferSequence,
+      };
+      return this.buildXrplNativeTx(cancel);
+    }
+    default:
+      throw new ChainError('INVALID_INSTRUCTION', 'ripple', {
+        message: `Unknown XRPL transaction type: ${xrplParams.xrplTxType}`,
+      });
   }
+}
 
-  // 4. Use appRow.name for WalletLinkRegistry (universal link)
-  this.walletLinkRegistry.getWallet(appRow.name);
-
-  // 5. Use appRow.push_relay_url for response channel
-  // 6. Use appRow.subscription_token for request topic
-  // ... (consolidates 3 separate queries into 1)
+// Shared builder (same pattern as buildTransaction for Payment)
+private async buildXrplNativeTx(tx: Transaction): Promise<UnsignedTransaction> {
+  const client = this.getClient();
+  const autofilled = await client.autofill(tx);
+  // Apply fee safety margin, serialize, set expiry -- identical to buildTransaction()
+  const baseFee = BigInt(autofilled.Fee ?? '12');
+  const safeFee = (baseFee * 120n) / 100n;
+  autofilled.Fee = safeFee.toString();
+  const txJson = JSON.stringify(autofilled);
+  const serialized = new TextEncoder().encode(txJson);
+  // ... return UnsignedTransaction
 }
 ```
 
-**Deprecation:** `signing_sdk.preferred_wallet` setting is no longer consulted. The signing primary is determined by the `signing_enabled = 1` row in wallet_apps. The setting key remains in `setting-keys.ts` with updated description marking it deprecated.
+**Why this approach over alternatives:**
+- ApiDirectResult + requiresSigningKey (Hyperliquid 패턴)은 부적합: XRPL DEX는 on-chain 네이티브 트랜잭션이므로 pipeline signing이 필요. Hyperliquid는 off-chain API 서명이라 근본적으로 다름.
+- 새 TransactionType 추가 (e.g., 'DEX_ORDER')는 discriminatedUnion 9-type SSoT 전파 범위가 너무 큼 (Zod schema, DB CHECK constraints 6 tables, pipeline stage1/stage3/stage5, policy engine, notification, Admin UI, SDK, MCP 전체 변경). XRPL DEX 하나를 위해 아키텍처 핵심을 변경하는 것은 비용 대비 효과 불일치.
 
-#### 4. Admin UI: Grouped Radio Layout
+### Pattern 2: ApiDirectResult for Read-Only Queries
 
-Current flat list -> grouped by wallet_type with radio buttons for signing:
+**What:** get_orderbook, get_offers는 on-chain 트랜잭션이 아닌 읽기 전용 RPC 호출. ApiDirectResult를 반환하여 pipeline을 완전히 우회.
 
+**When to use:** 읽기 전용 action (호가 조회, 미체결 주문 조회)
+
+**Trade-offs:**
+- 장점: pipeline 우회로 트랜잭션 레코드/서명/정책 불필요한 곳에서 불필요한 오버헤드 제거
+- 장점: 기존 ApiDirectResult 메커니즘(Hyperliquid에서 검증됨) 재사용
+- 단점: 트랜잭션 이력에 남지 않음 (의도된 동작)
+
+**Example:**
 ```typescript
-// Group apps by wallet_type
-const grouped = new Map<string, WalletAppApi[]>();
-for (const app of apps.value) {
-  const key = app.wallet_type || app.name;
-  if (!grouped.has(key)) grouped.set(key, []);
-  grouped.get(key)!.push(app);
+// XrplDexProvider.resolve() for get_orderbook
+if (actionName === 'get_orderbook') {
+  const input = GetOrderbookInputSchema.parse(params);
+  const orderbook = await this.orderbookClient.getOrderbook(
+    input.base, input.counter, input.limit,
+  );
+  return {
+    __apiDirect: true,
+    externalId: `orderbook-${Date.now()}`,
+    status: 'success',
+    provider: 'xrpl_dex',
+    action: 'get_orderbook',
+    data: {
+      bids: orderbook.bids,
+      asks: orderbook.asks,
+      spread: orderbook.spread,
+    },
+  } satisfies ApiDirectResult;
 }
 ```
 
-Radio button handler calls existing `PUT /admin/wallet-apps/{id}` with `{ signing_enabled: true }`. The backend auto-toggle ensures mutual exclusivity. Admin UI refetches list after PUT.
+### Pattern 3: RPC Client Injection via Constructor
 
-"None" radio option: Admin UI sends `PUT /admin/wallet-apps/{currentPrimaryId}` with `{ signing_enabled: false }`. This disables signing for the entire wallet_type group.
+**What:** XrplDexProvider는 xrpl.Client에 접근이 필요(book_offers RPC). ActionContext에는 adapter가 포함되지 않으므로, Provider 생성 시 XrplOrderbookClient를 주입.
 
-## Patterns to Follow
+**When to use:** Provider가 adapter의 RPC 클라이언트와 별도로 읽기 전용 RPC 호출이 필요한 경우
 
-### Pattern 1: Transactional Auto-Toggle (Radio Semantics)
+**Trade-offs:**
+- 장점: Provider-Adapter 결합도를 최소화 (IActionProvider 인터페이스 변경 불필요)
+- 장점: orderbookClient가 자체 connection lifecycle 관리
+- 단점: Provider 초기화 시 RPC URL 주입이 필요하므로 daemon-startup.ts에서 설정 주입 필요
 
-**What:** When setting `signing_enabled = true` on one app, disable all others in the same wallet_type within a single SQLite transaction.
-
-**When:** Any mutation that changes signing_enabled to true.
-
-**Why:** The partial unique index enforces the constraint at DB level, but the application must proactively manage the toggle to avoid constraint violation errors. The transaction ensures atomicity -- if the enable fails, the disable is rolled back.
-
+**Example:**
 ```typescript
-this.sqlite.transaction(() => {
-  // Step 1: Disable all in group
-  this.sqlite.prepare(
-    'UPDATE wallet_apps SET signing_enabled = 0, updated_at = ? WHERE wallet_type = ? AND signing_enabled = 1'
-  ).run(now, walletType);
-  // Step 2: Enable target
-  this.sqlite.prepare(
-    'UPDATE wallet_apps SET signing_enabled = 1, updated_at = ? WHERE id = ?'
-  ).run(now, id);
-})();
+// daemon-startup.ts -- ripple chain 설정 시 조건부 등록
+if (hasRippleWallets || config.rpc.xrpl_mainnet) {
+  const xrplDexClient = new XrplOrderbookClient(rippleRpcUrl);
+  const xrplDexProvider = new XrplDexProvider(xrplDexClient);
+  registry.register(xrplDexProvider);
+}
 ```
 
-### Pattern 2: Single-Query Resolution
+## Data Flow
 
-**What:** Consolidate multiple wallet_apps queries in SignRequestBuilder into one query that returns all needed fields.
+### Swap (tfImmediateOrCancel) Flow
 
-**When:** Building a SignRequest.
+```
+Agent: POST /v1/actions/xrpl_dex/swap
+  { params: { takerGets: "XRP", takerGetsAmount: "1000000",
+              takerPays: "USD.rIssuer", takerPaysAmount: "100",
+              slippageBps: 50 } }
+    |
+    v
+ActionProviderRegistry.executeResolve()
+    |
+    v
+XrplDexProvider.resolve("swap", params, ctx)
+    |-- 1. orderbookClient.getOrderbook() -- 현재 호가 조회
+    |-- 2. 슬리피지 검증: 최소 수량 계산
+    |-- 3. OfferCreate params 빌드 (tfImmediateOrCancel)
+    |-- 4. ContractCallRequest 반환
+    |      { type: 'CONTRACT_CALL', to: issuerAddr,
+    |        calldata: JSON.stringify({ xrplTxType: 'OfferCreate', ... }),
+    |        value: takerGetsAmount }
+    v
+Pipeline Stage 1: Validate + DB INSERT (type=CONTRACT_CALL)
+    |
+    v
+Pipeline Stage 2: Session Auth
+    |
+    v
+Pipeline Stage 3: Policy Evaluation
+    |-- actionProvider='xrpl_dex' -> provider-trust bypass 또는 정책 평가
+    |-- type=CONTRACT_CALL -> CONTRACT_WHITELIST/SPENDING_LIMIT 적용 가능
+    v
+Pipeline Stage 4: Wait (DELAY/APPROVAL if policy requires)
+    |
+    v
+Pipeline Stage 5: Execute
+    |-- buildByType(adapter, request, publicKey)
+    |     -> case 'CONTRACT_CALL': adapter.buildContractCall()
+    |         -> RippleAdapter: parse calldata JSON -> OfferCreate 빌드
+    |         -> client.autofill(offerCreate) -> UnsignedTransaction
+    |-- adapter.simulateTransaction() (autofill validation)
+    |-- adapter.signTransaction() (Ed25519 via Wallet.sign())
+    |-- adapter.submitTransaction() (client.submit(tx_blob))
+    v
+Pipeline Stage 6: Confirm
+    |-- adapter.waitForConfirmation() (validated ledger)
+    |-- DB UPDATE status=CONFIRMED
+    |-- Notification: ACTION_EXECUTED
+```
 
-**Why:** Current code queries wallet_apps 3 separate times (name lookup, push_relay_url, subscription_token). The new approach uses one query with `WHERE wallet_type = ? AND signing_enabled = 1` returning all fields.
+### Read-Only Query Flow (Orderbook)
 
-### Pattern 3: Existing API Surface, New Backend Behavior
+```
+Agent: POST /v1/actions/xrpl_dex/get_orderbook
+  { params: { base: "XRP", counter: "USD.rIssuer", limit: 10 } }
+    |
+    v
+ActionProviderRegistry.executeResolve()
+    |
+    v
+XrplDexProvider.resolve("get_orderbook", params, ctx)
+    |-- orderbookClient.getOrderbook(base, counter, limit)
+    |     -> client.request({ command: 'book_offers', ... })
+    |-- ApiDirectResult 반환
+    v
+actions.ts route handler
+    |-- isApiDirectResult(result) === true
+    |-- Pipeline 우회, 즉시 응답
+    v
+Response: { id: "orderbook-...", status: "success", data: { bids, asks, spread } }
+```
 
-**What:** Keep REST API schema identical. The auto-toggle is a server-side side effect.
+### Limit Order + Partial Fill Tracking Flow
 
-**When:** PUT /admin/wallet-apps/{id} with `signing_enabled: true`.
+```
+Agent: POST /v1/actions/xrpl_dex/limit_order
+  { params: { takerGets: "1000000", takerPays: "USD.rIssuer:100",
+              expiration: 3600 } }
+    |
+    v
+XrplDexProvider.resolve("limit_order", ...)
+    |-- OfferCreate WITHOUT tfImmediateOrCancel
+    |-- Expiration = rippleEpoch + seconds
+    |-- ContractCallRequest 반환
+    v
+Pipeline: full 6-stage execution
+    |
+    v
+Agent: POST /v1/actions/xrpl_dex/get_offers
+  { params: {} }
+    |
+    v
+XrplDexProvider.resolve("get_offers", ...)
+    |-- client.request({ command: 'account_offers', account: ctx.walletAddress })
+    |-- ApiDirectResult: 미체결/부분체결 주문 목록
+    v
+Agent: POST /v1/actions/xrpl_dex/cancel_order
+  { params: { offerSequence: 12345 } }
+    |
+    v
+XrplDexProvider.resolve("cancel_order", ...)
+    |-- OfferCancel tx params via calldata JSON
+    |-- ContractCallRequest 반환
+    v
+Pipeline: full 6-stage execution
+```
 
-**Why:** Admin UI already refetches the full list after any update. No need for new response fields or new endpoints. The same `WalletAppUpdateRequestSchema` and `WalletAppResponseSchema` work unchanged.
+### Key Data Flows
 
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Client-Side Radio Enforcement
-
-**What:** Making the Admin UI responsible for sending two API calls (disable old + enable new).
-
-**Why bad:** Race conditions, partial failure (one succeeds, other fails), inconsistent state if another client updates simultaneously.
-
-**Instead:** Server-side transactional auto-toggle. Client sends one PUT, server handles the rest.
-
-### Anti-Pattern 2: New Endpoints for Toggle
-
-**What:** Creating `POST /admin/wallet-apps/{id}/set-signing-primary` or similar.
-
-**Why bad:** Unnecessary API surface expansion. The existing PUT with `signing_enabled: true` is semantically correct -- the only change is server-side behavior.
-
-**Instead:** Reuse existing PUT endpoint. The auto-toggle is an implementation detail.
-
-### Anti-Pattern 3: Removing preferred_wallet Immediately
-
-**What:** Deleting the `signing_sdk.preferred_wallet` setting key from setting-keys.ts.
-
-**Why bad:** Users who have configured it will get errors. Preset auto-setup references it.
-
-**Instead:** Deprecate by updating description, stop consulting it in SignRequestBuilder, update preset-auto-setup.ts to set signing_enabled instead.
-
-### Anti-Pattern 4: Settings Fallback Chain
-
-**What:** `signing_sdk.preferred_wallet` -> wallet_type primary -> first app fallback chain.
-
-**Why bad:** Unpredictable behavior, debugging difficulty.
-
-**Instead:** wallet_type + signing_enabled=1 single query. If no result, throw WALLET_NOT_REGISTERED error.
+1. **On-chain action (swap/limit/cancel):** Provider resolve() -> ContractCallRequest (calldata=XRPL JSON) -> Pipeline 6-stage -> RippleAdapter.buildContractCall() -> xrpl.Client autofill/sign/submit
+2. **Read-only query (orderbook/offers):** Provider resolve() -> ApiDirectResult -> Pipeline bypass -> 즉시 응답
+3. **RPC client lifecycle:** XrplOrderbookClient는 Provider 생성 시 RPC URL 주입, 자체 connection 관리, daemon shutdown 시 disconnect
 
 ## Integration Points
 
-### Existing Integration (No Changes Needed)
+### Existing Components Modified
 
-| Integration Point | Why No Change |
-|---|---|
-| ApprovalChannelRouter | Already queries `wallet_type + signing_enabled = 1` (lines 93-106) |
-| PushRelaySigningChannel | Delegates to SignRequestBuilder, passes params through |
-| TelegramSigningChannel | Same delegation pattern |
-| REST API wallet-apps routes | WalletAppService handles toggle internally |
-| MCP tools | No wallet app management tools exist |
-| SDK (@waiaas/wallet-sdk) | Signing protocol only, unaware of app selection |
-
-### Modified Integration Points
-
-| Integration Point | What Changes |
-|---|---|
-| WalletAppService.update() | Add transactional auto-toggle for signingEnabled=true |
-| WalletAppService.register() | Check existing primary, register as secondary if exists |
-| SignRequestBuilder.buildRequest() | Replace walletName-based queries with wallet_type + signing_enabled query |
-| preset-auto-setup.ts | Stop setting `signing_sdk.preferred_wallet`, set signing_enabled on app instead |
-| Admin UI HumanWalletAppsPage | Group by wallet_type, radio for signing, checkbox for alerts |
+| Component | File | Change | Impact |
+|-----------|------|--------|--------|
+| **RippleAdapter.buildContractCall()** | `packages/adapters/ripple/src/adapter.ts` | `INVALID_INSTRUCTION` throw -> calldata JSON 파싱 -> OfferCreate/OfferCancel 빌드 | 핵심 변경. "XRPL does not support smart contracts" 에러를 XRPL native tx 라우팅으로 교체. calldata 없는 호출은 여전히 에러. |
+| **RippleAdapter (private helper)** | `packages/adapters/ripple/src/adapter.ts` | buildXrplNativeTx() 공통 헬퍼 추출 -- autofill/serialize/fee margin 로직 재사용 | buildTransaction()과 코드 중복 제거 |
+| **tx-parser.ts** | `packages/adapters/ripple/src/tx-parser.ts` | OfferCreate/OfferCancel 파싱 (현재 UNKNOWN 반환) | 트랜잭션 이력 표시 개선 |
+| **daemon-startup.ts** | `packages/daemon/src/lifecycle/daemon-startup.ts` | XrplDexProvider 조건부 등록 (ripple chain 설정 시) | 기존 Provider 등록 패턴 동일 |
+| **builtin-metadata.ts** | `packages/daemon/src/infrastructure/action/builtin-metadata.ts` | xrpl_dex 메타데이터 추가 | 기존 패턴 동일 |
+| **Admin Settings** | settings keys | `actions.xrpl_dex_enabled` 추가 | 기존 패턴 동일 |
 
 ### New Components
 
-| Component | Type | Location |
-|---|---|---|
-| Migration v61 | DB migration function | `packages/daemon/src/infrastructure/database/migrations/` (add to v51-v59.ts or create new file) |
-| Partial unique index | DB constraint | `idx_wallet_apps_signing_primary ON wallet_apps(wallet_type) WHERE signing_enabled = 1` |
+| Component | File | Purpose |
+|-----------|------|---------|
+| **XrplDexProvider** | `packages/actions/src/providers/xrpl-dex/index.ts` | IActionProvider: 5 actions, resolve() |
+| **Zod input schemas** | `packages/actions/src/providers/xrpl-dex/schemas.ts` | swap/limit/cancel/orderbook/offers 입력 검증 |
+| **XrplOrderbookClient** | `packages/actions/src/providers/xrpl-dex/orderbook-client.ts` | book_offers/account_offers RPC 래퍼 |
+| **OfferBuilder** | `packages/actions/src/providers/xrpl-dex/offer-builder.ts` | OfferCreate/OfferCancel 파라미터 빌드, Currency Amount 변환, Flag 계산 |
+
+### Unchanged Components (Pipeline 무변경 확인)
+
+| Component | Why Unchanged |
+|-----------|---------------|
+| **buildByType() in stage5** | CONTRACT_CALL case가 이미 adapter.buildContractCall() 호출. XRPL 라우팅은 adapter 내부에서 calldata 파싱으로 처리. |
+| **Stage 3 Policy** | CONTRACT_CALL 정책 평가 경로 그대로 사용. actionProvider='xrpl_dex'로 provider-trust bypass 가능. |
+| **ActionProviderRegistry.executeResolve()** | ContractCallRequest 반환은 ContractCallRequestSchema.parse()로 재검증 -- calldata(string), to(string) 모두 기존 스키마 통과. ApiDirectResult도 기존 isApiDirectResult() 분기로 처리. |
+| **ContractCallRequestSchema** | calldata(optional string), to(string), value(optional numeric string) 기존 필드로 XRPL params 인코딩 가능. 새 필드 불필요. |
+| **IActionProvider interface** | resolve() 반환 타입 union이 이미 ContractCallRequest | ApiDirectResult 포함 |
+| **MCP auto-exposure** | mcpExpose: true이면 getMcpExposedActions()로 자동 MCP 도구 노출 |
+| **actions.ts route handler** | isApiDirectResult() 분기 + ContractCallRequest pipeline 실행 경로 모두 기존 코드 |
+
+## Anti-Patterns
+
+### Anti-Pattern 1: 새 TransactionType 추가 (e.g., DEX_ORDER)
+
+**What people do:** discriminatedUnion에 10번째 타입 'DEX_ORDER'를 추가하여 OfferCreate를 표현
+**Why it's wrong:** SSoT 전파 범위가 막대함 -- Zod schema, DB CHECK constraints 6 tables, pipeline stage1/stage3/stage5, policy engine evaluators, notification service, Admin UI, SDK types, MCP tools 전부 변경. XRPL DEX 하나를 위해 아키텍처 핵심을 변경하는 것은 과잉 설계.
+**Do this instead:** CONTRACT_CALL + calldata에 XRPL params를 JSON 인코딩. 기존 pipeline이 그대로 동작하며 adapter 내부에서만 분기.
+
+### Anti-Pattern 2: requiresSigningKey + ApiDirectResult 전용 (Hyperliquid 패턴 복사)
+
+**What people do:** Hyperliquid처럼 Provider가 private key를 받아 직접 서명하고 API로 제출
+**Why it's wrong:** XRPL DEX는 on-chain 네이티브 트랜잭션. 이미 RippleAdapter에 sign/submit 파이프라인이 완비되어 있음. requiresSigningKey를 사용하면 private key를 Provider에 노출하고, pipeline의 정책/지연/승인/서명/확인 단계를 모두 Provider 내부에서 재구현해야 함.
+**Do this instead:** ContractCallRequest로 반환하여 pipeline이 서명/제출/확인을 처리. Provider는 파라미터 빌드만 담당.
+
+### Anti-Pattern 3: Provider가 직접 xrpl.Client 생성/관리
+
+**What people do:** XrplDexProvider 내부에서 `new Client(url).connect()`로 직접 WebSocket 연결
+**Why it's wrong:** connection lifecycle 관리 분산, daemon shutdown 시 cleanup 누락 위험, RPC URL 하드코딩, 동일 endpoint에 중복 connection
+**Do this instead:** XrplOrderbookClient를 별도로 생성하여 Provider constructor에 주입. daemon-startup에서 lifecycle 관리 (shutdown 시 disconnect 호출).
+
+### Anti-Pattern 4: 모든 action을 ApiDirectResult로 처리
+
+**What people do:** swap/limit/cancel도 ApiDirectResult로 반환하고 Provider 내부에서 직접 xrpl.Client로 제출
+**Why it's wrong:** 정책 엔진 우회 (SPENDING_LIMIT, DELAY, APPROVAL 미적용), 트랜잭션 이력 미기록, 서명 파이프라인 재구현, 알림 누락
+**Do this instead:** on-chain action은 반드시 ContractCallRequest로 반환하여 full pipeline을 거치도록 함. ApiDirectResult는 읽기 전용 쿼리(orderbook, offers)에만 사용.
 
 ## Suggested Build Order
 
-Based on dependency analysis, build in this order:
+의존성 기반 구현 순서:
 
-### Phase 1: DB Migration v61
+1. **Phase 1: RippleAdapter.buildContractCall() 확장**
+   - calldata JSON 파싱 -> xrplTxType 분기
+   - OfferCreate: TakerPays/TakerGets/Flags/Expiration -> autofill -> UnsignedTransaction
+   - OfferCancel: OfferSequence -> autofill -> UnsignedTransaction
+   - buildXrplNativeTx() 공통 헬퍼 추출 (buildTransaction()과 코드 공유)
+   - tx-parser.ts에 OfferCreate/OfferCancel 파싱 추가
+   - calldata 없는 호출은 여전히 기존 에러 유지
+   - **이유:** Provider가 반환한 ContractCallRequest가 실제로 실행되려면 adapter가 먼저 준비되어야 함
 
-**Rationale:** Foundation. All other changes depend on the partial unique index being in place.
+2. **Phase 2: XrplDexProvider 핵심 (swap + limit_order + cancel_order)**
+   - Zod input schemas (SwapInputSchema, LimitOrderInputSchema, CancelOrderInputSchema)
+   - OfferBuilder (Currency Amount 변환: XRP drops vs IOU {currency, issuer, value}, Flag 계산)
+   - XrplOrderbookClient (book_offers RPC -- swap 시 현재가 조회에 필요)
+   - resolve() -> ContractCallRequest (on-chain actions)
+   - 슬리피지 보호: book_offers로 현재 호가 조회 -> 실효 환율 계산 -> tfImmediateOrCancel로 즉시 체결 보장
+   - **이유:** on-chain action이 핵심 가치, Phase 1의 adapter 변경에 의존
 
-- Add migration v61 with partial unique index
-- Include data migration for existing rows (keep oldest signing_enabled per wallet_type)
-- Update `LATEST_VERSION` constant
-- Write migration test
-
-**Dependencies:** None
-**Blocks:** Phase 2, 3
-
-### Phase 2: WalletAppService Backend Changes
-
-**Rationale:** Backend logic must be in place before Admin UI can use radio semantics.
-
-- Modify `update()` with transactional auto-toggle
-- Modify `register()` with conditional signing_enabled
-- Update `preset-auto-setup.ts` to stop setting preferred_wallet
-- Deprecate `signing_sdk.preferred_wallet` in setting-keys.ts description
-- Write unit tests for auto-toggle behavior
-
-**Dependencies:** Phase 1 (index must exist)
-**Blocks:** Phase 4
-
-### Phase 3: SignRequestBuilder Query Change
-
-**Rationale:** Can be done in parallel with Phase 2 since it only changes read queries, but logically depends on the auto-toggle being correct.
-
-- Replace 3 wallet_apps name-based queries with 1 wallet_type + signing_enabled query
-- Remove preferred_wallet fallback from buildRequest()
-- Update unit tests
-
-**Dependencies:** Phase 1 (partial index guarantees single result)
-**Blocks:** Phase 4 (full flow test)
-
-### Phase 4: Admin UI Grouped Radio Layout
-
-**Rationale:** UI change depends on backend auto-toggle being in place for correct behavior.
-
-- Group apps by wallet_type in render
-- Replace signing checkbox with radio button (per group)
-- Add "None" radio option for disabling signing in a group
-- Auto-select for single-app groups (disabled radio)
-- Keep alerts as checkboxes
-- Write Admin UI tests
-
-**Dependencies:** Phase 2 (backend auto-toggle), Phase 3 (query change)
-**Blocks:** None
-
-## Scalability Considerations
-
-Not applicable -- wallet_apps table is small (typically 1-5 rows). Partial unique index has negligible overhead. No performance concerns.
+3. **Phase 3: Read-only queries + Integration**
+   - get_orderbook: book_offers -> ApiDirectResult
+   - get_offers: account_offers -> ApiDirectResult
+   - daemon-startup.ts 등록, builtin-metadata, Admin Settings
+   - MCP 도구 자동 노출 검증
+   - Admin UI: XRPL DEX 활성화 토글, 트랜잭션 이력에서 OfferCreate/OfferCancel 표시 (tx-parser 연동)
+   - **이유:** read-only는 pipeline 변경 없이 동작하므로 마지막에 추가. 통합 테스트는 Phase 1+2 완료 후 가능.
 
 ## Sources
 
-- `packages/daemon/src/services/signing-sdk/wallet-app-service.ts` -- current WalletAppService implementation
-- `packages/daemon/src/services/signing-sdk/sign-request-builder.ts` -- current SignRequestBuilder with walletName-based lookup
-- `packages/daemon/src/services/signing-sdk/approval-channel-router.ts` -- existing wallet_type + signing_enabled pattern (lines 93-106)
-- `packages/daemon/src/api/routes/wallet-apps.ts` -- REST API handlers
-- `packages/admin/src/pages/human-wallet-apps.tsx` -- current Admin UI with per-app checkboxes
-- `packages/daemon/src/infrastructure/database/schema.ts` -- wallet_apps table definition (line 551)
-- `internal/objectives/m33-04-signing-app-explicit-selection.md` -- milestone objective document
-- SQLite partial index documentation (supported since 3.8.0, 2013) -- HIGH confidence
+- XRPL OfferCreate: https://xrpl.org/docs/references/protocol/transactions/types/offercreate
+- XRPL OfferCancel: https://xrpl.org/docs/references/protocol/transactions/types/offercancel
+- XRPL DEX Offers concept: https://xrpl.org/docs/concepts/tokens/decentralized-exchange/offers
+- xrpl.js OfferCreate type: https://js.xrpl.org/interfaces/OfferCreate.html
+- xrpl.js OfferCancel type: https://js.xrpl.org/interfaces/OfferCancel.html
+- XRPL Create Offers tutorial: https://xrpl.org/docs/tutorials/javascript/send-payments/create-offers
+- 코드베이스 직접 분석:
+  - `packages/core/src/interfaces/action-provider.types.ts` -- IActionProvider, ApiDirectResult, isApiDirectResult()
+  - `packages/core/src/schemas/transaction.schema.ts` -- ContractCallRequestSchema (calldata: string optional)
+  - `packages/daemon/src/infrastructure/action/action-provider-registry.ts` -- executeResolve(), ContractCallRequestSchema.parse() 재검증
+  - `packages/daemon/src/pipeline/stage5-execute.ts` -- buildByType() CONTRACT_CALL -> adapter.buildContractCall()
+  - `packages/daemon/src/api/routes/actions.ts` -- action route handler, isApiDirectResult() 분기, pipeline 실행
+  - `packages/adapters/ripple/src/adapter.ts` -- RippleAdapter, buildContractCall() throws INVALID_INSTRUCTION, buildTransaction() autofill 패턴
+  - `packages/actions/src/providers/hyperliquid/perp-provider.ts` -- ApiDirectResult + requiresSigningKey 패턴 (비교용)
+  - `packages/actions/src/providers/jupiter-swap/index.ts` -- ContractCallRequest 반환 패턴 (참조)
+
+---
+*Architecture research for: XRPL DEX Action Provider integration with WAIaaS pipeline*
+*Researched: 2026-04-03*

@@ -1,184 +1,251 @@
 # Technology Stack
 
-**Project:** m33-04 서명 앱 명시적 선택
-**Researched:** 2026-04-02
+**Project:** XRPL DEX Action Provider
+**Researched:** 2026-04-04
 
-## Scope
+## Core Finding: No New Dependencies Needed
 
-이 마일스톤은 기존 스택에 **신규 라이브러리 추가 없음**. SQLite 내장 기능, better-sqlite3 기존 API, Preact 기존 패턴만 사용. 아래는 세 가지 핵심 기술 영역의 검증 결과.
+XRPL DEX is a **protocol-level orderbook** -- not a smart contract protocol. All DEX operations (OfferCreate, OfferCancel, book_offers, account_offers) are native XRPL transaction types and RPC methods already fully supported by the installed `xrpl` package. No external API, SDK, or additional library is required.
 
-## 1. SQLite Partial Unique Index
+**Confidence: HIGH** -- verified against installed `xrpl@4.6.0` source code in `packages/adapters/ripple/node_modules/xrpl/`.
 
-### 현황
+## Existing Stack (No Changes)
 
-프로젝트에 이미 9개 이상의 partial index(`CREATE INDEX ... WHERE`) 사용 중:
-- `idx_incoming_tx_status ON incoming_transactions(status) WHERE status = 'DETECTED'`
-- `idx_transactions_bridge_status ON transactions(bridge_status) WHERE bridge_status IS NOT NULL`
-- `idx_wallet_credentials_global_name ON wallet_credentials(name) WHERE wallet_id IS NULL`
-- 등 (v21-v30, v51-v59 마이그레이션 파일 참조)
+### Core Library
+| Technology | Version | Purpose | Status |
+|------------|---------|---------|--------|
+| xrpl | 4.6.0 | XRPL WebSocket client, transaction types, RPC methods | Already installed in @waiaas/adapter-ripple |
+| ripple-keypairs | 2.0.0 | Key derivation (already used by adapter) | Already installed |
 
-### Partial UNIQUE Index 지원
+### xrpl.js Types Available for DEX
 
-| 항목 | 상태 | 근거 |
-|------|------|------|
-| SQLite 지원 | **YES** (3.8.0+, 2013) | SQLite 공식 문서: partial index는 `CREATE INDEX` 뿐만 아니라 `CREATE UNIQUE INDEX`에도 동일 적용 |
-| better-sqlite3 지원 | **YES** | raw SQL `exec()` 호출이므로 드라이버 제한 없음 |
-| Drizzle ORM 영향 | **없음** | 마이그레이션은 raw SQL(`sqlite.exec()`), Drizzle schema는 읽기 전용 타입 정의 |
+All of the following are exported from `xrpl` and ready to import -- verified in installed source:
 
-### 필요한 SQL
-
-```sql
-CREATE UNIQUE INDEX idx_wallet_apps_signing_primary
-  ON wallet_apps(wallet_type) WHERE signing_enabled = 1;
-```
-
-이 인덱스는 `wallet_type` 당 `signing_enabled = 1`인 행을 최대 1개로 제한. `signing_enabled = 0`인 행은 인덱스 대상이 아니므로 여러 개 가능.
-
-### Confidence: HIGH
-
-근거: 프로젝트에서 동일 패턴(partial index)을 이미 광범위하게 사용. UNIQUE 변형도 SQLite 3.8.0+ 표준 기능.
-
-## 2. Transaction-Safe Multi-Row Updates (better-sqlite3)
-
-### 현황
-
-프로젝트에 `sqlite.transaction()` 패턴이 15곳 이상 사용 중:
-- `database-policy-engine.ts:415` -- 정책 평가
-- `approval-workflow.ts:120, 187, 247, 295` -- 승인 워크플로우
-- `delay-queue.ts:156` -- 지연 큐
-- `wallets.ts:1164` -- 지갑 CRUD
-- `re-encrypt.ts:152, 215` -- 키 재암호화
-- `incoming-tx-queue.ts:96` -- 수신 TX 배치
-
-### 필요한 트랜잭션 패턴
+#### Transaction Types (from `xrpl/src/models/transactions/`)
 
 ```typescript
-// WalletAppService.update() -- signing_enabled 토글 시
-const txn = this.sqlite.transaction(() => {
-  // 1. 같은 wallet_type의 다른 앱 비활성화
-  this.sqlite.prepare(
-    'UPDATE wallet_apps SET signing_enabled = 0, updated_at = ? WHERE wallet_type = ? AND id != ?'
-  ).run(now, walletType, id);
-  // 2. 대상 앱 활성화
-  this.sqlite.prepare(
-    'UPDATE wallet_apps SET signing_enabled = 1, updated_at = ? WHERE id = ?'
-  ).run(now, id);
-});
-txn();
+import type { OfferCreate, OfferCancel } from 'xrpl';
 ```
 
-| 항목 | 상태 | 근거 |
-|------|------|------|
-| better-sqlite3 ^12.6.0 | 사용 중 | `packages/daemon/package.json` |
-| `db.transaction()` API | 안정적 | WAL 모드 SQLite + 동기 API = 데드락 없음 |
-| Partial unique index + transaction | **호환** | 트랜잭션 내에서 비활성화 후 활성화하면 unique 위반 없음 (순서 보장) |
-
-### 주의사항
-
-- better-sqlite3의 `transaction()` 내 모든 statement는 **동기 실행**. async 호출 불가 (프로젝트 전체가 이 패턴을 따름).
-- 트랜잭션 내에서 `signing_enabled = 0`을 먼저 실행한 후 `signing_enabled = 1`을 설정해야 partial unique index 위반 방지.
-
-### Confidence: HIGH
-
-근거: 프로젝트에서 동일 `sqlite.transaction()` 패턴을 15곳 이상에서 검증 완료.
-
-## 3. Preact Radio Button Group (Admin UI)
-
-### 현황
-
-프로젝트에 이미 radio 버튼 패턴이 존재:
-- `packages/admin/src/pages/wallets.tsx:1378` -- `approval_method` 라디오 그룹
-- `packages/admin/src/__tests__/wallets-preset-dropdown.test.tsx` -- 라디오 테스트
-
-### 기존 패턴 (wallets.tsx)
-
-```tsx
-<input
-  type="radio"
-  name="approval_method"
-  value={opt.value ?? ''}
-  checked={wallet.value?.approvalMethod === opt.value}
-  onChange={() => handleApprovalMethodChange(opt.value)}
-  style={{ marginTop: '2px' }}
-/>
+**OfferCreate** (`xrpl/src/models/transactions/offerCreate.ts`):
+```typescript
+interface OfferCreate extends BaseTransaction {
+  TransactionType: 'OfferCreate';
+  Flags?: number | OfferCreateFlagsInterface;
+  Expiration?: number;        // Ripple Epoch seconds
+  OfferSequence?: number;     // Replace existing offer
+  TakerGets: Amount;          // What creator provides
+  TakerPays: Amount;          // What creator receives
+  DomainID?: string;          // Permissioned domain (v4.6+)
+}
 ```
 
-### 서명 앱 라디오에 적용할 패턴
-
-```tsx
-// wallet_type 그룹별 name 속성으로 라디오 그룹 분리
-<input
-  type="radio"
-  name={`signing_primary_${app.walletType}`}
-  value={app.id}
-  checked={app.signingEnabled}
-  onChange={() => handleSigningToggle(app.id)}
-/>
+**OfferCancel** (`xrpl/src/models/transactions/offerCancel.ts`):
+```typescript
+interface OfferCancel extends BaseTransaction {
+  TransactionType: 'OfferCancel';
+  OfferSequence: number;      // Sequence of offer to cancel
+}
 ```
 
-| 항목 | 상태 | 근거 |
-|------|------|------|
-| Preact 10.x radio | **표준 HTML** | Preact는 표준 DOM 이벤트 사용, React 래퍼 불필요 |
-| @preact/signals 연동 | **기존 패턴** | `useSignal` + onChange -> API 호출 -> 리패치 |
-| "없음" 옵션 | `value=""` 라디오 추가 | 전체 비활성화를 위한 옵션 |
+#### Transaction Flags (from `xrpl/src/models/transactions/offerCreate.ts`)
 
-### "없음" 옵션 구현
-
-```tsx
-// 그룹 내 모든 앱의 signing_enabled = 0으로 만드는 "없음" 라디오
-<input
-  type="radio"
-  name={`signing_primary_${walletType}`}
-  value=""
-  checked={!groupApps.some(a => a.signingEnabled)}
-  onChange={() => handleSigningDisableAll(walletType)}
-/>
+```typescript
+import { OfferCreateFlags } from 'xrpl';
 ```
 
-### Confidence: HIGH
+| Flag | Hex Value | Purpose | Use Case |
+|------|-----------|---------|----------|
+| `tfPassive` | 0x00010000 | Don't consume matching offers, sit in book | Maker orders |
+| `tfImmediateOrCancel` | 0x00020000 | Fill what you can, cancel rest immediately | **Swap (instant execution)** |
+| `tfFillOrKill` | 0x00040000 | Fill entire amount or cancel entirely | Exact-amount swaps |
+| `tfSell` | 0x00080000 | Exchange entire TakerGets even if overpaying | Sell-side orders |
+| `tfHybrid` | 0x00100000 | Part of domain + open orderbook (v4.6+) | Not needed |
 
-근거: 동일 Preact 라디오 패턴이 wallets.tsx에서 이미 검증됨.
+**For WAIaaS DEX swap**: Use `tfImmediateOrCancel` because it matches the "swap" mental model -- execute what's available immediately, don't leave residual orders that the AI agent would need to track.
 
-## 추가 라이브러리 필요 여부
+**For WAIaaS DEX limit_order**: Use no flags (default) or `tfPassive` depending on maker intent. Default OfferCreate without IOC/FOK naturally becomes a limit order on the book.
 
-| 후보 | 필요 여부 | 이유 |
-|------|-----------|------|
-| UI 라디오 컴포넌트 라이브러리 | **불필요** | 표준 HTML `<input type="radio">` + 기존 CSS로 충분 |
-| ORM 마이그레이션 도구 | **불필요** | raw SQL `sqlite.exec()` 패턴 유지 |
-| 트랜잭션 매니저 | **불필요** | better-sqlite3 내장 `transaction()` |
-| 상태 관리 추가 | **불필요** | @preact/signals 기존 패턴 |
+#### Amount Type (from `xrpl/src/models/common/`)
 
-## 기존 스택 (변경 없음)
+```typescript
+// XRP native: string in drops
+type Amount = IssuedCurrencyAmount | string;
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| better-sqlite3 | ^12.6.0 | SQLite 드라이버 (트랜잭션, partial unique index) |
-| drizzle-orm | ^0.45.0 | Schema 타입 정의 (마이그레이션은 raw SQL) |
-| Preact | 10.x | Admin UI (라디오 버튼 그룹) |
-| @preact/signals | 기존 | UI 상태 관리 |
-| openapi-fetch | 기존 | 타입 안전 API 클라이언트 |
+// IOU token: object with currency/issuer/value
+interface IssuedCurrencyAmount {
+  currency: string;   // 3-char ISO or 40-char hex
+  issuer: string;     // Issuer r-address
+  value: string;      // Decimal string (up to 15 sig digits)
+}
+```
+
+**Critical distinction for DEX**:
+- XRP amounts are **strings in drops** (e.g., `"50000000"` = 50 XRP)
+- IOU amounts are **objects** with currency/issuer/value
+- Both TakerGets and TakerPays use the same `Amount` type
+- The adapter already has `xrpToDrops()` and `smallestUnitToIou()` helpers
+
+#### RPC Methods (from `xrpl/src/models/methods/`)
+
+```typescript
+import type {
+  BookOffersRequest, BookOffersResponse, BookOffer,
+  AccountOffersRequest, AccountOffersResponse, AccountOffer,
+} from 'xrpl';
+```
+
+**book_offers** -- Orderbook depth query:
+```typescript
+interface BookOffersRequest {
+  command: 'book_offers';
+  taker_gets: BookOfferCurrency;  // { currency, issuer? }
+  taker_pays: BookOfferCurrency;  // { currency, issuer? }
+  limit?: number;                 // Max offers to return
+  taker?: string;                 // Perspective account
+}
+
+interface BookOffer extends Offer {
+  owner_funds?: string;           // Available balance of maker
+  taker_gets_funded?: Amount;     // Max gettable given funding
+  taker_pays_funded?: Amount;     // Max payable given funding
+  quality?: string;               // Price ratio (pays/gets)
+}
+```
+
+**account_offers** -- My active orders:
+```typescript
+interface AccountOffersRequest {
+  command: 'account_offers';
+  account: string;
+  limit?: number;                 // 10-400 range
+  marker?: unknown;               // Pagination cursor
+}
+
+interface AccountOffer {
+  flags: number;
+  seq: number;                    // Offer Sequence (use for cancel)
+  taker_gets: Amount;
+  taker_pays: Amount;
+  quality: string;
+  expiration?: number;
+}
+```
+
+#### Ledger Object (from `xrpl/src/models/ledger/Offer.ts`)
+
+```typescript
+interface Offer {
+  LedgerEntryType: 'Offer';
+  Account: string;
+  Sequence: number;
+  TakerPays: Amount;              // Remaining requested amount
+  TakerGets: Amount;              // Remaining offered amount
+  BookDirectory: string;
+  Expiration?: number;
+}
+
+enum OfferFlags {
+  lsfPassive = 0x00010000,
+  lsfSell = 0x00020000,
+  lsfHybrid = 0x00040000,
+}
+```
+
+## Integration with Existing RippleAdapter
+
+### What Already Works
+
+The existing `RippleAdapter` in `packages/adapters/ripple/src/adapter.ts` provides:
+
+1. **WebSocket Client management** -- `connect()`, `disconnect()`, `getClient()` with connection state
+2. **autofill()** -- Automatically populates `Sequence`, `Fee`, `LastLedgerSequence`
+3. **Fee safety margin** -- `(baseFee * 120n) / 100n` pattern
+4. **Sign + Submit pipeline** -- `signTransaction()` uses `Wallet.fromEntropy()` with Ed25519, `submitTransaction()` handles tx_blob
+5. **Confirmation polling** -- `waitForConfirmation()` with validated ledger check
+6. **Error mapping** -- `mapError()` classifies xrpl.js errors to ChainError types
+7. **Amount utilities** -- `xrpToDrops()`, `dropsToXrp()`, `smallestUnitToIou()`, `iouToSmallestUnit()`, `parseTrustLineToken()`
+
+### What Needs Extension
+
+The XrplDexProvider will use the adapter's existing `Client` instance (via `AdapterPool`) for RPC queries (`book_offers`, `account_offers`), and construct `OfferCreate`/`OfferCancel` transactions that flow through the existing pipeline.
+
+**Key pattern decision**: Since XRPL DEX uses native transaction types (not contract calls), the provider's `resolve()` must return a `ContractCallRequest` that maps to the pipeline's `CONTRACT_CALL` type. The existing adapter's `buildContractCall()` currently throws -- it needs to be extended to handle `OfferCreate`/`OfferCancel` transaction JSON passed via `ContractCallRequest.data`.
+
+Alternative: Use the `signExternalTransaction()` path, but this bypasses policy evaluation. The `ContractCallRequest` approach is preferred because it integrates with the full 6-stage pipeline (policy checks, delay, approval).
+
+### tx-parser.ts Extension
+
+The existing `parseRippleTransaction()` handles `Payment` and `TrustSet` types. It needs to be extended with `OfferCreate` and `OfferCancel` cases for sign-only parsing and transaction display.
+
+## What NOT to Add
+
+| Candidate | Why Not |
+|-----------|---------|
+| Any DEX aggregator SDK | XRPL DEX is the native orderbook -- no aggregation layer exists or is needed |
+| AMM libraries | Excluded from scope (m33-10), XRPL AMM is a separate transaction type |
+| Price feed oracle | Orderbook itself IS the price discovery mechanism |
+| WebSocket subscription library | xrpl.js Client already supports `subscribe` for order updates |
+| Additional RPC client | xrpl.js Client handles all needed RPC methods |
+| ripple-lib (deprecated) | Replaced by xrpl.js v4.x, already using correct package |
+
+## Version Compatibility
+
+| Package | Installed | Required | Notes |
+|---------|-----------|----------|-------|
+| xrpl | 4.6.0 | >=4.0.0 | OfferCreate/OfferCancel types available since v2.x, fully typed in v4.x |
+| ripple-keypairs | 2.0.0 | >=2.0.0 | No change needed |
+| @waiaas/core | workspace:* | No change | ContractCallRequest already supports the needed return pattern |
+| @waiaas/adapter-ripple | workspace:* | Minor extension | buildContractCall() needs OfferCreate/OfferCancel support |
 
 ## Installation
 
 ```bash
-# 신규 패키지 설치 없음
+# No new packages needed. Zero dependency additions.
+# All required types and APIs are in the existing xrpl@4.6.0 package.
 ```
 
-## Drizzle Schema 업데이트
-
-마이그레이션은 raw SQL이지만, `schema.ts`의 Drizzle 정의도 동기화 필요:
+## New Imports Required (in XrplDexProvider)
 
 ```typescript
-// schema.ts -- walletApps 테이블 정의는 변경 없음
-// partial unique index는 Drizzle schema에 표현 불필요 (런타임 DB 제약)
-// 단, 스키마 주석에 v61 인덱스 추가 정보 기록
+// Transaction types
+import type { OfferCreate, OfferCancel } from 'xrpl';
+import { OfferCreateFlags } from 'xrpl';
+
+// RPC response types
+import type {
+  BookOffersRequest,
+  BookOffersResponse,
+  BookOffer,
+  AccountOffersRequest,
+  AccountOffersResponse,
+  AccountOffer,
+  BookOfferCurrency,
+} from 'xrpl';
+
+// Amount types (already used by adapter)
+import type { Amount, IssuedCurrencyAmount } from 'xrpl';
+
+// Existing adapter utilities
+import {
+  xrpToDrops,
+  dropsToXrp,
+  XRP_DECIMALS,
+  parseTrustLineToken,
+  smallestUnitToIou,
+  iouToSmallestUnit,
+  IOU_DECIMALS,
+} from '@waiaas/adapter-ripple';
 ```
 
 ## Sources
 
-- SQLite 공식 문서: Partial Indexes (https://www.sqlite.org/partialindex.html) -- SQLite 3.8.0+
-- better-sqlite3 API: `Database.transaction()` (https://github.com/WiseLibs/better-sqlite3/blob/master/docs/api.md#transactionfunction---function)
-- 프로젝트 내부: `packages/daemon/src/infrastructure/database/migrations/v21-v30.ts` (9개 partial index)
-- 프로젝트 내부: `packages/daemon/src/infrastructure/database/migrations/v51-v59.ts` (추가 partial index)
-- 프로젝트 내부: `packages/daemon/src/services/signing-sdk/wallet-app-service.ts` (WalletAppService CRUD)
-- 프로젝트 내부: `packages/admin/src/pages/wallets.tsx:1378` (Preact radio 패턴)
+- **xrpl@4.6.0 source code** (installed, verified): `packages/adapters/ripple/node_modules/xrpl/src/models/` -- HIGH confidence
+  - `transactions/offerCreate.ts` -- OfferCreate interface + OfferCreateFlags enum
+  - `transactions/offerCancel.ts` -- OfferCancel interface
+  - `methods/bookOffers.ts` -- BookOffersRequest/Response + BookOffer
+  - `methods/accountOffers.ts` -- AccountOffersRequest/Response + AccountOffer
+  - `ledger/Offer.ts` -- Offer ledger entry + OfferFlags
+  - `common/index.ts` -- Amount = IssuedCurrencyAmount | string
+- **RippleAdapter source** (verified): `packages/adapters/ripple/src/adapter.ts` -- existing autofill/sign/submit pipeline
+- **currency-utils.ts** (verified): IOU_DECIMALS=15, iouToSmallestUnit/smallestUnitToIou conversion utilities

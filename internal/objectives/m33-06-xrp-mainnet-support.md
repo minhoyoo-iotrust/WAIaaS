@@ -1,7 +1,9 @@
 # 마일스톤 m33-06: XRP 메인넷 지원
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v33.6
+- **Package:** 3.0.0-rc
+- **Completed:** 2026-04-03
 
 ## 목표
 

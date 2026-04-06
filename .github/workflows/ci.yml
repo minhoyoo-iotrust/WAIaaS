@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 concurrency:
@@ -40,18 +40,20 @@ jobs:
 
       - name: Fetch base branch
         shell: bash
-        run: git fetch origin main
+        run: |
+          BASE_REF="${{ github.base_ref || github.ref_name }}"
+          git fetch origin "$BASE_REF"
 
       - name: Determine affected base
         id: affected-base
         shell: bash
         run: |
+          BASE_REF="${{ github.base_ref || github.ref_name }}"
           if [ "${{ github.event_name }}" = "push" ]; then
-            # Push to main: compare with previous commit so --affected detects changes
-            # (origin/main == HEAD after push, making --affected find no diff)
+            # Push: compare with previous commit so --affected detects changes
             echo "base=HEAD~1" >> "$GITHUB_OUTPUT"
           else
-            echo "base=origin/main" >> "$GITHUB_OUTPUT"
+            echo "base=origin/$BASE_REF" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Lint (affected)
@@ -76,8 +78,9 @@ jobs:
         run: pnpm verify:agent-uat
 
   # Stage 2: PR only - full suite + coverage gate + coverage reports
+  # Skip for main-target PRs (already verified on dev; release.yml runs full suite)
   stage2:
-    if: github.event_name != 'push'
+    if: github.event_name != 'push' && github.base_ref != 'main'
     needs: stage1
     runs-on: ubuntu-latest
     env:
@@ -119,6 +122,9 @@ jobs:
 
       - name: Verify Enum SSoT
         run: pnpm run verify:enums
+
+      - name: Verify Migration Safety
+        run: pnpm run verify:migrations
 
       - name: Validate OpenAPI Spec
         run: pnpm run validate:openapi

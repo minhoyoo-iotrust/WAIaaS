@@ -11,12 +11,14 @@
 export const NATIVE_DECIMALS: Record<string, number> = {
   solana: 9,
   ethereum: 18,
+  ripple: 6, // 1 XRP = 1,000,000 drops
 };
 
 /** Native token symbols per chain. Defaults to uppercase chain name. */
 export const NATIVE_SYMBOLS: Record<string, string> = {
   solana: 'SOL',
   ethereum: 'ETH',
+  ripple: 'XRP',
 };
 
 /** Get native token decimals for a chain. Defaults to 18 for unknown chains. */

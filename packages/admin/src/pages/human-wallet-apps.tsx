@@ -13,6 +13,22 @@ import { showToast } from '../components/toast';
 type WalletAppApi = WalletApp;
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Group apps by wallet_type (falls back to name if wallet_type is empty). */
+function groupAppsByWalletType(appList: WalletAppApi[]): Map<string, WalletAppApi[]> {
+  const groups = new Map<string, WalletAppApi[]>();
+  for (const app of appList) {
+    const key = app.wallet_type || app.name;
+    const list = groups.get(key) ?? [];
+    list.push(app);
+    groups.set(key, list);
+  }
+  return groups;
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -121,6 +137,44 @@ export default function HumanWalletAppsPage() {
       showToast('error', 'Failed to update toggle');
     } finally {
       toggleSaving.value = null;
+    }
+  };
+
+  const handleSigningRadioChange = async (walletType: string, selectedValue: string) => {
+    if (selectedValue === 'none') {
+      // Disable signing for the currently enabled app in this group
+      const currentSigning = apps.value.find((a) => (a.wallet_type || a.name) === walletType && a.signing_enabled);
+      if (!currentSigning) return; // already none
+      toggleSaving.value = `${currentSigning.id}-signing_enabled`;
+      try {
+        await api.PUT('/v1/admin/wallet-apps/{id}', {
+          params: { path: { id: currentSigning.id } },
+          body: { signing_enabled: false },
+        });
+        await fetchApps();
+        showToast('success', `Signing disabled for ${currentSigning.display_name}`);
+      } catch {
+        showToast('error', 'Failed to update signing');
+      } finally {
+        toggleSaving.value = null;
+      }
+    } else {
+      // Enable signing for the selected app (backend handles disabling peers)
+      const targetApp = apps.value.find((a) => a.id === selectedValue);
+      if (!targetApp || targetApp.signing_enabled) return; // already enabled
+      toggleSaving.value = `${targetApp.id}-signing_enabled`;
+      try {
+        await api.PUT('/v1/admin/wallet-apps/{id}', {
+          params: { path: { id: targetApp.id } },
+          body: { signing_enabled: true },
+        });
+        await fetchApps();
+        showToast('success', `Signing enabled for ${targetApp.display_name}`);
+      } catch {
+        showToast('error', 'Failed to update signing');
+      } finally {
+        toggleSaving.value = null;
+      }
     }
   };
 
@@ -340,304 +394,336 @@ export default function HumanWalletAppsPage() {
               No wallet apps registered. Use "+ Register App" to add one, or apply a wallet preset when setting up a wallet owner.
             </div>
           ) : (
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              {apps.value.map((app) => (
-                <div key={app.id} class="settings-category" style={{ border: '1px solid var(--border)', padding: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h4 style={{ margin: '0 0 0.25rem 0' }}>
-                        {app.display_name}
-                        {app.wallet_type && app.wallet_type !== app.name && (
-                          <Badge variant="info" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>{app.wallet_type}</Badge>
-                        )}
-                      </h4>
-                      <code style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{app.name}</code>
-                    </div>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => handleRemove(app)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {Array.from(groupAppsByWalletType(apps.value)).map(([walletType, groupApps]) => {
+                const signingApp = groupApps.find((a) => a.signing_enabled);
+                const selectedValue = signingApp ? signingApp.id : 'none';
 
-                  <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {/* Signing toggle */}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={app.signing_enabled}
-                        onChange={() => handleToggle(app, 'signing_enabled')}
-                        disabled={toggleSaving.value === `${app.id}-signing_enabled`}
-                      />
-                      <span>Signing</span>
-                      <Badge variant={app.signing_enabled ? 'success' : 'muted'}>
-                        {app.signing_enabled ? 'ON' : 'OFF'}
-                      </Badge>
-                    </label>
+                return (
+                  <div key={walletType} data-testid={`group-${walletType}`} class="settings-category" style={{ border: '1px solid var(--border)', padding: '1rem' }}>
+                    {/* Group header */}
+                    <h4 data-testid={`group-header-${walletType}`} style={{ margin: '0 0 0.75rem 0', textTransform: 'capitalize' }}>
+                      {walletType}
+                    </h4>
 
-                    {/* Alerts toggle */}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={app.alerts_enabled}
-                        onChange={() => handleToggle(app, 'alerts_enabled')}
-                        disabled={toggleSaving.value === `${app.id}-alerts_enabled`}
-                      />
-                      <span>Alerts</span>
-                      <Badge variant={app.alerts_enabled ? 'success' : 'muted'}>
-                        {app.alerts_enabled ? 'ON' : 'OFF'}
-                      </Badge>
-                    </label>
-
-                    {/* Test notification button */}
-                    {app.alerts_enabled && (() => {
-                      const canTest = !!(app.subscription_token && app.push_relay_url);
-                      return (
-                        <span title={canTest ? undefined : 'Set subscription token and Push Relay URL first'}>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleTestNotification(app)}
-                            disabled={!canTest || testNotifSending.value === app.id}
-                          >
-                            {testNotifSending.value === app.id ? 'Sending...' : 'Test Notify'}
-                          </Button>
-                        </span>
-                      );
-                    })()}
-
-                    {/* Test sign request button */}
-                    {app.signing_enabled && (() => {
-                      const canTest = !!(app.subscription_token && app.push_relay_url);
-                      return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {/* Signing Primary radio group */}
+                    <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Signing Primary: </span>
+                      <div class="signing-radio-group" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}>
                           <input
-                            type="text"
-                            placeholder="Owner address (optional)"
-                            value={testSignOwnerAddress.value[app.id] || ''}
-                            onInput={(e) => {
-                              testSignOwnerAddress.value = { ...testSignOwnerAddress.value, [app.id]: (e.target as HTMLInputElement).value };
-                            }}
-                            disabled={!canTest || testSignSending.value === app.id}
-                            style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', width: '240px', fontFamily: 'monospace' }}
+                            type="radio"
+                            name={`signing-${walletType}`}
+                            value="none"
+                            checked={selectedValue === 'none'}
+                            onChange={() => handleSigningRadioChange(walletType, 'none')}
                           />
-                          <span title={canTest ? undefined : 'Set subscription token and Push Relay URL first'}>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => handleTestSignRequest(app)}
-                              disabled={!canTest || testSignSending.value === app.id}
-                            >
-                              {testSignSending.value === app.id ? 'Waiting...' : 'Test Sign'}
-                            </Button>
-                          </span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  {/* Inline test errors */}
-                  {testNotifError.value[app.id] && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #e74c3c)' }}>
-                      {testNotifError.value[app.id]}
-                    </div>
-                  )}
-                  {testSignError.value[app.id] && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #e74c3c)' }}>
-                      {testSignError.value[app.id]}
-                    </div>
-                  )}
-                  {/* Sign request waiting indicator */}
-                  {testSignSending.value === app.id && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      Waiting for response from wallet app... Check your device.
-                    </div>
-                  )}
-                  {/* Sign request result */}
-                  {testSignResult.value[app.id] && (
-                    <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem' }}>
-                      <div><strong>Action:</strong> <Badge variant={testSignResult.value[app.id]!.action === 'approve' ? 'success' : 'warning'}>{testSignResult.value[app.id]!.action}</Badge></div>
-                      <div style={{ marginTop: '0.25rem' }}><strong>Signer:</strong> <code>{testSignResult.value[app.id]!.signerAddress.slice(0, 6)}...{testSignResult.value[app.id]!.signerAddress.slice(-4)}</code></div>
-                      {testSignResult.value[app.id]!.signature && (
-                        <div style={{ marginTop: '0.25rem' }}>
-                          <strong>Signature:</strong>{' '}
-                          <code
-                            style={{ cursor: 'pointer', wordBreak: 'break-all' }}
-                            title="Click to copy"
-                            onClick={() => {
-                              navigator.clipboard.writeText(testSignResult.value[app.id]!.signature!);
-                              showToast('success', 'Signature copied');
-                            }}
-                          >
-                            {testSignResult.value[app.id]!.signature!.slice(0, 20)}...
-                          </code>
-                        </div>
-                      )}
-                      <div style={{ marginTop: '0.25rem' }}><strong>Signed at:</strong> {testSignResult.value[app.id]!.signedAt}</div>
-                    </div>
-                  )}
-
-                  {/* Used by */}
-                  <div style={{ marginTop: '0.75rem' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Used by: </span>
-                    {app.used_by.length === 0 ? (
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No wallets</span>
-                    ) : (
-                      <span style={{ fontSize: '0.85rem' }}>
-                        {app.used_by.map((w, i) => (
-                          <span key={w.id}>
-                            {i > 0 && ', '}
-                            <a href={`#/wallets/${w.id}`} style={{ color: 'var(--primary)' }}>{w.label}</a>
-                          </span>
+                          <span>None</span>
+                        </label>
+                        {groupApps.map((app) => (
+                          <label key={app.id} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                            <input
+                              type="radio"
+                              name={`signing-${walletType}`}
+                              value={app.id}
+                              checked={selectedValue === app.id}
+                              onChange={() => handleSigningRadioChange(walletType, app.id)}
+                            />
+                            <span>{app.display_name}</span>
+                          </label>
                         ))}
-                      </span>
-                    )}
-                  </div>
+                      </div>
+                    </div>
 
-                  {/* Subscription Token */}
-                  <div style={{ marginTop: '0.75rem' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Subscription Token: </span>
-                    {subTokenEditing.value[app.id] !== undefined ? (
-                      <span style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <input
-                          type="text"
-                          value={subTokenEditing.value[app.id]}
-                          onInput={(e) => {
-                            subTokenEditing.value = {
-                              ...subTokenEditing.value,
-                              [app.id]: (e.target as HTMLInputElement).value,
-                            };
-                          }}
-                          placeholder="e.g., a1b2c3d4"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', width: '140px' }}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => handleSetSubToken(app, subTokenEditing.value[app.id]!)}
-                          disabled={subTokenSaving.value === app.id}
-                        >
-                          {subTokenSaving.value === app.id ? 'Saving...' : 'Set'}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            const next = { ...subTokenEditing.value };
-                            delete next[app.id];
-                            subTokenEditing.value = next;
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </span>
-                    ) : app.subscription_token ? (
-                      <span style={{ fontSize: '0.85rem' }}>
-                        <code>{app.subscription_token.slice(0, 4)}****</code>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleSetSubToken(app, '')}
-                          disabled={subTokenSaving.value === app.id}
-                          style={{ marginLeft: '0.5rem' }}
-                        >
-                          Clear
-                        </Button>
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: '0.85rem' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Not set</span>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            subTokenEditing.value = { ...subTokenEditing.value, [app.id]: '' };
-                          }}
-                          style={{ marginLeft: '0.5rem' }}
-                        >
-                          Set
-                        </Button>
-                      </span>
-                    )}
-                  </div>
+                    {/* App cards within this group */}
+                    <div style={{ display: 'grid', gap: '0.75rem' }}>
+                      {groupApps.map((app) => (
+                        <div key={app.id} style={{ border: '1px solid var(--border)', padding: '0.75rem', borderRadius: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                              <h4 style={{ margin: '0 0 0.25rem 0' }}>
+                                {app.display_name}
+                                {app.signing_enabled && (
+                                  <Badge variant="success" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>Signing</Badge>
+                                )}
+                              </h4>
+                              <code style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{app.name}</code>
+                            </div>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleRemove(app)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
 
-                  {/* Push Relay URL */}
-                  <div style={{ marginTop: '0.75rem' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Push Relay URL: </span>
-                    {pushRelayEditing.value[app.id] !== undefined ? (
-                      <span style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <input
-                          type="text"
-                          value={pushRelayEditing.value[app.id]}
-                          onInput={(e) => {
-                            pushRelayEditing.value = {
-                              ...pushRelayEditing.value,
-                              [app.id]: (e.target as HTMLInputElement).value,
-                            };
-                          }}
-                          placeholder="https://push-relay.example.com"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', width: '260px' }}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => handleSetPushRelayUrl(app, pushRelayEditing.value[app.id]!)}
-                          disabled={pushRelaySaving.value === app.id}
-                        >
-                          {pushRelaySaving.value === app.id ? 'Saving...' : 'Save'}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            const next = { ...pushRelayEditing.value };
-                            delete next[app.id];
-                            pushRelayEditing.value = next;
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </span>
-                    ) : app.push_relay_url ? (
-                      <span style={{ fontSize: '0.85rem' }}>
-                        <code>{app.push_relay_url}</code>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            pushRelayEditing.value = { ...pushRelayEditing.value, [app.id]: app.push_relay_url || '' };
-                          }}
-                          style={{ marginLeft: '0.5rem' }}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleSetPushRelayUrl(app, '')}
-                          disabled={pushRelaySaving.value === app.id}
-                          style={{ marginLeft: '0.25rem' }}
-                        >
-                          Clear
-                        </Button>
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: '0.85rem' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Not configured</span>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            pushRelayEditing.value = { ...pushRelayEditing.value, [app.id]: '' };
-                          }}
-                          style={{ marginLeft: '0.5rem' }}
-                        >
-                          Set
-                        </Button>
-                      </span>
-                    )}
+                          <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {/* Alerts toggle */}
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={app.alerts_enabled}
+                                onChange={() => handleToggle(app, 'alerts_enabled')}
+                                disabled={toggleSaving.value === `${app.id}-alerts_enabled`}
+                              />
+                              <span>Alerts</span>
+                              <Badge variant={app.alerts_enabled ? 'success' : 'muted'}>
+                                {app.alerts_enabled ? 'ON' : 'OFF'}
+                              </Badge>
+                            </label>
+
+                            {/* Test notification button */}
+                            {app.alerts_enabled && (() => {
+                              const canTest = !!(app.subscription_token && app.push_relay_url);
+                              return (
+                                <span title={canTest ? undefined : 'Set subscription token and Push Relay URL first'}>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleTestNotification(app)}
+                                    disabled={!canTest || testNotifSending.value === app.id}
+                                  >
+                                    {testNotifSending.value === app.id ? 'Sending...' : 'Test Notify'}
+                                  </Button>
+                                </span>
+                              );
+                            })()}
+
+                            {/* Test sign request button */}
+                            {app.signing_enabled && (() => {
+                              const canTest = !!(app.subscription_token && app.push_relay_url);
+                              return (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Owner address (optional)"
+                                    value={testSignOwnerAddress.value[app.id] || ''}
+                                    onInput={(e) => {
+                                      testSignOwnerAddress.value = { ...testSignOwnerAddress.value, [app.id]: (e.target as HTMLInputElement).value };
+                                    }}
+                                    disabled={!canTest || testSignSending.value === app.id}
+                                    style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', width: '240px', fontFamily: 'monospace' }}
+                                  />
+                                  <span title={canTest ? undefined : 'Set subscription token and Push Relay URL first'}>
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={() => handleTestSignRequest(app)}
+                                      disabled={!canTest || testSignSending.value === app.id}
+                                    >
+                                      {testSignSending.value === app.id ? 'Waiting...' : 'Test Sign'}
+                                    </Button>
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          {/* Inline test errors */}
+                          {testNotifError.value[app.id] && (
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #e74c3c)' }}>
+                              {testNotifError.value[app.id]}
+                            </div>
+                          )}
+                          {testSignError.value[app.id] && (
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #e74c3c)' }}>
+                              {testSignError.value[app.id]}
+                            </div>
+                          )}
+                          {/* Sign request waiting indicator */}
+                          {testSignSending.value === app.id && (
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                              Waiting for response from wallet app... Check your device.
+                            </div>
+                          )}
+                          {/* Sign request result */}
+                          {testSignResult.value[app.id] && (
+                            <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem' }}>
+                              <div><strong>Action:</strong> <Badge variant={testSignResult.value[app.id]!.action === 'approve' ? 'success' : 'warning'}>{testSignResult.value[app.id]!.action}</Badge></div>
+                              <div style={{ marginTop: '0.25rem' }}><strong>Signer:</strong> <code>{testSignResult.value[app.id]!.signerAddress.slice(0, 6)}...{testSignResult.value[app.id]!.signerAddress.slice(-4)}</code></div>
+                              {testSignResult.value[app.id]!.signature && (
+                                <div style={{ marginTop: '0.25rem' }}>
+                                  <strong>Signature:</strong>{' '}
+                                  <code
+                                    style={{ cursor: 'pointer', wordBreak: 'break-all' }}
+                                    title="Click to copy"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(testSignResult.value[app.id]!.signature!);
+                                      showToast('success', 'Signature copied');
+                                    }}
+                                  >
+                                    {testSignResult.value[app.id]!.signature!.slice(0, 20)}...
+                                  </code>
+                                </div>
+                              )}
+                              <div style={{ marginTop: '0.25rem' }}><strong>Signed at:</strong> {testSignResult.value[app.id]!.signedAt}</div>
+                            </div>
+                          )}
+
+                          {/* Used by */}
+                          <div style={{ marginTop: '0.75rem' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Used by: </span>
+                            {app.used_by.length === 0 ? (
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No wallets</span>
+                            ) : (
+                              <span style={{ fontSize: '0.85rem' }}>
+                                {app.used_by.map((w, i) => (
+                                  <span key={w.id}>
+                                    {i > 0 && ', '}
+                                    <a href={`#/wallets/${w.id}`} style={{ color: 'var(--primary)' }}>{w.label}</a>
+                                  </span>
+                                ))}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Subscription Token */}
+                          <div style={{ marginTop: '0.75rem' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Subscription Token: </span>
+                            {subTokenEditing.value[app.id] !== undefined ? (
+                              <span style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <input
+                                  type="text"
+                                  value={subTokenEditing.value[app.id]}
+                                  onInput={(e) => {
+                                    subTokenEditing.value = {
+                                      ...subTokenEditing.value,
+                                      [app.id]: (e.target as HTMLInputElement).value,
+                                    };
+                                  }}
+                                  placeholder="e.g., a1b2c3d4"
+                                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', width: '140px' }}
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSetSubToken(app, subTokenEditing.value[app.id]!)}
+                                  disabled={subTokenSaving.value === app.id}
+                                >
+                                  {subTokenSaving.value === app.id ? 'Saving...' : 'Set'}
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    const next = { ...subTokenEditing.value };
+                                    delete next[app.id];
+                                    subTokenEditing.value = next;
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </span>
+                            ) : app.subscription_token ? (
+                              <span style={{ fontSize: '0.85rem' }}>
+                                <code>{app.subscription_token.slice(0, 4)}****</code>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleSetSubToken(app, '')}
+                                  disabled={subTokenSaving.value === app.id}
+                                  style={{ marginLeft: '0.5rem' }}
+                                >
+                                  Clear
+                                </Button>
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.85rem' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Not set</span>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    subTokenEditing.value = { ...subTokenEditing.value, [app.id]: '' };
+                                  }}
+                                  style={{ marginLeft: '0.5rem' }}
+                                >
+                                  Set
+                                </Button>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Push Relay URL */}
+                          <div style={{ marginTop: '0.75rem' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Push Relay URL: </span>
+                            {pushRelayEditing.value[app.id] !== undefined ? (
+                              <span style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <input
+                                  type="text"
+                                  value={pushRelayEditing.value[app.id]}
+                                  onInput={(e) => {
+                                    pushRelayEditing.value = {
+                                      ...pushRelayEditing.value,
+                                      [app.id]: (e.target as HTMLInputElement).value,
+                                    };
+                                  }}
+                                  placeholder="https://push-relay.example.com"
+                                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', width: '260px' }}
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSetPushRelayUrl(app, pushRelayEditing.value[app.id]!)}
+                                  disabled={pushRelaySaving.value === app.id}
+                                >
+                                  {pushRelaySaving.value === app.id ? 'Saving...' : 'Save'}
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    const next = { ...pushRelayEditing.value };
+                                    delete next[app.id];
+                                    pushRelayEditing.value = next;
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </span>
+                            ) : app.push_relay_url ? (
+                              <span style={{ fontSize: '0.85rem' }}>
+                                <code>{app.push_relay_url}</code>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    pushRelayEditing.value = { ...pushRelayEditing.value, [app.id]: app.push_relay_url || '' };
+                                  }}
+                                  style={{ marginLeft: '0.5rem' }}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleSetPushRelayUrl(app, '')}
+                                  disabled={pushRelaySaving.value === app.id}
+                                  style={{ marginLeft: '0.25rem' }}
+                                >
+                                  Clear
+                                </Button>
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.85rem' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Not configured</span>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    pushRelayEditing.value = { ...pushRelayEditing.value, [app.id]: '' };
+                                  }}
+                                  style={{ marginLeft: '0.5rem' }}
+                                >
+                                  Set
+                                </Button>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

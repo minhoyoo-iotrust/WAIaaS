@@ -15,12 +15,12 @@ import {
 } from '../index.js';
 
 describe('CAIP-2 Mapping', () => {
-  it('CAIP2_TO_NETWORK has 15 entries', () => {
-    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(15);
+  it('CAIP2_TO_NETWORK has 18 entries', () => {
+    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(18);
   });
 
-  it('NETWORK_TO_CAIP2 has 15 entries', () => {
-    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(15);
+  it('NETWORK_TO_CAIP2 has 18 entries', () => {
+    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(18);
   });
 
   it('every CAIP-2 entry maps to a valid NetworkType', () => {

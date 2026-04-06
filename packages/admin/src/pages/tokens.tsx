@@ -1,6 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
-import { EVM_NETWORK_TYPES, NETWORK_DISPLAY_NAMES } from '@waiaas/shared';
+import { EVM_NETWORK_TYPES, RIPPLE_NETWORK_TYPES, NETWORK_DISPLAY_NAMES } from '@waiaas/shared';
 import { api, ApiError } from '../api/typed-client';
 import type { TokenRegistryItem } from '../api/types.aliases';
 import { Badge, Button } from '../components/form';
@@ -17,7 +17,7 @@ type TokenItem = TokenRegistryItem;
 // Constants
 // ---------------------------------------------------------------------------
 
-const EVM_NETWORKS: readonly string[] = EVM_NETWORK_TYPES;
+const TOKEN_NETWORKS: readonly string[] = [...EVM_NETWORK_TYPES, ...RIPPLE_NETWORK_TYPES];
 
 const COLUMNS = ['Symbol', 'Name', 'Address', 'Decimals', 'Source', 'Actions'];
 
@@ -196,7 +196,7 @@ export function TokensContent() {
         <div class="filter-field">
           <label>Network</label>
           <select value={network.value} onChange={handleNetworkChange}>
-            {EVM_NETWORKS.map((n) => (
+            {TOKEN_NETWORKS.map((n) => (
               <option key={n} value={n}>
                 {NETWORK_DISPLAY_NAMES[n as keyof typeof NETWORK_DISPLAY_NAMES] ?? n}
               </option>

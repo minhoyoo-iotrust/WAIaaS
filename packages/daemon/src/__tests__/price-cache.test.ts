@@ -295,6 +295,7 @@ describe('PYTH_FEED_IDS cross-validation', () => {
     const knownPairs = [
       { network: 'solana-mainnet' as const, address: 'native' },
       { network: 'ethereum-mainnet' as const, address: 'native' },
+      { network: 'xrpl-mainnet' as const, address: 'native' },
       { network: 'solana-mainnet' as const, address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
       { network: 'solana-mainnet' as const, address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB' },
     ];
@@ -304,6 +305,6 @@ describe('PYTH_FEED_IDS cross-validation', () => {
       expect(PYTH_FEED_IDS.has(key), `Expected PYTH_FEED_IDS to contain key: ${key}`).toBe(true);
     }
 
-    expect(PYTH_FEED_IDS.size).toBe(4);
+    expect(PYTH_FEED_IDS.size).toBe(5);
   });
 });

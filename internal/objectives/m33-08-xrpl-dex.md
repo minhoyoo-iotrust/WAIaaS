@@ -1,7 +1,8 @@
 # 마일스톤 m33-08: XRPL DEX 지원
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v33.8
+- **Completed:** 2026-04-04
 
 ## 목표
 

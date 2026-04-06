@@ -69,12 +69,27 @@ const DIRECTION_OPTIONS = [
 ];
 
 const TYPE_OPTIONS = [
-  { value: 'TRANSFER', label: 'TRANSFER' },
-  { value: 'TOKEN_TRANSFER', label: 'TOKEN_TRANSFER' },
-  { value: 'CONTRACT_CALL', label: 'CONTRACT_CALL' },
-  { value: 'APPROVE', label: 'APPROVE' },
-  { value: 'BATCH', label: 'BATCH' },
+  { value: 'TRANSFER', label: 'Transfer' },
+  { value: 'TOKEN_TRANSFER', label: 'Token Transfer' },
+  { value: 'CONTRACT_CALL', label: 'Contract Call' },
+  { value: 'APPROVE', label: 'Approve' },
+  { value: 'BATCH', label: 'Batch' },
+  { value: 'CONTRACT_DEPLOY', label: 'Contract Deploy' },
+  { value: 'SIGN', label: 'Sign' },
 ];
+
+/** Human-readable type labels for display */
+const TYPE_LABELS: Record<string, string> = {
+  TRANSFER: 'Transfer',
+  TOKEN_TRANSFER: 'Token Transfer',
+  CONTRACT_CALL: 'Contract Call',
+  APPROVE: 'Approve',
+  BATCH: 'Batch',
+  CONTRACT_DEPLOY: 'Contract Deploy',
+  SIGN: 'Sign',
+  NFT_TRANSFER: 'NFT Transfer',
+  X402_PAYMENT: 'x402 Payment',
+};
 
 const OUTGOING_STATUS_OPTIONS = [
   { value: 'PENDING', label: 'PENDING' },
@@ -94,6 +109,7 @@ const INCOMING_STATUS_OPTIONS = [
 const CHAIN_OPTIONS = [
   { value: 'solana', label: 'Solana' },
   { value: 'evm', label: 'EVM' },
+  { value: 'ripple', label: 'Ripple' },
 ];
 
 const SUSPICIOUS_OPTIONS = [
@@ -115,6 +131,9 @@ const NETWORK_OPTIONS = [
   { value: 'optimism-sepolia', label: 'optimism-sepolia' },
   { value: 'base-mainnet', label: 'base-mainnet' },
   { value: 'base-sepolia', label: 'base-sepolia' },
+  { value: 'xrpl-mainnet', label: 'xrpl-mainnet' },
+  { value: 'xrpl-testnet', label: 'xrpl-testnet' },
+  { value: 'xrpl-devnet', label: 'xrpl-devnet' },
 ];
 
 const COLUMNS = ['Time', 'Direction', 'Wallet', 'Counterparty', 'Amount', 'Network', 'Status', 'Tx Hash'];
@@ -697,7 +716,7 @@ export default function TransactionsPage() {
         <div class="detail-item"><span class="detail-label">ID</span><span class="detail-value">{tx.id}</span></div>
         <div class="detail-item"><span class="detail-label">Wallet ID</span><span class="detail-value">{tx.walletId}</span></div>
         <div class="detail-item"><span class="detail-label">Wallet Name</span><span class="detail-value">{tx.walletName ?? '\u2014'}</span></div>
-        <div class="detail-item"><span class="detail-label">Type</span><span class="detail-value">{tx.type}</span></div>
+        <div class="detail-item"><span class="detail-label">Type</span><span class="detail-value">{TYPE_LABELS[tx.type] ?? tx.type}</span></div>
         <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value">{tx.status}</span></div>
         <div class="detail-item"><span class="detail-label">Tier</span><span class="detail-value">{tx.tier ?? '\u2014'}</span></div>
         <div class="detail-item"><span class="detail-label">To Address</span><span class="detail-value">{tx.toAddress ?? '\u2014'}</span></div>

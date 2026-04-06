@@ -14,7 +14,7 @@
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { createPublicClient, http, type Address } from 'viem';
-import { EVM_NETWORK_TYPES, WAIaaSError, networkToCaip2 } from '@waiaas/core';
+import { EVM_NETWORK_TYPES, RIPPLE_NETWORK_TYPES, WAIaaSError, networkToCaip2 } from '@waiaas/core';
 import type { NetworkType } from '@waiaas/core';
 import type { TokenRegistryService } from '../../infrastructure/token-registry/index.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
@@ -109,10 +109,12 @@ const removeTokenRoute = createRoute({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function validateEvmNetwork(network: string): void {
-  if (!(EVM_NETWORK_TYPES as readonly string[]).includes(network)) {
+const TOKEN_REGISTRY_NETWORKS: readonly string[] = [...EVM_NETWORK_TYPES, ...RIPPLE_NETWORK_TYPES];
+
+function validateTokenRegistryNetwork(network: string): void {
+  if (!TOKEN_REGISTRY_NETWORKS.includes(network)) {
     throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
-      message: `Invalid EVM network '${network}'. Valid networks: ${EVM_NETWORK_TYPES.join(', ')}`,
+      message: `Invalid network '${network}'. Valid networks: ${TOKEN_REGISTRY_NETWORKS.join(', ')}`,
     });
   }
 }
@@ -169,7 +171,7 @@ export function tokenRegistryRoutes(deps: TokenRegistryRouteDeps): OpenAPIHono {
   router.openapi(listTokensRoute, async (c) => {
     const { network } = c.req.valid('query');
 
-    validateEvmNetwork(network);
+    validateTokenRegistryNetwork(network);
 
     const tokens = await deps.tokenRegistryService.getTokensForNetwork(network);
 
@@ -201,7 +203,12 @@ export function tokenRegistryRoutes(deps: TokenRegistryRouteDeps): OpenAPIHono {
   router.openapi(resolveTokenRoute, async (c) => {
     const { network, address } = c.req.valid('query');
 
-    validateEvmNetwork(network);
+    // Resolve is EVM-only (ERC-20 ABI call)
+    if (!(EVM_NETWORK_TYPES as readonly string[]).includes(network)) {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: `Token resolve is only supported for EVM networks. Got '${network}'.`,
+      });
+    }
 
     const rpcConfig = deps.rpcConfig ?? {};
     const rpcUrl = resolveRpcUrl(rpcConfig, 'ethereum', network);
@@ -236,7 +243,7 @@ export function tokenRegistryRoutes(deps: TokenRegistryRouteDeps): OpenAPIHono {
   router.openapi(addTokenRoute, async (c) => {
     const body = c.req.valid('json');
 
-    validateEvmNetwork(body.network);
+    validateTokenRegistryNetwork(body.network);
 
     try {
       const result = await deps.tokenRegistryService.addCustomToken(body.network, {
@@ -273,7 +280,7 @@ export function tokenRegistryRoutes(deps: TokenRegistryRouteDeps): OpenAPIHono {
   router.openapi(removeTokenRoute, async (c) => {
     const body = c.req.valid('json');
 
-    validateEvmNetwork(body.network);
+    validateTokenRegistryNetwork(body.network);
 
     const removed = await deps.tokenRegistryService.removeCustomToken(body.network, body.address);
 

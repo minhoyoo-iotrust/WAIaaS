@@ -18,6 +18,10 @@ export {
   EVM_NETWORK_TYPES,
   type EvmNetworkType,
 
+  // Ripple (XRPL) network types
+  RIPPLE_NETWORK_TYPES,
+  type RippleNetworkType,
+
   // Environment types
   ENVIRONMENT_TYPES,
   type EnvironmentType,
@@ -36,6 +40,7 @@ export {
   EVM_NETWORK_OPTIONS,
   EVM_RPC_SETTING_KEYS,
   SOLANA_RPC_SETTING_KEYS,
+  RIPPLE_RPC_SETTING_KEYS,
   RPC_KEY_LABELS,
 } from './networks.js';
 

@@ -1,5 +1,396 @@
 # Project Milestones: WAIaaS
 
+## v33.8 XRPL DEX 지원 (Shipped: 2026-04-04)
+
+**Phases completed:** 3 phases, 7 plans, 6 tasks
+
+**Key accomplishments:**
+
+- RippleAdapter.buildContractCall() extended with calldata JSON routing for OfferCreate/OfferCancel via shared buildXrplNativeTx helper
+- tx-parser extended to parse OfferCreate/OfferCancel as CONTRACT_CALL with TakerGets-based spending amount extraction
+- 1. [Rule 3 - Blocking] xrpl dependency missing from @waiaas/actions
+- 1. [Rule 1 - Bug] Missing requiredApis field in metadata
+- XRPL DEX CONTRACT_CALL calldata parsing for accurate USD spending limit -- XRP drops via native oracle, IOU safe fallback
+- XRPL DEX framework integration verified via 16 tests + Admin UI transaction type labels improved to human-readable format
+
+---
+
+## v33.6 XRP 메인넷 지원 (Shipped: 2026-04-03)
+
+**Phases completed:** 4 phases (470-473), 10 plans, 37 requirements
+
+**Key accomplishments:**
+
+- @waiaas/adapter-ripple 패키지 — IChainAdapter 25 메서드 구현, Ed25519 키 + r-address 도출, xrpl.Client WebSocket RPC
+- XRP 네이티브 전송 — drops 변환, 동적 reserve, Destination Tag, LastLedgerSequence, validated ledger 확인
+- Trust Line 토큰 지원 — TrustSet(tfSetNoRipple), IOU 전송, 3-char/40-char hex 통화 코드, account_lines 자산 조회
+- XLS-20 NFT 전송 — NFTokenCreateOffer/AcceptOffer 2-step 모델, pending_accept 상태, URI/taxon 메타데이터
+- SSoT 자동 전파 — ChainType 'ripple' 추가만으로 REST/MCP/SDK/Admin UI 전 인터페이스 자동 지원
+- DB v62 마이그레이션 — 6 테이블 CHECK 제약조건 확장, CAIP-2 xrpl:0/1/2, CAIP-19 slip44:144 + token 네임스페이스
+
+**Stats:**
+
+- 4 phases, 10 plans, 37 requirements, 27 commits
+- 152 files changed, +13,772 / -1,441 lines
+- @waiaas/adapter-ripple: 3,120 LOC, 131 tests
+- Timeline: 2 days (2026-04-02 → 2026-04-03)
+- WalletConnect v2 QR 연결 + ownerAuth 8단계 미들웨어 + Owner API 8개 엔드포인트 + owner_wallets 스키마 + Relay 장애 CLI 대안 전체 설계
+- INotificationChannel 3채널 추상화 + NotificationService 폴백/broadcast + notification_channels/notification_log DB 스키마 + TokenBucketRateLimiter + 최소 2채널 제한 모드 전체 설계
+- Kill Switch 6단계 캐스케이드 프로토콜 + 3상태 머신 + 이중 인증 복구 + AutoStopEngine 5개 규칙 타입 + auto_stop_rules 테이블 + EvmAdapterStub 13메서드 전체 설계
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- v0.1 -> v0.2 변경 매핑 문서 작성 및 6개 SUPERSEDED 대상 문서에 경고 표기 추가
+- IBlockchainAdapter -> IChainAdapter 인터페이스 매핑, RFC 9457 46개 -> 36개 에러 코드 변환, 4단계 에스컬레이션 -> 4-tier 정책 대응표 작성
+- Settings key-value table (Drizzle + v5 migration) with AES-256-GCM HKDF credential encryption for operational config DB storage
+- SettingsService CRUD with DB > config.toml > default fallback, AES-GCM credential auto-encryption, and first-boot config.toml auto-import hook in daemon startup
+- 3 admin settings REST endpoints (GET/PUT/POST) with OpenAPI schemas, credential masking, key validation, and RPC connectivity testing
+- HotReloadOrchestrator dispatching settings changes to notification channel swap, RPC adapter eviction, and security parameter refresh without daemon restart
+- Complete settings page overhaul with 5 category sections (notifications, RPC, security, WalletConnect, daemon), dirty tracking save bar, RPC connectivity testing with latency, and notification test delivery
+- 14-test comprehensive settings page test suite covering all 5 categories, credential masking, save/discard flow, RPC/notification test interactions, and error handling
+- 3 new MCP tools (call_contract, approve_token, send_batch) for full discriminatedUnion 5-type parity with REST API and SDK
+- 11 new tests for call_contract/approve_token/send_batch MCP tools, MCPSDK-04 design decision formally revoked with feature parity principle, BUG-017 closed
+- 3 API skill files (quickstart, wallet, transactions) with correct v1.4.4 endpoints, discriminatedUnion 5-type documentation, and masterAuth/sessionAuth curl examples for AI agent onboarding
+- 10-PolicyType CRUD reference + 12 admin endpoint reference completing the 5-file AI agent skill set
+- EnvironmentType(testnet/mainnet) Zod SSoT 파생 체인, 13개 네트워크 전수 매핑, WalletSchema 변경 설계, 키스토어 영향 분석을 단일 설계 문서(docs/68)로 확립
+- v6a(ADD COLUMN + UPDATE 역참조) + v6b(wallets 12-step 재생성 with 13개 CASE WHEN) 마이그레이션 전략을 copy-paste 수준 SQL로 완성하고, pushSchema/Drizzle 동기화 + 테스트 전략 + 위험 완화를 포함한 설계 문서(docs/69) 작성
+- resolveNetwork() 3단계 우선순위 순수 함수 + PipelineContext.resolvedNetwork 전파 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 + AdapterPool 호출부 2곳 변경 통합 설계 문서(docs/70, 7개 섹션)
+- ALLOWED_NETWORKS 11번째 PolicyType + 4단계 network override + policies v8 12-step 마이그레이션 통합 설계 (docs/71, 8개 섹션)
+- REST API 7개 엔드포인트의 network/environment 파라미터 확장, 멀티네트워크 잔액 집계 엔드포인트 신설, 3-Layer 하위호환 전략 + OpenAPI 변경 전수 목록 설계
+- MCP 6개 도구 + TS/Python SDK 3개 메서드의 network 파라미터 Zod/타입 수준 설계, 3개 인터페이스 통합 하위호환 매트릭스, quickstart --mode 5단계 CLI 워크플로우 의사코드 완성
+- EnvironmentType Zod SSoT (testnet/mainnet 2값) + 환경-네트워크 매핑 상수 2개 + 순수 함수 4개를 TDD로 구현, 31개 테스트 전부 GREEN
+- v6a/v6b/v8 SQLite 마이그레이션으로 wallets.network을 environment+default_network 2컬럼으로 분리, Drizzle 스키마 동기화, 807개 테스트 전체 PASS
+- Wallet/Transaction/Policy Zod 스키마를 environment 모델로 전환하고, ALLOWED_NETWORKS 11번째 PolicyType SSoT + 라우트 레이어 적용
+- ALLOWED_NETWORKS 정책 평가 + 4단계 override resolveOverrides + evaluateAndReserve network SQL 필터 TDD 구현
+- resolveNetwork() 순수 함수 TDD 구현 -- 3단계 우선순위 네트워크 해결 + chain/environment 교차 검증 + ENVIRONMENT_NETWORK_MISMATCH 에러 코드 69번째 등록
+- transactions.ts/daemon.ts/pipeline.ts에 resolveNetwork() 통합 -- 환경 불일치 WAIaaSError 변환 + AdapterPool resolvedNetwork 전달 + daemon.ts 재진입 tx.network 직접 사용 + 통합 테스트 5개
+- balance/assets 엔드포인트 network 쿼리 파라미터 + 월렛/트랜잭션 응답 environment/network 필드 보강
+- PUT /wallets/:id/default-network + GET /wallets/:id/networks 엔드포인트와 ALLOWED_NETWORKS 정책 CRUD 통합 검증
+- MCP 6개 도구에 network optional 파라미터 추가 + get_wallet_info 신규 도구로 멀티체인 MCP 인터페이스 완성
+- TS SDK + Python SDK에 network 선택 파라미터 추가하여 멀티체인 잔액 조회 및 트랜잭션 실행 지원
+- Admin UI 월렛 생성/상세를 environment 기반으로 전환하고, Available Networks 관리 UI + ALLOWED_NETWORKS 정책 타입 추가
+- waiaas quickstart --mode testnet/mainnet 명령으로 Solana + EVM 2개 월렛 일괄 생성 + 네트워크 조회 + MCP 세션 생성 + config snippet 출력
+- 4개 API 스킬 파일을 environment 기반 멀티체인 모델로 전면 동기화 + ALLOWED_NETWORKS 11번째 정책 타입 + CLI quickstart 대안 섹션
+- SSoT 열거형에 SIGNED/SIGN 추가, ParsedTransaction/SignedTransaction 타입 정의, IChainAdapter 2개 메서드 선언, 4+2 에러 코드 추가, DB migration v9로 CHECK 제약 갱신
+- Solana tx-parser.ts로 base64 unsigned tx 파싱 (4종 operation 식별) + adapter.ts에 parseTransaction/signExternalTransaction 구현, 10개 TDD 테스트 통과
+- EVM unsigned tx 파싱 유틸리티 (tx-parser.ts) + EvmAdapter parseTransaction/signExternalTransaction 구현, ERC-20 transfer/approve selector 기반 4종 operation 분류, 13개 TDD 테스트
+- SettingsService 기반 3개 기본 거부 토글 추가 -- DatabasePolicyEngine DI + Admin UI 체크박스
+- SettingsService 기반 Default Deny 3개 토글의 ON/OFF, 화이트리스트 공존, hot-reload 동작을 10개 테스트로 검증
+- executeSignOnly() 10-step 파이프라인 모듈과 reservation SUM 쿼리 SIGNED 확장으로 외부 tx 서명 + TOCTOU 이중 지출 방지 구현
+- POST /v1/transactions/sign 라우트 + TxSignRequest/TxSignResponse OpenAPI 스키마 + 11개 통합 테스트로 sign-only 파이프라인 HTTP 노출
+- POST /v1/utils/encode-calldata endpoint wrapping viem encodeFunctionData with ABI_ENCODING_FAILED error code, OpenAPI schemas, sessionAuth
+- TS/Python SDK encodeCalldata 메서드 + MCP encode_calldata 도구 + transactions.skill.md 문서화로 3개 클라이언트 인터페이스 완성
+- TS/Python SDK signTransaction() 메서드 + MCP sign_transaction 13번째 도구를 추가하여 sign-only REST API를 3개 클라이언트 인터페이스에서 사용 가능하게 함
+- GET /v1/skills/:name public REST 엔드포인트 + waiaas://skills/{name} MCP ResourceTemplate으로 5개 API 스킬 파일을 AI 에이전트에 in-context 제공
+- POLICY_VIOLATION 알림에 policyType/tokenAddress/contractAddress/adminLink vars 추가 + transactions.skill.md sign-only API 문서화
+- 1. [Rule 1 - Bug] AutoStopRuleType 값 수정
+- 1. [Rule 2 - Missing Critical] Zod 스키마 전체 섹션 명시
+- pushSchema() 3-step 순서 수정 (tables->migrations->indexes)으로 기존 DB 시작 실패 버그 해결, 23개 마이그레이션 체인 테스트 추가
+- stdin end/close 감지 + 3초 force-exit 타임아웃으로 Claude Desktop 종료 시 MCP 고아 프로세스 잔류 방지 (BUG-020)
+- MCP 14번째 도구 + 세션 스코프 엔드포인트 + CLI wallet 서브커맨드 + TS/Python SDK 메서드로 모든 인터페이스에서 기본 네트워크 변경 가능
+- network=all 파라미터로 환경 내 모든 네트워크 잔액/자산 한 번에 조회 + Promise.allSettled 부분 실패 처리 + MCP/SDK/Skill 전체 동기화
+- admin/status API에 정책/트랜잭션 통계 추가 + 대시보드 StatCard 링크/추가 카드/최근 활동 테이블 구현
+- 월렛 상세에 네이티브/토큰 잔액 + 트랜잭션 테이블 추가, 세션 페이지에서 전체 세션 즉시 조회 + walletName 컬럼 표시
+- apiPost 빈 body SYSTEM_LOCKED 버그 수정 + 채널별 개별 [Test] 버튼 UI + Delivery Log 메시지 확장 패널
+- notification_logs.message 컬럼 v10 마이그레이션, Slack Incoming Webhook 채널 구현, 전체 알림 메시지 저장/조회 파이프라인 완성
+- 설계 문서 61/62/38을 v1.5 아키텍처에 맞게 수정: Pyth Primary + CoinGecko Fallback 2단계 Oracle, Chainlink 제거, MCP 16개 상한 제거 + 14개 도구 현행화
+- IPriceOracle Zod SSoT 인터페이스 + Map 기반 LRU 캐시(128항목, 5min TTL, stampede 방지) + classifyPriceAge 3단계 분류기를 TDD로 구현
+- PythOracle: Pyth Hermes REST API 기반 IPriceOracle 구현체 -- SOL/ETH/BTC 등 5개 토큰 feed ID 하드코딩 + fetch mock 기반 10개 테스트 TDD
+- CoinGecko Demo API 기반 IPriceOracle 구현: SPL/ERC-20 토큰 + 네이티브(SOL/ETH) 가격 조회 + 체인별 배치 + oracle SettingsService 키 2개 등록
+- OracleChain: Pyth->CoinGecko->Stale Cache 3단계 fallback + 편차>5% 교차 검증 isStale 격하 + GET /admin/oracle-status 모니터링 엔드포인트
+- PriceResult 3-state discriminated union + resolveEffectiveAmountUsd 5-type USD 환산 (TDD 16 tests)
+- SpendingLimitRulesSchema Zod SSoT + evaluateSpendingLimit USD 병행 평가 + evaluateAndReserve 코드 통일 (10 tests)
+- Stage 3 파이프라인에 OracleChain DI 연결 + resolveEffectiveAmountUsd USD 환산 통합 + notListed NOTIFY 격상/감사로그/힌트 (9 tests)
+- IActionProvider Zod SSoT 인터페이스 3개 스키마 + ActionProviderRegistry 등록/조회/실행/ESM 로드 구현 (20 tests)
+- api_keys 테이블 DB v11 증분 마이그레이션 + HKDF/AES-256-GCM ApiKeyStore CRUD with 14 unit tests
+- Actions REST API 2개 라우트 + DaemonLifecycle Step 4f 초기화 + 11개 통합 테스트 (pipeline 연동 포함)
+- Admin UI API Keys 섹션 + GET/PUT/DELETE /v1/admin/api-keys REST API (masterAuth 보호, 마스킹 반환, 10 tests)
+- mcpExpose=true Action Provider 액션을 action_{provider}_{action} MCP 도구로 자동 등록 + degraded mode 지원 + 8개 단위 테스트
+- admin.skill.md에 oracle-status/api-keys 4개 엔드포인트 추가, actions.skill.md 신규 생성으로 Action Provider REST API 완전 문서화
+- One-liner:
+- One-liner:
+- @x402/core 의존성 + CAIP-2 양방향 매핑 13개 + TransactionType/PolicyType SSoT 확장 + X402 에러 코드 8개 + 23개 신규 테스트
+- v12 마이그레이션: transactions + policies 12-step 재생성으로 X402_PAYMENT/X402_ALLOWED_DOMAINS CHECK 제약 갱신 + 7개 체인 테스트
+- DNS 사전 해석 + RFC 5735/6890 사설 IP 전체 범위 차단 + IPv4-mapped IPv6 바이패스 방어 + 리다이렉트 hop별 재검증 SSRF 가드 TDD 구현
+- x402 전체 파이프라인 오케스트레이션 핸들러 -- SSRF 가드 + 402 파싱 + scheme 자동 선택 + 결제 서명 + 재요청을 조합하는 독립 파이프라인 (25 테스트)
+- EVM EIP-3009 + Solana TransferChecked 결제 서명 모듈을 TDD로 구현, viem signTypedData와 @solana/kit signBytes로 체인별 서명 생성
+- matchDomain 와일드카드 도메인 매칭 + evaluateX402Domain 기본 거부 정책 평가 + config.toml [x402] 섹션 (enabled/request_timeout)
+- USDC $1 직접 환산 + IPriceOracle 폴백으로 x402 결제 금액 USD 변환 모듈 TDD 구현 (7개 EVM 체인 + Solana)
+- POST /v1/x402/fetch 엔드포인트: sessionAuth + 도메인 정책 + SSRF + 402 파싱 + SPENDING_LIMIT 4-tier + DELAY/APPROVAL + 결제 서명 + 감사 로그 + 알림 전체 오케스트레이션 (21개 통합 테스트)
+- TS SDK x402Fetch() + Python SDK x402_fetch() 메서드 추가 -- POST /v1/x402/fetch 래퍼, 9개 테스트
+- MCP x402_fetch 도구 등록 + x402.skill.md 생성 + VALID_SKILLS/SKILL_NAMES 7개 통합
+- 12개 PolicyType 전체 Zod 스키마 등록 + DynamicRowList/PolicyFormRouter/JSON 토글 폼 인프라 구축
+- 5개 핵심 타입(SPENDING_LIMIT, WHITELIST, RATE_LIMIT, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE) 전용 폼 + 유효성 검증 + 10개 통합 테스트
+- 7개 나머지 PolicyType 전용 폼 컴포넌트 + PolicyFormRouter 12-type 완전 분기 + validateRules 12-type 클라이언트 유효성 검증
+- PolicyRulesSummary 12-type 목록 시각화 (심볼 배지, req/time, tier bars) + 수정 모달 전용 폼 프리필/저장 + 22개 통합 테스트
+- SpendingLimitForm에 daily/monthly USD 한도 입력 필드 추가 + PolicyRulesSummary에 누적 한도 설정값 조건부 시각화
+- Commit:
+- Admin 환산 유틸리티 생성
+- display-currency-helper.ts
+- 14-02 준비 상태:
+- 1. [Rule 2 - Missing Critical] 에러 코드 매핑 병기
+- 금액 경계:
+- 1. [Efficiency] 두 태스크를 단일 파일 작성으로 통합
+- GitHub Actions 4단계 파이프라인(ci/nightly/release/coverage-report) + Turborepo --affected + Soft/Hard 커버리지 게이트 전환 메커니즘 통합 설계
+- 4개 배포 타겟(CLI 32건, Docker 18건, Tauri 6+28건, Telegram 34건) 총 118건 시나리오 확정 + Phase 17 CI/CD Stage 4 통합 매핑 + 정합성 검증 10건
+- masterAuth(implicit/explicit)/ownerAuth(2곳)/sessionAuth 3-tier 재분리, 31-endpoint 인증 맵 재배치, 16-downgrade 보상 통제 검증, CLI 수동 서명 4단계 플로우
+- agents.owner_address NOT NULL 전환, wallet_connections 테이블 신규(owner_wallets 대체), config.toml walletconnect 선택적 편의 기능, v0.5 마이그레이션 6단계 전략
+- 변경 범위:
+- 27 tests covering security.tsx 3-tab layout: Kill Switch 3-state actions, AutoStop Rules dirty form, JWT Rotation modal
+- 16 tests covering walletconnect.tsx: table rendering, WC session status, Connect/QR modal with polling, Disconnect, empty state, and error handling
+- 34 tests for system.tsx covering all 6 sections: API Keys CRUD, Oracle/RateLimit/LogLevel/Currency settings forms, dirty tracking save/discard, and shutdown double-confirmation modal
+- 65 unit tests for 5 shared admin components: EmptyState, dirty-guard, UnsavedDialog, SettingsSearch, PolicyRulesSummary covering render, interaction, and all 12 policy types
+- 44 targeted tests for sessions/notifications/wallets pages, restoring vitest.config.ts thresholds to 70% with 92% actual coverage
+- Dynamic --version from package.json via createRequire, init password guidance with commented config sections, and EACCES permission error handling
+- Step logs downgraded to console.debug, EADDRINUSE port conflict detection with lsof hint, and Admin UI URL in daemon ready message
+- Quickstart command fully English with session expiry display, 409-idempotent wallet reuse, and correct availableNetworks field parsing
+- MCP setup "Run waiaas quickstart first" guidance and 24h default session expiry warning with --expires-in option hint
+- Fixed README SDK example field names (balance.balance, tx.id) and extended sync-version.mjs to auto-sync all 14 root + packages skill file version headers at build time
+- Minimal npm README files for @waiaas/cli and @waiaas/sdk with install commands, quickstart code, and API reference tables
+- docker-compose.yml switched from local build to GHCR image pull, with build override file and .env.example template for zero-friction Docker startup
+- Python SDK version synced to 1.7.0 (matching pyproject.toml), default port corrected to 3100 in README/docstrings, .venv/ added to gitignore
+- 낙관적 갱신 프로토콜 SSoT(53-session-renewal-protocol.md) 신규 작성: PUT /v1/sessions/:id/renew API, 5종 안전 장치, 토큰 회전, Owner 사후 거부, 알림 이벤트 2종 + 30-session-token-protocol.md SessionConstraints 8필드 확장 및 수명주기 5단계 반영
+- sessions 테이블 갱신 컬럼 4개 + PUT /v1/sessions/:id/renew API 스펙 + SESSION_RENEWED/SESSION_RENEWAL_REJECTED 알림 이벤트 2종을 기존 설계 문서 3개에 전파
+- CLI 플로우 재설계 SSoT(54-cli-flow-redesign.md) 신규 작성: init 2단계 간소화(DX-01) + agent create --owner(DX-02) + session create masterAuth(DX-03) + --quickstart 4단계 오케스트레이션(DX-04) + --dev 고정 패스워드 + 3종 보안 경고(DX-05), v0.5 CLI 17개 커맨드 전체 요약표 + v0.2 마이그레이션 가이드
+- ErrorResponseSchema hint 필드(31개 에러 맵) + MCP 옵션 B(stdio) 채택 + SSH 터널 원격 접근 가이드를 단일 SSoT로 정의
+- 28/37/40 설계 문서 3개에 v0.5 인증 모델(masterAuth implicit/explicit, ownerAuth 2곳 한정) + hint 필드 + CLI 간소화 + Docker --dev 주의사항 반영
+- One-liner:
+- TransferRequest.token 확장 + SPL/ERC-20 빌드 로직 + ALLOWED_TOKENS 정책 + TOKEN_TRANSFER NOTIFY 과도기 전략을 1824줄 설계 문서로 완성
+- getAssets() 14번째 메서드 복원 + Solana Token Program/Token-2022 조회 + EVM ALLOWED_TOKENS 기반 multicall 조회 + FeeEstimate ATA 동적 비용 + 테스트 시나리오 44개
+- ContractCallRequest(EVM calldata + Solana instruction) + CONTRACT_WHITELIST/METHOD_WHITELIST opt-in 정책 + 파이프라인 5-type discriminatedUnion + DB TransactionType 5개/PolicyType 10개 + 에러 코드 10개 + 보안 시나리오 14개
+- ApproveRequest(EVM ERC-20 + Solana SPL) 독립 타입 + APPROVED_SPENDERS/APPROVE_AMOUNT_LIMIT/APPROVE_TIER_OVERRIDE 3중 정책 + race condition 자동 방지 + 단일 delegate 경고 + 보안 시나리오 22개
+- BatchRequest/InstructionRequest discriminated union(4 types) + Solana 원자적 배치 빌드(pipe/ATA/CU) + EVM BATCH_NOT_SUPPORTED + 2단계 정책 평가(개별+합산 All-or-Nothing) + 1232 bytes/20 instruction 사전 검증 + 보안 시나리오 14개
+- DEFI-01 package structure + DEFI-02 API conversion patterns confirmed with ActionApiClient base, branded SlippageHelper, 8 error codes, and AllowanceHolder flow replacing Permit2
+- ActionProvider -> Stage 3 정책 연동 플로우, 4개 프로토콜 CONTRACT_WHITELIST 주소 확정, 크로스체인 정책 규칙 및 도착 주소 변조 방지 3단계 검증 설계
+- IAsyncStatusTracker interface with 3 implementations, setTimeout-chain polling scheduler, 11-state transaction machine (GAS_WAITING), integrated DB migration v23, and 3-stage bridge timeout policy
+- 4 safety designs confirmed: Jito MEV fail-closed, wstETH adoption, stale calldata re-resolve pattern, and API drift 3-layer defense with effectiveWaitTime RPC failure handling
+- Mock API fixture structure, 3 test helpers, and C1-C10 cross-provider scenario matrix with 33 total test scenarios for 4 DeFi providers
+- Actions settings category (13 keys) in Admin Settings SSoT with SettingsReader-based provider registration and ACTION_API_KEY_REQUIRED notification
+- Sequential pipeline execution for ContractCallRequest arrays with auto-tagged actionProvider and SettingsService-based CONTRACT_WHITELIST bypass
+- Admin Actions page with Jupiter Swap and 0x Swap provider cards, enable/disable toggles, API key management, and 14 test cases
+- ZeroExApiClient with Zod-validated price/quote responses, AllowanceHolder address mapping for 20 EVM chains, and 19 MSW-based unit tests
+- ZeroExSwapActionProvider with approve+swap multi-step resolution, ERC-20 vs native ETH detection, and 17 MSW-based unit tests
+- v0.4 테스트 프레임워크에 Mock 경계 5->10개, Contract Test 5->7개 확장 + Hardhat EVM 환경 + 124개 기능/42개 보안 시나리오 7개 도메인 통합 (1577줄)
+- One-liner:
+- One-liner:
+- REST API discriminatedUnion 5-type 스키마 + 5개 엔드포인트(36개 총), SDK/MCP 메서드 18개 + MCP Tool Action 변환(MCP_TOOL_MAX=16) 통합
+- executeAction/execute_action methods added to TS and Python SDKs for DeFi action provider API calls with multi-step pipeline support
+- Verified MCP auto-registration for zerox_swap and added comprehensive 0x Swap DX documentation with REST/MCP/SDK examples, safety features, and Admin Settings config
+- MCP LiFi tool registration verified (5 tests) + actions.skill.md updated with LI.FI Section 5 covering config, parameters, 6 chains, safety features, bridge tracking, and 8 code examples across 4 interfaces
+- Solana blockhash freshness guard(getBlockHeight 기반 20초 임계값) + refreshBlockhash(Option A 메시지 캐싱) + IChainAdapter 19개 메서드 확장(getCurrentNonce/resetNonceTracker) + UnsignedTransaction.nonce 승격
+- AES-GCM nonce 충돌의 Birthday Problem 정확 공식(P=1-e^(-n^2/(2N))) 정정 + WAIaaS 구조적 불가능성 분석, Priority fee TTL 30초의 Nyquist-Shannon 이론적 근거 확립, 1.5배 fee bump 1회 재시도 전략 설계
+- RpcPool class with priority-based RPC URL rotation, exponential cooldown (60s base, 300s max), and AllRpcFailedError -- 24 unit tests covering all fallback scenarios
+- BUILT_IN_RPC_DEFAULTS with 13 public RPC endpoints (6 mainnet + 7 testnet) and RpcPool.createWithDefaults() zero-config factory -- 18 tests covering data integrity and factory behavior
+- AdapterPool wired to RpcPool with config.toml highest-priority seeding, configKeyToNetwork reverse mapping, and backward-compatible optional rpcUrl -- 27 integration tests covering pool resolution, fallback, config priority, and failure reporting
+- 1. [Rule 1 - Bug] Fixed `let` -> `const` for non-reassigned variables in tests
+- resolveRpcUrlFromPool helper wired into IncomingTxMonitor subscriberFactory for pool-first RPC URL resolution with SettingsService fallback -- 12 tests covering pool preference, cooldown fallback, and Solana/EVM subscriber creation
+- 1. [Rule 3 - Blocking] Fixed pre-existing lint error: let -> const in rpc-pool-defaults.test.ts
+- GET /admin/rpc-status endpoint with per-network pool status, multi-URL RPC Endpoints tab with add/delete/reorder/built-in-toggle per network, 11 tests (4 backend + 7 frontend)
+- Live RPC pool health indicators (available green / cooldown orange with remaining time) via 15s polling, plus per-URL Test button with latency/block result display, 6 new tests (13 total)
+- RPC_ALL_FAILED/RPC_RECOVERED notification events (42->44) with RpcPool onEvent callback emitting 3 event types on cooldown transitions, 5 new tests
+- RpcPool onEvent wired to daemon NotificationService for RPC health/failure/recovery alerts, RpcPoolEvent exported from @waiaas/core, 4 integration tests verifying MNTR-01 through MNTR-04
+- 섹션 5: 공통 인프라 — positions 테이블
+- 섹션 7: 공통 인프라 — REST API 명세
+- IDeFiMonitor interface with adaptive polling HealthFactorMonitor, daily MaturityMonitor, and minute-interval MarginMonitor — all designed in m29-00 sections 9-10
+- 4 notification events SSoT chain integrated, config.toml [monitoring] 17 flat keys defined, DaemonLifecycle Step 4c-11 with fail-soft start/stop designed in m29-00 sections 11-12
+- One-liner:
+- Argon2id 메모리 캐시 기반 Master Password 인증 통일(DAEMON-05) + INonceStore 인터페이스 추상화로 Memory/SQLite nonce 저장 전략 패턴 확립(DAEMON-06)
+- ILendingProvider interface extending IActionProvider with 4 lending actions, 3 query methods, LendingPosition/HealthFactor/MarketInfo Zod schemas, and LendingPolicyEvaluator with default-deny asset whitelist and LTV limit policies
+- GET /v1/wallets/:id/health-factor endpoint with HealthFactorResponseSchema, plus complete Aave V3/Kamino/Morpho Blue protocol-to-ILendingProvider method mapping tables
+- IYieldProvider interface with 5 yield actions (buyPT/buyYT/redeemPT/addLiquidity/removeLiquidity), 3 query methods, and 4 Zod type schemas (YieldPositionSummary, MaturityInfo, YieldMarketInfo, YieldForecast) added to m29-00 design doc sections 18-19
+- MaturityMonitor↔IYieldProvider 5-stage data flow specified, Phase 268 YIELD schema completeness verified, and full Pendle V2 protocol mapping table connecting all 8 IYieldProvider methods to Router/Hosted SDK endpoints — added as m29-00 section 20 with 5 design decisions
+- IPerpProvider interface with 5 perp actions (open/close/modify position, add/withdraw margin), 3 query methods, PerpPositionSummary/MarginInfo/PerpMarketInfo Zod schemas, and PerpPolicyEvaluator with 3 default-deny policy types added to m29-00 sections 21-22
+- MarginMonitor 5-stage data flow from DriftProvider through PositionTracker to DB cache, PerpMetadataSchema completeness verification (7 fields all sufficient), Drift V2 SDK mapping tables (5 actions + 3 queries), and cross-protocol comparison added to m29-00 section 23
+- SignableOrder Zod schema with EIP-712 domain + intentMetadata, ActionProviderRegistry union return type extension, and TRANSACTION_TYPES 8th value 'INTENT'
+- IChainAdapter.signTypedData extension, 10-step intent pipeline, IntentOrderTracker async polling, 4-layer security model with attack vector analysis (21 design decisions total for Phase 273)
+- DeFi SSoT enums (POSITION_CATEGORIES, POSITION_STATUSES) with Zod validation, 4 DeFi notification events, defi_monitoring category, and bilingual i18n templates
+- Protocol-agnostic DeFi position sync infrastructure with per-category timers, Map-based dedup write queue, pluggable monitor orchestrator, and daemon lifecycle integration
+- Adaptive polling health factor monitor with 4-level severity, recursive setTimeout intervals, cooldown-based LIQUIDATION alerts, and on-demand PositionTracker sync
+- ContractCallRequestSchema.actionName extension + LENDING_ASSET_WHITELIST/LENDING_LTV_LIMIT policy evaluation + non-spending classification for supply/repay/withdraw
+- Manual hex ABI encoding for 7 Aave V3 functions (4 Pool write + approve + 2 read), 5-chain address registry, and Zod input schemas with 'max' support
+- Pure decoder functions for Aave V3 on-chain responses with bigint-only HF simulation preventing self-liquidation
+- Complete Aave V3 lending provider with 4 actions (supply/borrow/repay/withdraw), dual ILendingProvider+IPositionProvider interface, HF simulation guard, and registerBuiltInProviders integration
+- DB migration v27 drops is_default and default_network columns; getSingleNetwork replaces getDefaultNetwork with EVM null return; WALLET_ID_REQUIRED/NETWORK_REQUIRED error codes added
+- resolveWalletId rewritten with 2-priority + single-wallet auto-resolve; resolveNetwork uses getSingleNetwork with NETWORK_REQUIRED for EVM chains
+- SIWE 검증을 viem/siwe 내장 3단계 함수로 전환하여 ethers/siwe 의존성을 제거하고, 5개 타겟 플랫폼 + prebuildify 기반 native addon SEA 번들 전략을 확정한 5개 설계 문서 수정
+- Removed wlt claim from JWT, defaultWalletId from auth middleware, isDefault from session routes/Telegram bot, and deleted setDefaultWalletRoute
+- Deleted 2 default-network endpoints, removed defaultNetwork/isDefault from all API responses and OpenAPI schemas, updated 8 route files to use getSingleNetwork and 3-param resolveNetwork
+- Removed defaultNetwork from pipeline context, services, and settings; rewrote BalanceMonitor for multi-network iteration; fixed ownerAuth transaction ID lookup; updated 70+ test files for v27 migration compatibility
+- Remove all default wallet/default network dead code from TypeScript SDK, CLI, and Python SDK after daemon API cleanup in Phase 280
+- Deleted set_default_network MCP tool and updated wallet_id/network descriptions across all 24 remaining MCP tools to remove default wallet/default network references
+- Remove all default wallet/network UI from Admin Web UI (wallets, sessions, settings pages) and update 5 skill files to explicit network/wallet specification model
+- Sidecar 종료 35초 타임아웃 + SQLite integrity_check 복구, CORS 5종 Origin, Setup Wizard CLI 위임 + waiaas init --json idempotent 스펙 확정
+- Owner disconnect 5단계 cascade(APPROVAL->EXPIRED, DELAY 유지) 확정 + 5개 TransactionType x 4 Tier HTTP 응답 매트릭스(INSTANT/NOTIFY->200, DELAY/APPROVAL->202) 확정으로 API-03, API-04 해소
+- WAIaaSBaseModel(alias_generator=to_camel)로 Python SDK 필드 변환 SSoT 확정, @waiaas/core Zod 스키마 export + SDK .parse() 사전 검증 패턴 정의
+- IPerpProvider interface with 3 Zod SSoT schemas, MarginWarningEvent, 3 perp policy types, and TransactionParam extensions for perp framework
+- Adaptive margin ratio monitor with 4-level severity polling and 3 perp policy evaluators (market whitelist, leverage limit, position size limit) in DatabasePolicyEngine Step 4i
+- IDriftSdkWrapper abstraction layer with 5 build + 3 query methods, MockDriftSdkWrapper deterministic test data, DriftConfig, and 5 Zod input schemas for Drift Perp
+- DriftPerpProvider with 5 perp actions (open/close/modify/add_margin/withdraw_margin) implementing IPerpProvider + IPositionProvider for Drift V2 on Solana
+- 81 unit tests covering DriftSdkWrapper (mock + stub), DriftMarketData conversion, and DriftPerpProvider (5 actions + IPerpProvider queries + IPositionProvider compliance + graceful degradation)
+- DriftPerpProvider auto-registration via actions.drift_enabled toggle with pendle_yield hot-reload bug fix
+- Admin UI Drift Perp Trading card with 4 advanced settings fields and actions.skill.md section 11 documenting 5 perp actions with REST/MCP/SDK/Python examples
+- config.toml 17개 중첩 키 평탄화 + WAIAAS_{SECTION}_{KEY} 환경변수 1:1 매핑 확정 + SQLite 타임스탬프 전체 초 단위 통일
+- agents 테이블 chain/network CHECK 제약 + NetworkType 'mainnet' 통일 + Docker UID 1001 정합성 + 알림 채널 BEGIN IMMEDIATE TOCTOU 방지
+- agents 스키마 v0.8 변경(nullable owner_address, owner_verified CHECK), OwnerState/SweepResult 타입 정의, PolicyDecision downgraded 확장을 설계 문서 25/32에 반영
+- IChainAdapter에 sweepAll 20번째 메서드 시그니처를 추가하고, resolveOwnerState() 순수 함수 유틸리티와 Grace->Locked BEGIN IMMEDIATE 원자화 설계를 확정
+- One-liner:
+- evaluate() Step 9.5에 APPROVAL->DELAY 다운그레이드 삽입, evaluateBatch() 합산 다운그레이드, evaluate() agentOwnerInfo 시그니처 확장, TX_DOWNGRADED 감사 로그, Owner LOCKED 후 정상 APPROVAL 복원 흐름, Stage 4 다운그레이드 분기를 33-time-lock-approval-mechanism.md에 명세
+- TX_DOWNGRADED_DELAY 이벤트를 16번째 NotificationEventType으로 추가하고, 3채널(Telegram/Discord/ntfy.sh) 다운그레이드 알림 템플릿에 Owner 등록 CLI 안내를 포함시키며, APPROVAL 승인/거부 버튼을 채널별 제약에 맞게 명세 완료
+- POST /v1/owner/agents/:agentId/withdraw API 완전 스펙(요청/응답/에러/인증) + WithdrawService 도메인 서비스(scope all/native 분기) + sweepAll Solana 4단계 실행 순서 + 부분 실패 HTTP 207 처리 설계
+- Kill Switch 복구 대기 시간의 Owner 유무 분기(30min vs 24h)와 2단계 복구 패턴을 36-killswitch에 설계하고, 세션 갱신의 OwnerState별 분기(즉시 확정 vs [거부하기] 버튼)를 53-session-renewal과 35-notification에 3채널 명세 완료
+- 54-cli-flow-redesign.md를 v0.8 Owner 선택적 모델로 전면 갱신 -- --owner Required->Optional, set-owner/remove-owner/withdraw 3개 CLI 신규, agent info 안내 메시지, --quickstart --chain만 필수, Kill Switch withdraw 방안 A 채택
+- objectives/v0.8에 18행x3열 Owner 상태 분기 매트릭스를 SSoT로 작성 -- GRACE APPROVAL=DELAY 다운그레이드 확정(33-time-lock 준수), Kill Switch withdraw 방안 A 반영, v0.8 본문 6곳을 3-State 기준으로 보강, 교차 검증 10건 전건 일치
+- 14개 기존 설계 문서 + 3개 참조 문서에 v0.8 Owner 선택적 모델 통합 -- 4개 미변경 문서(30-session, 31-solana, 40-telegram, 36-killswitch)에 첫 v0.8 태그 적용, killSwitchGuard 5번째 허용 경로(withdraw) 반영, 37-rest-api Open Question 해소, 매트릭스 SSoT 교차 검증 전건 통과
+- SESSION_EXPIRING_SOON 이벤트를 17번째 NotificationEventType으로 추가하고, 데몬 SessionService 갱신 로직에 shouldNotifyExpiringSession 순수 함수 기반 만료 임박 판단 + notification_log 중복 방지 메커니즘을 설계
+- SessionManager 클래스 인터페이스(getToken/start/dispose, 9개 내부 상태, Composition 패턴)와 loadToken() 8-step 토큰 로드 전략(파일>env var, jose decodeJwt, C-03 방어적 범위 검증)을 38-sdk-mcp-interface.md 섹션 6.4에 정의
+- scheduleRenewal(절대 시간 기준 + safeSetTimeout + 드리프트 보정), renew(파일-우선 쓰기 H-02 방어), handleRenewalError(5종 에러 분기 테이블), handleUnauthorized(4-step lazy reload)를 38-sdk-mcp-interface.md 섹션 6.4.3~6.4.7에 구현 가능 수준으로 정의
+- ApiClient 래퍼 클래스(7개 메서드, request 7-step, handle401 3-step), ApiResult<T> discriminated union 4종 분기, toToolResult/toResourceResult 공통 변환 함수, SessionManager.getState() 추가(SMGI-D01), 6개 tool + 3개 resource handler 리팩토링 패턴을 38-sdk-mcp-interface.md 섹션 6.5~6.5.4에 정의
+- 토큰 로테이션 동시성 시퀀스 다이어그램(50ms 대기 + 401 재시도, SMGI-D02), MCP 프로세스 5단계 생명주기(degraded mode + startRecoveryLoop 60초 polling, SMGI-D03), Claude Desktop 에러 처리 전략(isError 회피 5종 + 안내 메시지 JSON 3종 + stdout 오염 방지, SMGI-D04)을 38-sdk-mcp-interface.md 섹션 6.5.5~6.5.7에 정의하고, objectives에 Phase 38 설계 결과 반영
+- Commit:
+- 38-sdk-mcp-interface.md 섹션 12에 18개 테스트 시나리오(T-01~T-14 핵심 + S-01~S-04 보안) 검증 방법/테스트 레벨/설계 결정 ID 매핑 완료
+- 7개 설계 문서 v0.9 태그 검증 + 25-sqlite EXT-03 이연 태그 + pitfall 5건 교차 참조 매트릭스 + REQUIREMENTS 21/21 Complete
+- One-liner:
+- 34-owner §10에 GRACE 무기한 정책/배타적 전이 트리거 명시, 33-time-lock §11.6과 양방향 SSoT 참조 확정
+- ChainError에 category 필드(PERMANENT/TRANSIENT/STALE) 추가, 25개 에러 코드 전체 분류, 카테고리별 복구 전략 테이블 정의
+- 66개 에러 코드 통합 매트릭스(HTTP/retryable/backoff SSoT) + 429 응답 포맷 확정 + PolicyType 4->10개 확장 + superRefine type별 rules 검증 분기
+- executeStage5() 완전 의사코드: build->simulate->sign->submit 4단계 + ChainError category 기반 에러 분기(PERMANENT/TRANSIENT/STALE) + 티어별 타임아웃(30초/60초) + transitionTo() CAS 패턴
+- 53-session-renewal SS5에 token_hash WHERE 조건 낙관적 잠금 + RENEWAL_CONFLICT(409) 에러 정의 추가
+- Kill Switch 4개 상태 전이(NORMAL->ACTIVATED, ACTIVATED->RECOVERING, RECOVERING->NORMAL, RECOVERING->ACTIVATED)에 CAS SQL + 전이별 409 에러 코드 + BEGIN IMMEDIATE 원칙 문서화
+- 28-daemon §2.5에 7단계 시작 절차별 타임아웃(5~30초) + fail-fast/soft 정책 테이블 + 전체 90초 AbortController 상한 의사코드 추가
+- 배치 트랜잭션 부모-자식 2계층 DB 저장 전략 정의 + transactions 스키마에 parent_id/batch_index/PARTIAL_FAILURE 추가
+- OracleChain.getPrice()에 10% 괴리 시 보수적 가격 채택을 동기 인라인하고, FRESH/AGING/STALE 3단계 가격 나이 정책 테이블을 신설하여 >30분 시 USD 평가 스킵 정책을 확정
+- v1.1(코어 인프라 9개 설계 문서/E2E 12건) + v1.2(인증 정책 7개 설계 문서/E2E 20건) objective 문서 2개 생성, 전체 [L0] 자동화, [HUMAN] 0건
+- v1.3 SDK/MCP/알림 + v1.4 토큰/컨트랙트/EVM 확장 objective 문서 2개 생성, 총 62개 E2E 검증 시나리오 + 17개 기술 결정
+- v1.5 DeFi+가격오라클(IPriceOracle 3구현체+OracleChain+ActionProvider+Jupiter Swap, 28 E2E) + v1.6 Desktop+Telegram+Docker(Tauri 8화면+Kill Switch CAS+AutoStop 5규칙, 33 E2E) objective 문서 2개 생성
+- 설계 부채 추적 파일(Tier 1~3 + 운영 절차) 초기화 완료, 37개 설계 문서 번호가 구현 마일스톤(v1.1~v2.0)에 누락 없이 매핑되었음을 양방향 교차 검증으로 확인
+- Registered 'ripple' as 3rd ChainType with 3 XRPL NetworkTypes, environment mappings, native constants (6 decimals/XRP), and WebSocket RPC defaults
+- Registered XRPL CAIP-2 chain IDs (xrpl:0/1/2) and CAIP-19 asset identifiers for native XRP (slip44:144) and Trust Line tokens (token:{currency}.{issuer})
+- DB v62 12-step table recreation for 6 tables adding ripple chain CHECK and XRPL network CHECK constraints, plus AdapterPool ripple stub with RPC config key mapping
+- @waiaas/adapter-ripple package with RippleAdapter (25 IChainAdapter methods), KeyStore ripple Ed25519 key generation, and XRPL WebSocket RPC config
+- AdapterPool ripple resolution with dynamic import, full XRP transfer pipeline validation, and 75 unit tests covering all 25 IChainAdapter methods
+- TrustSet (tfSetNoRipple), IOU Payment with {currency,issuer,value} Amount, getTokenInfo/getAssets Trust Line queries, and 15-decimal precision IOU parsing
+- 120 unit tests covering currency-utils validation/conversion, TrustSet/IOU adapter methods, and 15-decimal tx-parser precision
+- XLS-20 NFT transfer via NFTokenCreateOffer with TDD, NftStandardEnum 'XLS-20' extension, and ripple getNativeTokenInfo support
+- OpenAPI/SDK chain enums extended with 'ripple', Admin UI wallet creation with XRPL network selector and RPC settings
+- 4 skill files updated with ripple/XRP/XRPL/XLS-20 guides including wallet creation, transfers, Trust Lines, and NFT workflows
+- pnpm workspace + Turborepo 모노레포 4-패키지 스캐폴드 (core, daemon, adapter-solana, cli) with ESLint flat config, Prettier, Vitest workspace, ESM-only TypeScript project references
+- 12 Enum SSoT with as-const-to-Zod pipeline, 5 domain Zod schemas with z.infer type derivation, 66 error codes unified matrix (10 domains) with WAIaaSError base class, validated by 46 unit tests
+- 4 contract interfaces (IChainAdapter 10-method, ILocalKeyStore, IPolicyEngine, INotificationChannel) with chain adapter common types, and i18n bilingual message system (en/ko) covering 66 error codes, validated by 65 total unit tests
+- 7-table Drizzle ORM schema with WAL mode, CHECK constraints from enum SSoT, UUID v7 IDs, and 37 comprehensive tests
+- AES-256-GCM keystore with Argon2id KDF (m=64MiB, t=3, p=4), sodium-native guarded memory, and 32 tests covering encrypt/decrypt/sign round-trip
+- smol-toml config loader with 7-section Zod schema, env overrides, nested section rejection; DaemonLifecycle 6-step startup / 10-step shutdown with proper-lockfile, BackgroundWorkers, signal handling; 45 tests
+- Hono 4.x API server with 5 middleware (requestId/hostGuard/killSwitchGuard/requestLogger) + errorHandler + GET /health, 19 tests passing
+- SolanaAdapter with 10 IChainAdapter methods using @solana/kit 6.x functional pipe pattern, 17 tests with mock RPC
+- POST /v1/agents creates Solana key pair + DB row, GET /v1/wallet/address and /balance query via SolanaAdapter, DaemonLifecycle Steps 4-5 filled with adapter init and HTTP server start, 13 new tests (146 total)
+- 6-stage transaction pipeline (validate/auth/policy/wait/execute/confirm) with DefaultPolicyEngine INSTANT passthrough, POST /send returning 201 async, GET /:id status query, 21 new tests (167 total)
+- 4 CLI commands (init/start/stop/status) via commander ^13.x with PID-based process management and 20 unit tests
+- 12 E2E tests covering full user journey (init, start, agent, wallet, transaction, stop, errors) with MockChainAdapter enabling pipeline testing without real Solana RPC
+- JWT secret management with dual-key 5-min rotation via jose HS256, sessionAuth middleware validating wai_sess_ tokens against DB sessions
+- masterAuth (Argon2id) and ownerAuth (Ed25519) middleware, all 6 endpoints auth-protected via server-level app.use() with 17 new tests
+- Session lifecycle CRUD (create/list/revoke) with masterAuth protection, JWT issuance via JwtSecretManager, active session limit enforcement, and 10 TDD tests
+- PUT /v1/sessions/:id/renew with 5 safety checks (maxRenewals, absoluteExpiresAt, 50% TTL, token_hash CAS, revocation), token rotation, and 11 TDD tests
+- DB-backed policy engine with SPENDING_LIMIT 4-tier BigInt classification, WHITELIST address filtering, and agent-specific override resolution
+- Policy CRUD REST API with masterAuth + BEGIN IMMEDIATE TOCTOU prevention via reserved_amount for concurrent spending limit serialization
+- DELAY tier cooldown queue with BEGIN IMMEDIATE atomic expiry, JSON_EXTRACT metadata, 11 TDD tests
+- APPROVAL tier owner sign-off lifecycle with BEGIN IMMEDIATE atomicity, 3-level timeout, and 14 TDD tests
+- Owner NONE/GRACE/LOCKED state machine with lifecycle service, APPROVAL->DELAY downgrade, and transaction approve/reject/cancel API routes with 18 TDD tests
+- stage3Policy wired to evaluateAndReserve (TOCTOU-safe) + downgradeIfNoOwner, sessionId audit trail on every transaction INSERT
+- stage4Wait with DELAY/APPROVAL branching via PIPELINE_HALTED halt, BackgroundWorkers delay-expired/approval-expired, executeFromStage5 pipeline re-entry
+- CLI E2E harness fixed with v1.2 auth (jwtSecretManager + masterPasswordHash + sessionAuth) + 16 gap-closure tests for auth and policy engine edge cases
+- Session lifecycle + DELAY/APPROVAL workflow + Owner state E2E tests with ownerAuth Ed25519 signatures, covering TEST-03 through TEST-05 at API level
+- Converted all 18 Hono routes to OpenAPIHono createRoute() pattern with auto-generated OpenAPI 3.0 spec via GET /doc and shared response schemas
+- IChainAdapter.getAssets() with SolanaAdapter implementation using getBalance + getTokenAccountsByOwner RPC, TDD with 6 test cases
+- 6 new OpenAPIHono endpoints (assets, tx list/pending, nonce, agents list/detail) with cursor pagination, ownerState, and 17 test cases
+- 9 new REST endpoints (agent PUT/DELETE + 6 admin ops) with 32-code error hint enrichment for AI agent self-recovery and 29 new test cases
+- 3 notification channel adapters (Telegram/Discord/ntfy) with 21 event type enums, en/ko message templates, and 39 passing tests
+- NotificationService with priority fallback, broadcast for critical events, per-channel rate limiting, CRITICAL audit_log, and daemon lifecycle integration with 31 tests
+- @waiaas/sdk zero-dependency package with WAIaaSClient (9 API methods), WAIaaSError, HttpClient fetch layer, and 44 tests
+- WAIaaSOwnerClient with 5 ownerAuth/masterAuth methods, exponential backoff retry on all SDK calls, inline sendToken validation, 91 total tests
+- Async WAIaaSClient with 8 API methods, 10 Pydantic v2 models, exponential backoff retry, and 47 pytest tests using httpx MockTransport
+- @waiaas/mcp package with 6 MCP tools, 3 resources, SessionManager (JWT load + 60% TTL renewal), ApiClient (auth proxy), and stdio transport -- 79 tests passing
+- SessionManager hardened with exponential backoff retry (1s/2s/4s), isRenewing concurrency guard, 409 conflict handling, 60s recovery loop, plus CLI `waiaas mcp setup` command for Claude Desktop integration -- 50 new tests
+- Preact SPA serving via Hono serveStatic, masterAuth-only login with @preact/signals auth store, CSP/memory-only password/XSS-CSRF defense in design doc 67 sections 1-7
+- 5 page wireframes with data flows, CSS Variables design tokens, 8 component interfaces, 68 error code mapping, and fetch wrapper specification in design doc 67 sections 8-10
+- Preact + Vite SPA scaffold with turbo.json build ordering and postbuild copy to daemon/public/admin/
+- CSP-secured serveStatic at /admin with Kill Switch bypass, config toggle, adminTimeout in status API, and dynamic version from package.json
+- Preact signals auth store with inactivity auto-logout, login form against /v1/admin/status, and fetch wrapper with X-Master-Password header injection
+- Sidebar layout with hash-based page routing, 7 reusable UI components (Table/Form/Modal/Toast/CopyButton/Badge/EmptyState), 70 error message mappings, and format utilities
+- Dashboard stat cards grid with 30s polling for daemon version, uptime, agent count, session count, kill switch state, and status
+- Agents page with list/detail CRUD (create, rename, terminate) and Sessions page with agent-scoped session management featuring JWT token one-time display
+- Policy CRUD page with 10-type dropdown, agent-scoped filtering, JSON rules editing, and 4-tier SPENDING_LIMIT visualization (green/blue/yellow/red bars)
+- Settings page with Kill Switch state toggle, JWT secret rotation confirmation modal, and daemon shutdown type-to-confirm (SHUTDOWN) with post-shutdown overlay
+- Vitest + @testing-library/preact infrastructure with 14 tests covering auth flow (login/logout/timeout) and daemon security (CSP, kill switch bypass, admin_ui toggle)
+- 14 Preact page tests covering Dashboard (3), Agents (5), Sessions (3), Policies (3), Settings (3) with mocked API client and testing-library assertions
+- Per-agent token path isolation (mcp-tokens/<agentId>) with legacy fallback, and agentName-based server naming + description prefix for multi-agent MCP identification
+- CLI mcp setup extended with per-agent token paths (mcp-tokens/<agentId>), WAIAAS_AGENT_ID/NAME env vars in config snippets, --all batch setup flag, and slug collision resolution
+- notification_logs table with incremental migration (schema_version), fire-and-forget delivery logging in NotificationService, 16 new tests
+- Fire-and-forget NotificationService.notify() wired into pipeline stages 1/3/5/6 for TX_REQUESTED, POLICY_VIOLATION, TX_SUBMITTED, TX_FAILED, TX_CONFIRMED events with 8 new tests
+- Fire-and-forget notify() wired into POST /sessions (SESSION_CREATED), PUT /agents/:id/owner (OWNER_SET), and session-cleanup worker (SESSION_EXPIRED) with 6 new tests covering all 3 event types + optional chaining safety
+- 3 admin notification endpoints (status/test/log) with OpenAPI schemas, credential masking, masterAuth, and paginated Drizzle queries
+- Notifications page with channel status cards, test send button, paginated delivery log table, and config.toml guidance info box
+- ChainError class with 25 codes mapped to PERMANENT/TRANSIENT/STALE categories, retryable auto-derivation, INSUFFICIENT_FOR_FEE moved to TX domain
+- schema_version-based incremental migration runner + z.discriminatedUnion 5-type TransactionRequestSchema for pipeline type routing
+- IChainAdapter extended to 20 methods with 7 new types, SolanaAdapter stubs, and Zod superRefine validation for 6 new PolicyType rules schemas
+- @waiaas/adapter-evm package with viem 2.x, IChainAdapter 20-method skeleton (6 real + 14 stubs), ERC20_ABI, 13 unit tests
+- EvmAdapter 17/20 real methods -- EIP-1559 build/simulate/sign/submit pipeline, 1.2x gas margin, viem multicall ERC-20 metadata, approve calldata, ChainError mapping, 34 tests
+- SolanaAdapter SPL/Token-2022 transfer with ATA auto-creation via @solana-program/token + ALLOWED_TOKENS default-deny policy in DatabasePolicyEngine
+- EvmAdapter buildTokenTransfer with ERC-20 transfer calldata + getAssets ERC-20 multicall expansion via setAllowedTokens() using viem encodeFunctionData and client.multicall
+- buildContractCall on EVM (EIP-1559 calldata) and Solana (programId + AccountRole), CONTRACT_WHITELIST default deny + METHOD_WHITELIST optional method restriction in DatabasePolicyEngine
+- SolanaAdapter.buildApprove with SPL ApproveChecked instruction, 3 new approve policy evaluations (spender whitelist, amount limit, tier override) in DatabasePolicyEngine
+- SolanaAdapter.buildBatch assembles 2-20 mixed instructions into atomic Solana tx with ATA auto-creation; DatabasePolicyEngine.evaluateBatch performs 2-stage All-or-Nothing policy evaluation with aggregate SPENDING_LIMIT
+- Stage 1 discriminatedUnion 5-type parsing with Stage 3 type-based policy routing via buildTransactionParam helper and evaluateBatch delegation for BATCH
+- Stage 5 CONC-01 complete: build->simulate->sign->submit loop with ChainError 3-category retry (PERMANENT instant fail, TRANSIENT 1s/2s/4s backoff max 3, STALE rebuild max 1) and buildByType 5-type adapter routing
+- NetworkType SSoT extended to 13 values (3 Solana + 10 EVM) with validateChainNetwork cross-validation and EVM_CHAIN_MAP 10-network viem mapping table
+- DaemonConfigSchema extended to 16 RPC keys (10 EVM drpc.org defaults + evm_default_network) with EvmAdapter nativeSymbol/nativeName constructor parameterization
+- CreateAgentRequestSchema.network made optional with chain-based service-layer defaults and validateChainNetwork integration in POST /agents
+- secp256k1 key generation with EIP-55 address derivation via viem, curve/network fields in KeystoreFileV1, backward compat for ed25519-only files
+- Chain-aware mock keyStore with 5 EVM agent creation integration tests verifying 0x address, default network, param signature, and DB persistence
+- AdapterPool class with lazy-init, caching by chain:network, and fail-soft disconnectAll for multi-chain daemon support
+- Wire AdapterPool into daemon lifecycle, server, route handlers, and all test files for multi-chain Solana+EVM support
+- schema_version v2 migration with managesOwnTransaction flag expanding agents.network CHECK to accept EVM networks via 12-step table recreation
+- POST /v1/transactions/send route schema separation with stage1Validate delegation and OpenAPI oneOf 6-variant component registration
+- MCP send_token with TRANSFER/TOKEN_TRANSFER params, TS SDK + Python SDK full 5-type sendToken with per-type validation and backward-compatible body construction
+- verifySIWE pure function for EIP-4361 SIWE messages + validateOwnerAddress chain-aware utility with strict EIP-55 and base58 32-byte validation
+- Chain-branching owner-auth middleware (solana=Ed25519, ethereum=SIWE) with chain-aware setOwner address validation rejecting invalid addresses per chain type
+- 6 E2E tests verifying EVM full lifecycle, Solana+EVM dual operation, and SIWE owner-auth through Hono API with mock adapters
+- 10 E2E/integration tests verifying all 5 transaction types flow through full pipeline (stage1-6) with correct adapter method dispatch, plus MCP/SDK parameter passing verification
+- 1,310 tests pass with zero new regressions across 86 test files, confirming v1.4.1 milestone (Phases 82-88) ready for tagging
+- SQLite v3 migration renames agents table to wallets with FK column/index/enum updates, Drizzle schema wallets definition, and backward-compat agents alias
+- Renamed all agent-related Zod schemas, enums, error codes, and i18n messages in @waiaas/core to wallet terminology -- 19 files modified, 137/137 tests passing
+- Updated all i18n notification templates (en/ko) to wallet terminology with {walletId}/{walletCount} placeholders, verified 137/137 core tests passing
+- 1. [Rule 3 - Blocking] Fixed AGENT_STATUSES -> WALLET_STATUSES in schema.ts and migrate.ts
+- 37 daemon test files renamed from agent to wallet terminology with NotificationPayload.agentId boundary preserved and raw SQL bug fixed
+- NotificationPayload.walletId and ILocalKeyStore walletId parameters in @waiaas/core, propagated to all daemon notification channels, keystore, and test files
+- MCP WalletContext/withWalletPrefix + CLI --wallet flag + WAIAAS_WALLET_ID env var -- complete agent-to-wallet rename across 21 files
+- TS SDK and Python SDK response types renamed from agentId to walletId with 159 tests passing
+- Admin UI agent->wallet rename across 15 files: endpoints, pages, tests, CSS selectors, error messages
+- 15 design docs + README.md updated with wallet terminology (walletId, /v1/wallets, --wallet) matching v1.4.2 codebase, ~236 substitutions with AI agent concept references preserved
+- IPolicyEngine/DatabasePolicyEngine/owner-state.ts walletId rename + comprehensive grep/test/OpenAPI verification confirming zero unintentional agent references across 14 source files and 1,326 passing tests
+- tag-release.sh script for monorepo-wide semver versioning + all 9 packages bumped to 1.4.3 (BUG-016 fix)
+- EVM waitForConfirmation fallback receipt query + stage6Confirm 3-way status branching to prevent SUBMITTED->FAILED false overwrite
+- Solana waitForConfirmation returns submitted on RPC error instead of throwing, matching EVM adapter fallback pattern
+- Built-in ERC-20 token data for 5 EVM mainnets (24 tokens), tokenRegistry DB table with migration v4, and TokenRegistryService merge layer
+- GET/POST/DELETE /v1/tokens endpoints with OpenAPI schemas, EVM network validation, and 17 tests covering service + API integration
+- EVM getAssets() wired to return ERC-20 token balances from token registry + ALLOWED_TOKENS policy union with case-insensitive dedup
+- POST /v1/mcp/tokens endpoint combining session creation, atomic token file writing, and Claude Desktop config snippet generation behind masterAuth
+- MCP Setup section in wallet detail page with one-click token provisioning and copyable Claude Desktop config JSON
+
+---
+
+## v33.4 서명 앱 명시적 선택 (Shipped: 2026-04-02)
+
+**Phases completed:** 3 phases, 4 plans, 8 tasks
+
+**Key accomplishments:**
+
+- Partial unique index + CHECK triggers enforce wallet_type-level signing primary uniqueness at DB level
+- Exclusive signing toggle in WalletAppService + PresetAutoSetupService migrated from preferred_wallet setting to signing_enabled column
+- SignRequestBuilder transitioned from name-based 3-query + preferred_wallet setting to wallet_type + signing_enabled=1 single DB query
+- wallet_type group layout with signing radio buttons replacing checkboxes for explicit signing app selection
+
+---
+
 ## v33.3 Desktop App 배포 채널 확장 (Shipped: 2026-04-01)
 
 **Phases completed:** 3 phases, 3 plans, 6 tasks

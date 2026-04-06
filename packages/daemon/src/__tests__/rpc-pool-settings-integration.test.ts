@@ -59,9 +59,9 @@ describe('rpc_pool.* SettingDefinitions', () => {
     expect((SETTING_CATEGORIES as readonly string[]).includes('rpc_pool')).toBe(true);
   });
 
-  it('15 rpc_pool.* keys are registered in SETTING_DEFINITIONS', () => {
+  it('18 rpc_pool.* keys are registered in SETTING_DEFINITIONS', () => {
     const poolDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'rpc_pool');
-    expect(poolDefs).toHaveLength(15);
+    expect(poolDefs).toHaveLength(18);
 
     const keys = poolDefs.map((d) => d.key);
     for (const network of ALL_NETWORK_KEYS) {

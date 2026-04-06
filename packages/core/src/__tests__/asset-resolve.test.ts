@@ -59,6 +59,28 @@ describe('parseAssetId', () => {
     });
   });
 
+  it('parses XRPL native asset (slip44:144)', () => {
+    const result = parseAssetId('xrpl:0/slip44:144');
+    expect(result).toEqual({
+      chainId: 'xrpl:0',
+      namespace: 'slip44',
+      address: null,
+      network: 'xrpl-mainnet',
+      isNative: true,
+    });
+  });
+
+  it('parses XRPL Trust Line token', () => {
+    const result = parseAssetId('xrpl:0/token:USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh');
+    expect(result).toEqual({
+      chainId: 'xrpl:0',
+      namespace: 'token',
+      address: 'USD.rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh',
+      network: 'xrpl-mainnet',
+      isNative: false,
+    });
+  });
+
   it('throws on unknown CAIP-2 chain ID', () => {
     expect(() => parseAssetId('eip155:99999/erc20:0xabc')).toThrow('Unknown CAIP-2 chain ID');
   });

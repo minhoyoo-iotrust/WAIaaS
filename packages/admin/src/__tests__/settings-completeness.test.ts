@@ -84,6 +84,9 @@ const EXCLUDED_KEYS: Record<string, string> = {
   'rpc.evm_base_sepolia': 'Bootstrap-only: RPC endpoints configured in config.toml',
   'rpc.evm_hyperevm_mainnet': 'Bootstrap-only: RPC endpoints configured in config.toml',
   'rpc.evm_hyperevm_testnet': 'Bootstrap-only: RPC endpoints configured in config.toml',
+  'rpc.xrpl_mainnet': 'Bootstrap-only: RPC endpoints configured in config.toml',
+  'rpc.xrpl_testnet': 'Bootstrap-only: RPC endpoints configured in config.toml',
+  'rpc.xrpl_devnet': 'Bootstrap-only: RPC endpoints configured in config.toml',
 
   // --- RPC Pool: managed via API (PUT /v1/admin/settings), not directly in UI ---
   'rpc_pool.solana-mainnet': 'API-only: RPC pool URLs managed via Admin Settings API',
@@ -101,6 +104,9 @@ const EXCLUDED_KEYS: Record<string, string> = {
   'rpc_pool.polygon-amoy': 'API-only: RPC pool URLs managed via Admin Settings API',
   'rpc_pool.hyperevm-mainnet': 'API-only: RPC pool URLs managed via Admin Settings API',
   'rpc_pool.hyperevm-testnet': 'API-only: RPC pool URLs managed via Admin Settings API',
+  'rpc_pool.xrpl-mainnet': 'API-only: RPC pool URLs managed via Admin Settings API',
+  'rpc_pool.xrpl-testnet': 'API-only: RPC pool URLs managed via Admin Settings API',
+  'rpc_pool.xrpl-devnet': 'API-only: RPC pool URLs managed via Admin Settings API',
 
   // --- Incoming TX WSS: per-network overrides, API-only ---
   'incoming.solana_mode': 'API-only: Solana monitor mode (websocket/polling/adaptive) via Admin Settings API (#454)',
@@ -120,6 +126,9 @@ const EXCLUDED_KEYS: Record<string, string> = {
   'incoming.wss_url.polygon-amoy': 'API-only: per-network WSS URL override',
   'incoming.wss_url.hyperevm-mainnet': 'API-only: per-network WSS URL override',
   'incoming.wss_url.hyperevm-testnet': 'API-only: per-network WSS URL override',
+  'incoming.wss_url.xrpl-mainnet': 'API-only: per-network WSS URL override',
+  'incoming.wss_url.xrpl-testnet': 'API-only: per-network WSS URL override',
+  'incoming.wss_url.xrpl-devnet': 'API-only: per-network WSS URL override',
 
   // --- Position tracker: internal service toggle, no UI control needed ---
   'position_tracker.enabled': 'Internal: DeFi position sync runs automatically when providers are enabled',

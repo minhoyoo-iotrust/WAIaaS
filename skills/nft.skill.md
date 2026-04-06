@@ -1,8 +1,8 @@
 ---
 name: "WAIaaS NFT Operations"
-description: "NFT query, transfer, and approval operations for ERC-721, ERC-1155, and Metaplex standards"
+description: "NFT query, transfer, and approval operations for ERC-721, ERC-1155, Metaplex, and XLS-20 standards"
 category: "api"
-tags: [wallet, blockchain, nft, erc721, erc1155, metaplex, solana, ethereum, waiass]
+tags: [wallet, blockchain, nft, erc721, erc1155, metaplex, xls20, solana, ethereum, ripple, xrpl, waiass]
 version: "2.10.0-rc"
 dispatch:
   kind: "tool"
@@ -11,7 +11,7 @@ dispatch:
 
 # WAIaaS NFT Operations
 
-Complete reference for NFT query, transfer, and approval operations. Supports ERC-721 (EVM), ERC-1155 (EVM), and Metaplex (Solana) standards. All endpoints use base URL `http://localhost:3100`.
+Complete reference for NFT query, transfer, and approval operations. Supports ERC-721 (EVM), ERC-1155 (EVM), Metaplex (Solana), and XLS-20 (XRPL) standards. All endpoints use base URL `http://localhost:3100`.
 
 > AI agents must NEVER request the master password. Use only your session token.
 
@@ -24,6 +24,7 @@ Complete reference for NFT query, transfer, and approval operations. Supports ER
 | ERC-721 | EVM (Ethereum, Polygon, etc.) | Unique non-fungible tokens |
 | ERC-1155 | EVM | Multi-token standard (fungible + non-fungible) |
 | Metaplex | Solana | Solana NFT standard via SPL tokens |
+| XLS-20 | XRPL (Ripple) | XRPL native NFT standard (2-step offer model) |
 
 ### Prerequisites
 
@@ -309,3 +310,47 @@ The Admin UI wallet detail page includes an **NFTs** tab showing:
 - Empty state guidance when indexer is not configured
 
 NFT indexer API keys can be configured in **Settings > NFT Indexer**.
+
+## 9. XLS-20 NFT (XRPL)
+
+### Overview
+
+XRPL uses the XLS-20 standard for native NFTs. Unlike EVM/Solana NFTs, XLS-20 transfers use a **2-step offer model**:
+
+1. **Sender creates a sell offer** (NFTokenCreateOffer with Flags=tfSellNFToken)
+2. **Recipient accepts the offer** (NFTokenAcceptOffer)
+
+WAIaaS handles step 1 automatically. The recipient must accept the offer separately (via their own WAIaaS wallet or external client).
+
+### Transfer XLS-20 NFT
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "NFT_TRANSFER",
+    "to": "rRecipientAddress",
+    "token": {
+      "address": "",
+      "tokenId": "000800006203F49C21D5D6E022CB16DE3538F248662FC73C0000000000000001",
+      "standard": "XLS-20"
+    },
+    "amount": "1"
+  }'
+```
+
+- `token.address`: Empty string for XLS-20 (not applicable)
+- `token.tokenId`: The 64-character hex NFTokenID
+- `token.standard`: Must be `"XLS-20"`
+- Response includes `metadata.pendingAccept: true` indicating the recipient must accept the offer
+
+### NFT Listing
+
+XLS-20 NFTs are queried via native `account_nfts` RPC, not external indexers. Use `GET /v1/wallet/assets` to list NFT holdings for ripple wallets.
+
+### Limitations
+
+- **NFT Approvals**: Not supported for XLS-20. XRPL uses the offer-based model instead of the approval model used by ERC-721/ERC-1155.
+- **NFT Query via /v1/wallet/nfts**: Not available for ripple wallets (INDEXER_NOT_CONFIGURED). Use `GET /v1/wallet/assets` instead.
+- **Batch NFT Transfer**: Not supported on XRPL.

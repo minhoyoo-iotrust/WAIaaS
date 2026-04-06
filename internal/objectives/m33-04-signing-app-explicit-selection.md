@@ -1,7 +1,8 @@
 # 마일스톤 m33-04: 서명 앱 명시적 선택
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v33.4
+- **Completed:** 2026-04-02
 
 ## 목표
 

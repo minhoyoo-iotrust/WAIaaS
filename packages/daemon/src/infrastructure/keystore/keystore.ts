@@ -99,8 +99,12 @@ export class LocalKeyStore implements ILocalKeyStore {
       return this.generateEd25519KeyPair(walletId, network, masterPassword);
     }
 
+    if (chain === 'ripple') {
+      return this.generateRippleKeyPair(walletId, network, masterPassword);
+    }
+
     throw new WAIaaSError('CHAIN_NOT_SUPPORTED', {
-      message: `Key generation for chain '${chain}' is not supported. Supported: 'solana', 'ethereum'.`,
+      message: `Key generation for chain '${chain}' is not supported. Supported: 'solana', 'ethereum', 'ripple'.`,
     });
   }
 
@@ -329,6 +333,73 @@ export class LocalKeyStore implements ILocalKeyStore {
    */
   get sodiumAvailable(): boolean {
     return isAvailable();
+  }
+
+  /**
+   * Generate an Ed25519 keypair for Ripple (XRP Ledger).
+   * Uses sodium-native for Ed25519 keypair generation and ripple-keypairs for r-address derivation.
+   * Encrypts only the 32-byte Ed25519 seed (not the full 64-byte secret key).
+   */
+  private async generateRippleKeyPair(
+    walletId: string,
+    network: string,
+    masterPassword: string,
+  ): Promise<{ publicKey: string; encryptedPrivateKey: Uint8Array }> {
+    const sodium = loadSodium();
+
+    // Generate Ed25519 keypair using sodium
+    const publicKeyBuf = Buffer.alloc(sodium.crypto_sign_PUBLICKEYBYTES);
+    const secretKeyBuf = Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
+    sodium.crypto_sign_keypair(publicKeyBuf, secretKeyBuf);
+
+    // Derive r-address from Ed25519 public key using ripple-keypairs
+    // ripple-keypairs expects hex-encoded public key with ED prefix
+    const rippleKeypairs = require('ripple-keypairs') as { deriveAddress: (publicKey: string) => string };
+    const publicKeyHex = `ED${publicKeyBuf.toString('hex').toUpperCase()}`;
+    const rAddress = rippleKeypairs.deriveAddress(publicKeyHex);
+
+    // Extract the 32-byte Ed25519 seed (first 32 bytes of sodium secret key)
+    const seedBuf = secretKeyBuf.subarray(0, 32);
+
+    // Encrypt the 32-byte seed
+    const encrypted = await encrypt(Buffer.from(seedBuf), masterPassword);
+
+    // Zero the plaintext secret key immediately
+    sodium.sodium_memzero(secretKeyBuf);
+
+    // Build keystore file v1
+    const keystoreFile: KeystoreFileV1 = {
+      version: 1,
+      id: randomUUID(),
+      chain: 'ripple',
+      network,
+      curve: 'ed25519',
+      publicKey: rAddress,
+      crypto: {
+        cipher: 'aes-256-gcm',
+        cipherparams: { iv: encrypted.iv.toString('hex') },
+        ciphertext: encrypted.ciphertext.toString('hex'),
+        authTag: encrypted.authTag.toString('hex'),
+        kdf: 'argon2id',
+        kdfparams: {
+          salt: encrypted.salt.toString('hex'),
+          ...KDF_PARAMS,
+        },
+      },
+      metadata: {
+        name: walletId,
+        createdAt: new Date().toISOString(),
+        lastUnlockedAt: null,
+      },
+    };
+
+    // Write keystore file atomically (write-then-rename)
+    await this.writeKeystoreFile(walletId, keystoreFile);
+
+    return {
+      publicKey: rAddress,
+      encryptedPrivateKey: new Uint8Array(encrypted.ciphertext),
+    };
   }
 
   // --- Private helpers ---

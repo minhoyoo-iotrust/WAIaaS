@@ -54,7 +54,7 @@ export const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 60;
+export const LATEST_SCHEMA_VERSION = 62;
 
 export function getCreateTableStatements(): string[] {
   return [
@@ -314,7 +314,7 @@ export function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7, v60: push_relay_url added)
+    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7, v60: push_relay_url, v61: signing primary partial unique index)
     `CREATE TABLE IF NOT EXISTS wallet_apps (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
@@ -615,6 +615,9 @@ export function getCreateIndexStatements(): string[] {
     // v34: wallet_apps.wallet_type index
     'CREATE INDEX IF NOT EXISTS idx_wallet_apps_wallet_type ON wallet_apps(wallet_type)',
 
+    // v61: signing primary partial unique index (one signing_enabled=1 per wallet_type)
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_apps_signing_primary ON wallet_apps(wallet_type) WHERE signing_enabled = 1',
+
     // v37: webhooks + webhook_logs indexes (OPS-04)
     'CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled)',
     'CREATE INDEX IF NOT EXISTS idx_webhook_logs_webhook_id ON webhook_logs(webhook_id)',
@@ -671,5 +674,15 @@ export function getCreateIndexStatements(): string[] {
 
     // v57: composite index for external action tracking queries
     'CREATE INDEX IF NOT EXISTS idx_transactions_action_kind_bridge_status ON transactions(action_kind, bridge_status) WHERE bridge_status IS NOT NULL',
+
+    // v61: CHECK triggers for wallet_apps.signing_enabled (must be 0 or 1)
+    `CREATE TRIGGER IF NOT EXISTS trg_wallet_apps_signing_check_insert
+      BEFORE INSERT ON wallet_apps
+      WHEN NEW.signing_enabled NOT IN (0, 1)
+      BEGIN SELECT RAISE(ABORT, 'signing_enabled must be 0 or 1'); END`,
+    `CREATE TRIGGER IF NOT EXISTS trg_wallet_apps_signing_check_update
+      BEFORE UPDATE ON wallet_apps
+      WHEN NEW.signing_enabled NOT IN (0, 1)
+      BEGIN SELECT RAISE(ABORT, 'signing_enabled must be 0 or 1'); END`,
   ];
 }

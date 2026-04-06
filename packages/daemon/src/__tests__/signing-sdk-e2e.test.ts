@@ -58,7 +58,7 @@ const walletConfig: WalletLinkConfig = {
 function createMockSettingsService(overrides: Record<string, string> = {}) {
   const defaults: Record<string, string> = {
     'signing_sdk.enabled': 'true',
-    'signing_sdk.preferred_wallet': 'dcent',
+    'signing_sdk.preferred_wallet': '', // deprecated -- no longer used by SignRequestBuilder
     'signing_sdk.request_expiry_min': '30',
     'signing_sdk.preferred_channel': 'push_relay',
     'telegram.bot_token': '',
@@ -67,6 +67,39 @@ function createMockSettingsService(overrides: Record<string, string> = {}) {
   return {
     get: vi.fn((key: string) => store[key] ?? ''),
     set: vi.fn(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Mock SQLite (signing_enabled based queries)
+// ---------------------------------------------------------------------------
+
+function createMockSqlite(opts: {
+  signingApp?: { name: string; wallet_type: string; push_relay_url: string | null; subscription_token: string | null } | undefined;
+  pendingApproval?: { expires_at: number } | undefined;
+  ownerAddress?: { owner_address: string | null } | undefined;
+} = {}) {
+  const defaultApp = {
+    name: 'dcent',
+    wallet_type: 'dcent',
+    push_relay_url: 'https://relay.test.com',
+    subscription_token: 'sub-tok',
+  };
+  const app = 'signingApp' in opts ? opts.signingApp : defaultApp;
+
+  return {
+    prepare: vi.fn((sql: string) => {
+      if (sql.includes('signing_enabled') && sql.includes('wallet_apps')) {
+        return { get: vi.fn(() => app) };
+      }
+      if (sql.includes('pending_approvals')) {
+        return { get: vi.fn(() => opts.pendingApproval) };
+      }
+      if (sql.includes('owner_address')) {
+        return { get: vi.fn(() => opts.ownerAddress) };
+      }
+      return { get: vi.fn(() => undefined) };
+    }),
   };
 }
 
@@ -113,6 +146,7 @@ describe('signing-sdk E2E integration', () => {
   let mockHandler: ReturnType<typeof createMockSignResponseHandler>;
   let mockSettings: ReturnType<typeof createMockSettingsService>;
   let mockRegistry: ReturnType<typeof createMockWalletLinkRegistry>;
+  let mockSqlite: ReturnType<typeof createMockSqlite>;
 
   beforeEach(() => {
     fetchMock = vi.fn();
@@ -121,10 +155,12 @@ describe('signing-sdk E2E integration', () => {
     mockSettings = createMockSettingsService();
     mockRegistry = createMockWalletLinkRegistry();
     mockHandler = createMockSignResponseHandler();
+    mockSqlite = createMockSqlite();
 
     builder = new SignRequestBuilder({
       settingsService: mockSettings as any,
       walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
     });
 
     channel = new PushRelaySigningChannel({
@@ -310,6 +346,7 @@ describe('signing-sdk E2E integration', () => {
           'signing_sdk.request_expiry_min': '1',
         }) as any,
         walletLinkRegistry: mockRegistry as any,
+        sqlite: mockSqlite as any,
       });
 
       vi.spyOn(shortBuilder, 'buildRequest').mockImplementation(() => {
@@ -484,5 +521,100 @@ describe('signing-sdk E2E integration', () => {
     expect(received.signature).toBe('0xsdk-generated-signature');
     expect(received.action).toBe('approve');
     expect(received.requestId).toBe(capturedRequestId);
+  });
+
+  // -----------------------------------------------------------------------
+  // Scenario 6: APPROVAL tier TX routes to signing_enabled=1 app push relay
+  // -----------------------------------------------------------------------
+
+  it('routes APPROVAL tier TX to signing_enabled=1 app push relay URL', () => {
+    // Build request using real buildRequest (not mocked)
+    const result = builder.buildRequest({
+      txId,
+      chain: 'ethereum',
+      network: 'ethereum-mainnet',
+      type: 'TRANSFER',
+      from: signerAddress,
+      to: toAddress,
+      amount: '1.5',
+      symbol: 'ETH',
+      policyTier: 'APPROVAL',
+      walletName: 'dcent',
+    });
+
+    // Verify push_relay_url comes from signing_enabled=1 app in DB
+    expect(result.request.responseChannel.type).toBe('push_relay');
+    if (result.request.responseChannel.type === 'push_relay') {
+      expect(result.request.responseChannel.pushRelayUrl).toBe('https://relay.test.com');
+    }
+
+    // Verify requestTopic is subscription_token from signing_enabled app
+    expect(result.requestTopic).toBe('sub-tok');
+
+    // Verify walletLinkRegistry was called with the app name from DB
+    expect(mockRegistry.getWallet).toHaveBeenCalledWith('dcent');
+  });
+
+  // -----------------------------------------------------------------------
+  // Scenario 7: signing_enabled=0 app push_relay_url is NOT used
+  // -----------------------------------------------------------------------
+
+  it('does not use signing_enabled=0 app push_relay_url', () => {
+    // Create builder with no signing_enabled app
+    const noSigningBuilder = new SignRequestBuilder({
+      settingsService: mockSettings as any,
+      walletLinkRegistry: mockRegistry as any,
+      sqlite: createMockSqlite({ signingApp: undefined }) as any,
+    });
+
+    // Should throw because no signing-enabled app found
+    expect(() =>
+      noSigningBuilder.buildRequest({
+        txId,
+        chain: 'ethereum',
+        network: 'ethereum-mainnet',
+        type: 'TRANSFER',
+        from: signerAddress,
+        to: toAddress,
+        amount: '1.5',
+        symbol: 'ETH',
+        policyTier: 'APPROVAL',
+        walletName: 'dcent',
+      }),
+    ).toThrow('No signing-enabled wallet app found');
+  });
+
+  // -----------------------------------------------------------------------
+  // Scenario 8: preferred_wallet setting is ignored, signing_enabled=1 used
+  // -----------------------------------------------------------------------
+
+  it('ignores preferred_wallet setting, uses signing_enabled=1 app', () => {
+    const settingsWithOldWallet = createMockSettingsService({
+      'signing_sdk.preferred_wallet': 'old-wallet',
+    });
+
+    const testBuilder = new SignRequestBuilder({
+      settingsService: settingsWithOldWallet as any,
+      walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
+    });
+
+    const result = testBuilder.buildRequest({
+      txId,
+      chain: 'ethereum',
+      network: 'ethereum-mainnet',
+      type: 'TRANSFER',
+      from: signerAddress,
+      to: toAddress,
+      amount: '1.5',
+      symbol: 'ETH',
+      policyTier: 'APPROVAL',
+    });
+
+    // Should use 'dcent' from signing_enabled=1 query, NOT 'old-wallet' from settings
+    expect(mockRegistry.getWallet).toHaveBeenCalledWith('dcent');
+    expect(result.request).toBeDefined();
+    // preferred_wallet should never be read
+    expect(settingsWithOldWallet.get).not.toHaveBeenCalledWith('signing_sdk.preferred_wallet');
   });
 });

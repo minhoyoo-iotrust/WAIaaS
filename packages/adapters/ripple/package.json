@@ -1,0 +1,47 @@
+{
+  "name": "@waiaas/adapter-ripple",
+  "version": "2.13.0",
+  "description": "WAIaaS Ripple chain adapter - XRP Ledger native transfer support",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git",
+    "directory": "packages/adapters/ripple"
+  },
+  "homepage": "https://github.com/minhoyoo-iotrust/WAIaaS#readme",
+  "bugs": {
+    "url": "https://github.com/minhoyoo-iotrust/WAIaaS/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:integration": "[ -d src/__tests__/integration ] && vitest run --dir src/__tests__/integration || true",
+    "test:security": "[ -d src/__tests__/security ] && vitest run --dir src/__tests__/security || true",
+    "test:chain": "[ -d src/__tests__/chain ] && vitest run --dir src/__tests__/chain || true",
+    "test:platform": "[ -d src/__tests__/platform ] && vitest run --dir src/__tests__/platform || true",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@waiaas/core": "workspace:*",
+    "xrpl": "^4.1.0",
+    "ripple-keypairs": "^2.0.0"
+  }
+}

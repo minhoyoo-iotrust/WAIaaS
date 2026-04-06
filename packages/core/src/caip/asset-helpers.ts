@@ -32,6 +32,10 @@ const NATIVE_SLIP44: Record<string, number> = {
   'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': 501,
   'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1': 501,
   'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z': 501,
+  // XRPL (XRP) -- SLIP-44 coin type 144
+  'xrpl:0': 144,
+  'xrpl:1': 144,
+  'xrpl:2': 144,
 };
 
 /**
@@ -68,6 +72,10 @@ export function tokenAssetId(network: NetworkType, address: string): string {
     return formatCaip19(caip2, 'erc20', address.toLowerCase());
   }
   if (namespace === 'solana') {
+    return formatCaip19(caip2, 'token', address);
+  }
+  if (namespace === 'xrpl') {
+    // Trust Line token: {currency}.{issuer} format (original case preserved)
     return formatCaip19(caip2, 'token', address);
   }
 

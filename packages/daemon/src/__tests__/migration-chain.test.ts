@@ -409,6 +409,12 @@ function getTableColumns(db: DatabaseType, table: string): string[] {
     .sort();
 }
 
+/** Column info with order, type, and notnull — for detecting column position mismatches (issue #480). */
+function getTableColumnDetails(db: DatabaseType, table: string): Array<{ cid: number; name: string; type: string; notnull: number }> {
+  return (db.prepare(`PRAGMA table_info('${table}')`).all() as Array<{ cid: number; name: string; type: string; notnull: number }>)
+    .map(({ cid, name, type, notnull }) => ({ cid, name, type, notnull }));
+}
+
 function getTableIndexes(db: DatabaseType, table: string): string[] {
   return (db.prepare(`PRAGMA index_list('${table}')`).all() as Array<{ name: string }>)
     .map((i) => i.name)
@@ -622,6 +628,28 @@ describe('migration chain schema equivalence', () => {
       const freshCols = getTableColumns(freshDb, table);
       const migratedCols = getTableColumns(migratedDb, table);
       expect(migratedCols).toEqual(freshCols);
+    }
+  });
+
+  // T-6b: Column order + type + notnull must match between migrated and fresh DB.
+  // Catches ALTER TABLE ADD column-order mismatches (issue #480).
+  it('T-6b: v1 migrated DB column order matches fresh DB for all tables', () => {
+    const connA = createDatabase(':memory:');
+    freshDb = connA.sqlite;
+    pushSchema(freshDb);
+
+    migratedDb = createV1SchemaDatabase();
+    pushSchema(migratedDb);
+
+    const TABLES_WITH_TABLE_RECREATION = [
+      'wallets', 'transactions', 'policies', 'incoming_transactions',
+      'defi_positions', 'nft_metadata_cache',
+    ];
+
+    for (const table of TABLES_WITH_TABLE_RECREATION) {
+      const freshDetails = getTableColumnDetails(freshDb, table);
+      const migratedDetails = getTableColumnDetails(migratedDb, table);
+      expect(migratedDetails, `column order mismatch in ${table}`).toEqual(freshDetails);
     }
   });
 });
@@ -1003,8 +1031,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 60
-    expect(LATEST_SCHEMA_VERSION).toBe(60);
+    // Verify LATEST_SCHEMA_VERSION is 61
+    expect(LATEST_SCHEMA_VERSION).toBe(62);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1333,7 +1361,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(60);
+    expect(Math.max(...versions)).toBe(62);
 
     // Verify data survived the entire chain (v27 drops default_network)
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string };
@@ -1513,7 +1541,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(60);
+    expect(Math.max(...versions)).toBe(62);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1733,7 +1761,7 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(60);
+    expect(Math.max(...versions)).toBe(62);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(
@@ -1815,7 +1843,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     db = conn.sqlite;
     pushSchema(db);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(60);
+    expect(LATEST_SCHEMA_VERSION).toBe(62);
 
     const versions = getVersions(db);
     expect(versions).toContain(24);
@@ -1907,7 +1935,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     // Verify final version is 24
     const versions = getVersions(db);
     expect(versions).toContain(24);
-    expect(Math.max(...versions)).toBe(60);
+    expect(Math.max(...versions)).toBe(62);
 
     // Verify wallets table has wallet_type column
     const columns = getTableColumns(db, 'wallets');
@@ -2035,5 +2063,73 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     };
     expect(eoa.account_type).toBe('eoa');
     expect(eoa.signer_key).toBeNull();
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // v62: defi_positions column order mismatch (issue #480)
+  // environment was added via ALTER TABLE ADD (last column in source)
+  // but v62 new table defines it at position 6. SELECT * breaks.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('T-v62: v62 migration preserves defi_positions with ALTER TABLE ADD column order', () => {
+    // Full chain migration to v61 — this produces the real column order
+    // where environment sits at the end (added via ALTER TABLE ADD in v30)
+    const conn = createDatabase(':memory:');
+    db = conn.sqlite;
+    pushSchema(db);
+
+    // Downgrade to v61
+    db.exec('DELETE FROM schema_version WHERE version >= 62');
+    expect(Math.max(...getVersions(db))).toBe(61);
+
+    const ts = Math.floor(Date.now() / 1000);
+    const walletId = 'w-v62-test';
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(walletId, 'V62 Wallet', 'solana', 'mainnet', 'pk-v62', 'ACTIVE', 0, ts, ts);
+
+    // Insert defi_positions seed data
+    db.prepare(
+      `INSERT INTO defi_positions (id, wallet_id, category, provider, chain, environment, network, asset_id, amount, amount_usd, metadata, status, opened_at, closed_at, last_synced_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('pos-v62-1', walletId, 'LENDING', 'aave_v3', 'ethereum', 'mainnet', 'ethereum-mainnet', 'caip19:eip155:1/erc20:0xA0b8', '1000000', 1500.5, '{"apy":0.05}', 'ACTIVE', ts - 86400, null, ts, ts, ts);
+
+    db.prepare(
+      `INSERT INTO defi_positions (id, wallet_id, category, provider, chain, environment, network, asset_id, amount, amount_usd, metadata, status, opened_at, closed_at, last_synced_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('pos-v62-2', walletId, 'STAKING', 'lido_staking', 'ethereum', 'testnet', 'ethereum-sepolia', null, '500', null, null, 'ACTIVE', ts - 3600, null, ts, ts, ts);
+
+    // Run v62 migration
+    const v62Only = MIGRATIONS.filter((m) => m.version === 62);
+    db.pragma('foreign_keys = OFF');
+    runMigrations(db, v62Only);
+
+    expect(Math.max(...getVersions(db))).toBe(62);
+
+    // Verify data integrity — values must be in correct columns
+    const pos1 = db.prepare('SELECT * FROM defi_positions WHERE id = ?').get('pos-v62-1') as Record<string, unknown>;
+    expect(pos1.wallet_id).toBe(walletId);
+    expect(pos1.category).toBe('LENDING');
+    expect(pos1.provider).toBe('aave_v3');
+    expect(pos1.chain).toBe('ethereum');
+    expect(pos1.environment).toBe('mainnet');
+    expect(pos1.network).toBe('ethereum-mainnet');
+    expect(pos1.asset_id).toBe('caip19:eip155:1/erc20:0xA0b8');
+    expect(pos1.amount).toBe('1000000');
+    expect(pos1.amount_usd).toBeCloseTo(1500.5);
+    expect(pos1.metadata).toBe('{"apy":0.05}');
+    expect(pos1.status).toBe('ACTIVE');
+    expect(pos1.opened_at).toBe(ts - 86400);
+    expect(pos1.closed_at).toBeNull();
+    expect(pos1.last_synced_at).toBe(ts);
+
+    const pos2 = db.prepare('SELECT * FROM defi_positions WHERE id = ?').get('pos-v62-2') as Record<string, unknown>;
+    expect(pos2.environment).toBe('testnet');
+    expect(pos2.network).toBe('ethereum-sepolia');
+    expect(pos2.asset_id).toBeNull();
+    expect(pos2.amount_usd).toBeNull();
+    expect(pos2.metadata).toBeNull();
+    expect(pos2.opened_at).toBe(ts - 3600);
   });
 });
