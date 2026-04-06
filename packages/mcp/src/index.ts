@@ -114,21 +114,22 @@ async function main(): Promise<void> {
   const shutdown = createShutdownHandler({ sessionManager, server });
   registerShutdownListeners(shutdown);
 
-  // Connect transport FIRST so stdio JSON-RPC responds to initialize immediately.
-  // sessionManager.start() involves disk I/O that can delay under load (BUG-011).
-  // If a tool call arrives before start() completes, degraded mode handles it (SMGI-03).
-  await server.connect(transport);
-  console.error('[waiaas-mcp] Server started on stdio transport');
-
+  // Start session BEFORE registering tools so API calls have valid token.
   await sessionManager.start();
 
-  // Register action provider tools (async, failure = degraded mode).
-  // Must be after sessionManager.start() so API calls have valid token.
-  // server.tool() after connect() automatically fires sendToolListChanged().
-  registerActionProviderTools(server, apiClient, { walletName: WALLET_NAME })
-    .catch((err: unknown) => {
-      console.error('[waiaas-mcp] Action provider tool registration failed:', err instanceof Error ? err.message : String(err));
-    });
+  // Register action provider tools BEFORE server.connect() so all tools
+  // are available when the client sends its first listTools() (issue #479).
+  // Failure is non-fatal: server starts without action tools (degraded mode).
+  try {
+    await registerActionProviderTools(server, apiClient, { walletName: WALLET_NAME });
+  } catch (err: unknown) {
+    console.error('[waiaas-mcp] Action provider tool registration failed:', err instanceof Error ? err.message : String(err));
+  }
+
+  // Connect transport LAST so stdio JSON-RPC responds to initialize with
+  // all tools already registered, preventing race conditions.
+  await server.connect(transport);
+  console.error('[waiaas-mcp] Server started on stdio transport');
 }
 
 main().catch((err: unknown) => {

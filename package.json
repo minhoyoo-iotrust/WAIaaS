@@ -30,6 +30,7 @@
     "format:check": "prettier --check .",
     "site:build": "node site/build.mjs",
     "verify:enums": "tsx scripts/verify-enum-ssot.ts",
+    "verify:migrations": "tsx scripts/verify-migration-no-select-star.ts",
     "verify:e2e-coverage": "tsx scripts/verify-e2e-coverage.ts",
     "verify:agent-uat": "tsx scripts/verify-agent-uat-provider-map.ts && tsx scripts/verify-agent-uat-format.ts && tsx scripts/verify-agent-uat-index.ts && tsx scripts/verify-admin-route-consistency.ts",
     "verify:agent-uat:providers": "tsx scripts/verify-agent-uat-provider-map.ts",
