@@ -5,19 +5,22 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock xrpl address validation functions
-vi.mock('xrpl', () => ({
-  isValidClassicAddress: vi.fn((addr: string) => /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(addr)),
-  isValidXAddress: vi.fn((addr: string) => /^[XT][1-9A-HJ-NP-Za-km-z]{46}$/.test(addr)),
-  xAddressToClassicAddress: vi.fn((xAddr: string) => {
-    if (xAddr.startsWith('X7AcgcsBL6XDcUb289X4mJ8djcdyKaB5hJDW')) {
-      return { classicAddress: 'rN7n3473SaZBCG4dFL83w7p1W9cgZw6XVD', tag: 12345 };
-    }
-    if (xAddr.startsWith('T7YL9jPJMZR6K7jPF7')) {
-      return { classicAddress: 'rGWrZyQqhTp9Xu7G5iFQw', tag: false };
-    }
-    return { classicAddress: 'rUnknown', tag: false };
-  }),
-}));
+vi.mock('xrpl', () => {
+  const mod = {
+    isValidClassicAddress: vi.fn((addr: string) => /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(addr)),
+    isValidXAddress: vi.fn((addr: string) => /^[XT][1-9A-HJ-NP-Za-km-z]{46}$/.test(addr)),
+    xAddressToClassicAddress: vi.fn((xAddr: string) => {
+      if (xAddr.startsWith('X7AcgcsBL6XDcUb289X4mJ8djcdyKaB5hJDW')) {
+        return { classicAddress: 'rN7n3473SaZBCG4dFL83w7p1W9cgZw6XVD', tag: 12345 };
+      }
+      if (xAddr.startsWith('T7YL9jPJMZR6K7jPF7')) {
+        return { classicAddress: 'rGWrZyQqhTp9Xu7G5iFQw', tag: false };
+      }
+      return { classicAddress: 'rUnknown', tag: false };
+    }),
+  };
+  return { ...mod, default: mod };
+});
 
 import {
   isXAddress,

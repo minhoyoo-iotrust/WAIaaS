@@ -40,20 +40,23 @@ const { mockClient, mockWallet } = vi.hoisted(() => {
   return { mockClient, mockWallet };
 });
 
-vi.mock('xrpl', () => ({
-  Client: vi.fn().mockImplementation(() => mockClient),
-  Wallet: {
-    fromEntropy: vi.fn().mockReturnValue(mockWallet),
-  },
-  ECDSA: { ed25519: 'ed25519', secp256k1: 'ecdsa-secp256k1' },
-  // Address validation functions used by address-utils.ts
-  isValidClassicAddress: vi.fn((addr: string) => typeof addr === 'string' && addr.startsWith('r')),
-  isValidXAddress: vi.fn((addr: string) => typeof addr === 'string' && (addr.startsWith('X') || addr.startsWith('T')) && addr.length > 30),
-  xAddressToClassicAddress: vi.fn((xAddr: string) => ({
-    classicAddress: 'rDecodedFromXAddr',
-    tag: xAddr.includes('WithTag') ? 99999 : false,
-  })),
-}));
+vi.mock('xrpl', () => {
+  const mod = {
+    Client: vi.fn().mockImplementation(() => mockClient),
+    Wallet: {
+      fromEntropy: vi.fn().mockReturnValue(mockWallet),
+    },
+    ECDSA: { ed25519: 'ed25519', secp256k1: 'ecdsa-secp256k1' },
+    // Address validation functions used by address-utils.ts
+    isValidClassicAddress: vi.fn((addr: string) => typeof addr === 'string' && addr.startsWith('r')),
+    isValidXAddress: vi.fn((addr: string) => typeof addr === 'string' && (addr.startsWith('X') || addr.startsWith('T')) && addr.length > 30),
+    xAddressToClassicAddress: vi.fn((xAddr: string) => ({
+      classicAddress: 'rDecodedFromXAddr',
+      tag: xAddr.includes('WithTag') ? 99999 : false,
+    })),
+  };
+  return { ...mod, default: mod };
+});
 
 // Import adapter after mocks
 import { RippleAdapter } from '../adapter.js';

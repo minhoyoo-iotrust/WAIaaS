@@ -25,6 +25,7 @@
 | 478 | ENHANCEMENT | LOW | MCP 서버 버전 0.0.0 하드코딩 | — | FIXED | 2026-04-02 |
 | 479 | BUG | HIGH | MCP listTools() 레이스 컨디션: Action Provider 도구 누락 | — | FIXED | 2026-04-06 |
 | 480 | BUG | CRITICAL | v62 마이그레이션 SELECT * 컬럼 순서 불일치로 실패 | — | FIXED | 2026-04-06 |
+| 481 | BUG | CRITICAL | xrpl ECDSA named export ESM import 실패 — XRPL 전 기능 불가 | v33.6 | OPEN | 2026-04-07 |
 
 ## Type Legend
 

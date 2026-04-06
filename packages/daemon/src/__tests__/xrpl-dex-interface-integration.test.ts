@@ -61,7 +61,7 @@ describe('XRPL DEX Interface Integration', () => {
     it('actions.xrpl_dex_enabled setting key exists', () => {
       const def = SETTING_DEFINITIONS.find((d) => d.key === 'actions.xrpl_dex_enabled');
       expect(def).toBeDefined();
-      expect(def!.defaultValue).toBe('false');
+      expect(def!.defaultValue).toBe('true');
       expect(def!.category).toBe('actions');
     });
 
