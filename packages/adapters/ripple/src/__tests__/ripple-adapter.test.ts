@@ -47,7 +47,7 @@ vi.mock('xrpl', () => {
     address: opts?.masterAddress ?? mockWallet.address,
   }));
   // Keep fromEntropy for any remaining references
-  (WalletCtor as Record<string, unknown>).fromEntropy = vi.fn().mockReturnValue(mockWallet);
+  (WalletCtor as unknown as Record<string, unknown>).fromEntropy = vi.fn().mockReturnValue(mockWallet);
   const mod = {
     Client: vi.fn().mockImplementation(() => mockClient),
     Wallet: WalletCtor,
