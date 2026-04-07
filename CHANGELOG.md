@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0-rc.3...v2.14.0-rc.4) (2026-04-07)
+
+
+### Bug Fixes
+
+* **release-please:** track adapter-ripple package.json version ([b4d0caf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b4d0cafe45be0fc3ef871db85c6bca2fe1adef81))
+
 ## [2.14.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0-rc.2...v2.14.0-rc.3) (2026-04-07)
 
 
