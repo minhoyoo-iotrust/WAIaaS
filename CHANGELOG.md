@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.14.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0-rc.2...v2.14.0-rc.3) (2026-04-07)
+
+
+### Bug Fixes
+
+* **release:** add adapter-ripple to smoke test packing list ([e48c437](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e48c4379157e1c54c5b934ae8468ec0404747d97))
+* **release:** add adapter-ripple to smoke test packing list ([fbc1867](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fbc18672cd61ae0e619c3860cfb93a9dc2eba3aa))
+
 ## [2.14.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0-rc.1...v2.14.0-rc.2) (2026-04-07)
 
 
