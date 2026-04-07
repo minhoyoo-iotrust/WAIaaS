@@ -148,6 +148,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/adapters/ripple
             packages/wallet-sdk
             packages/push-relay
             packages/actions
@@ -158,10 +159,19 @@ jobs:
             echo "Copied README.md -> $pkg_path/README.md"
           done
 
+      - name: Copy Admin UI into daemon
+        run: |
+          mkdir -p packages/daemon/public/admin
+          if [ -d packages/admin/dist ]; then
+            cp -r packages/admin/dist/* packages/daemon/public/admin/
+          fi
+
       - name: Verify Admin UI in daemon
         run: |
           if [ ! -f packages/daemon/public/admin/index.html ]; then
             echo "ERROR: Admin UI files missing from daemon/public/admin/"
+            ls -la packages/admin/dist/ || echo "(packages/admin/dist not found)"
+            ls -la packages/daemon/public/admin/ || echo "(packages/daemon/public/admin not found)"
             exit 1
           fi
 
@@ -177,6 +187,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/adapters/ripple
             packages/wallet-sdk
             packages/push-relay
             packages/actions
@@ -201,6 +212,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/adapters/ripple
             packages/wallet-sdk
             packages/push-relay
             packages/actions
@@ -396,6 +408,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/adapters/ripple
             packages/wallet-sdk
             packages/push-relay
             packages/actions
@@ -418,6 +431,7 @@ jobs:
             packages/skills
             packages/adapters/solana
             packages/adapters/evm
+            packages/adapters/ripple
             packages/wallet-sdk
             packages/push-relay
             packages/actions

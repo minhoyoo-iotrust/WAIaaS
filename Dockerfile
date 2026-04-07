@@ -29,6 +29,7 @@ COPY packages/daemon/package.json packages/daemon/package.json
 COPY packages/admin/package.json packages/admin/package.json
 COPY packages/adapters/solana/package.json packages/adapters/solana/package.json
 COPY packages/adapters/evm/package.json packages/adapters/evm/package.json
+COPY packages/adapters/ripple/package.json packages/adapters/ripple/package.json
 COPY packages/cli/package.json packages/cli/package.json
 COPY packages/sdk/package.json packages/sdk/package.json
 COPY packages/mcp/package.json packages/mcp/package.json
@@ -55,7 +56,7 @@ FROM builder AS prod-deps
 WORKDIR /prod
 
 RUN cp /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml /app/turbo.json ./ && \
-    for dir in shared core daemon admin adapters/solana adapters/evm cli sdk mcp push-relay actions; do \
+    for dir in shared core daemon admin adapters/solana adapters/evm adapters/ripple cli sdk mcp push-relay actions; do \
       mkdir -p "packages/$dir" && \
       cp "/app/packages/$dir/package.json" "packages/$dir/"; \
     done
@@ -101,6 +102,7 @@ COPY --from=builder /app/packages/daemon/dist packages/daemon/dist
 COPY --from=builder /app/packages/daemon/public packages/daemon/public
 COPY --from=builder /app/packages/adapters/solana/dist packages/adapters/solana/dist
 COPY --from=builder /app/packages/adapters/evm/dist packages/adapters/evm/dist
+COPY --from=builder /app/packages/adapters/ripple/dist packages/adapters/ripple/dist
 COPY --from=builder /app/packages/cli/dist packages/cli/dist
 COPY --from=builder /app/packages/cli/bin packages/cli/bin
 COPY --from=builder /app/packages/sdk/dist packages/sdk/dist
