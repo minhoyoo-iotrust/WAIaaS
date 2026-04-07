@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.14.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0-rc.1...v2.14.0-rc.2) (2026-04-07)
+
+
+### Bug Fixes
+
+* **release:** include adapter-ripple in Dockerfile and release pipeline ([ae5670c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ae5670c24f3ca4949f62a66a0ebb3b452aabdb49))
+* **release:** include adapter-ripple in Dockerfile and release pipeline ([23df43d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/23df43d8e7913cc0497ec92ddc664fd829242c12))
+
 ## [2.14.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0-rc...v2.14.0-rc.1) (2026-04-07)
 
 
