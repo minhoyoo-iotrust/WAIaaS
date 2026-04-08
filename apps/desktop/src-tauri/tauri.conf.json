@@ -37,7 +37,8 @@
     "macOS": {
       "minimumSystemVersion": "10.15",
       "signingIdentity": "Developer ID Application: MINHO YOO (RSYL5QMMPR)",
-      "providerShortName": "RSYL5QMMPR"
+      "providerShortName": "RSYL5QMMPR",
+      "entitlements": "entitlements.plist"
     },
     "windows": {
       "certificateThumbprint": null,
