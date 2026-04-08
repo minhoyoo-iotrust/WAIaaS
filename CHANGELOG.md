@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.14.1-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0...v2.14.1-rc) (2026-04-08)
+
+
+### Bug Fixes
+
+* **desktop:** unbrick v2.14.0 first-launch (issues 485-490) ([a696425](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a696425a672feab202bcfb7e8676914b9055c028))
+* **desktop:** unbrick v2.14.0 first-launch (issues 485-490) ([c0e7db9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c0e7db91c2852595589ba6f787e8515514373543))
+* **desktop:** unbrick v2.14.0 first-launch (issues 485-490) ([03d8182](https://github.com/minhoyoo-iotrust/WAIaaS/commit/03d8182ceecf33c2e86fa93baded492522e7813e))
+
 ## [2.14.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0-rc.4...v2.14.0) (2026-04-08)
 
 
