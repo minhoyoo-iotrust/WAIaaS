@@ -16,7 +16,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, rmSync, readdirSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, rmSync, readdirSync, statSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { platform, arch } from 'node:os';
@@ -26,7 +26,10 @@ const ROOT = resolve(__dirname, '..');
 const MONOREPO_ROOT = resolve(ROOT, '../..');
 const DIST_DIR = join(ROOT, 'dist');
 const NATIVE_ADDONS_DIR = join(ROOT, 'native-addons');
-const SEA_CONFIG = join(ROOT, 'sea-config.json');
+// Generated at build time (see admin asset embedding below). Placed under
+// dist/ so it stays out of git, since the asset paths are machine-absolute
+// and admin file hashes change per build.
+const SEA_CONFIG = join(ROOT, 'dist', 'sea-config.json');
 const BUNDLE_OUTPUT = join(DIST_DIR, 'daemon-bundle.cjs');
 const SEA_BLOB = join(DIST_DIR, 'sea-prep.blob');
 
@@ -62,7 +65,7 @@ function run(cmd, opts = {}) {
   });
 }
 
-function findPrebuild(packageName, patterns) {
+function findPrebuild(packageName, patterns, { strict = false } = {}) {
   for (const pattern of patterns) {
     const resolved = resolve(ROOT, pattern);
     if (existsSync(resolved)) {
@@ -75,7 +78,13 @@ function findPrebuild(packageName, patterns) {
     }
   }
 
-  // Glob search in node_modules
+  if (strict) {
+    // Do NOT fall back to recursive search: it can pick a wrong-arch prebuild
+    // (e.g., android-arm) and produce a silently-broken SEA binary.
+    return null;
+  }
+
+  // Glob search in node_modules (non-strict only)
   const searchDirs = [
     join(ROOT, 'node_modules', packageName),
     join(MONOREPO_ROOT, 'node_modules', packageName),
@@ -114,6 +123,21 @@ function findNodeFile(dir, depth = 0) {
   return null;
 }
 
+// Recursively collect relative file paths under a root directory.
+function collectFiles(root, rel = '', acc = []) {
+  const abs = join(root, rel);
+  for (const entry of readdirSync(abs)) {
+    const childRel = rel ? join(rel, entry) : entry;
+    const stat = statSync(join(abs, entry));
+    if (stat.isDirectory()) {
+      collectFiles(root, childRel, acc);
+    } else {
+      acc.push(childRel);
+    }
+  }
+  return acc;
+}
+
 async function main() {
   console.log('=== WAIaaS SEA Build ===');
   console.log(`Target: ${targetTriple}`);
@@ -125,22 +149,218 @@ async function main() {
     mkdirSync(DIST_DIR, { recursive: true });
   }
 
+  // 1b. Collect Admin UI static assets (issue 489). The daemon's ADMIN_STATIC_ROOT
+  // is normally resolved relative to __dirname in dev mode; in SEA mode we
+  // extract these assets to a tmp dir at startup and expose the path via
+  // WAIAAS_ADMIN_STATIC_ROOT. The list of asset keys is injected into the
+  // bootstrap shim so the shim can enumerate + extract them at runtime.
+  const adminDistDir = resolve(MONOREPO_ROOT, 'packages/admin/dist');
+  let adminAssets = [];
+  if (existsSync(adminDistDir)) {
+    adminAssets = collectFiles(adminDistDir).sort();
+    console.log(`  Admin UI: ${adminAssets.length} files from ${adminDistDir}`);
+  } else {
+    console.warn(`  WARNING: admin dist not found at ${adminDistDir} -- Desktop Setup Wizard will be unavailable`);
+  }
+
+  // SEA bootstrap shim — see issue 486.
+  //
+  // In SEA mode, the main script's `require` is Node's embedderRequire which
+  // ONLY resolves built-in modules. Any externalized native addon (e.g.
+  // `require('better-sqlite3')`) hits embedderRequire and throws
+  // ERR_UNKNOWN_BUILTIN_MODULE.
+  //
+  // Fix: prepend a shim that (1) dlopen()s the 3 embedded native .node assets,
+  // (2) stashes them on globalThis, and (3) shadows the outer `require` param
+  // with an interceptor that routes known names to the dlopen'd exports and
+  // falls back to Module.createRequire(process.execPath) for disk-resolvable
+  // modules. In dev mode (non-SEA), the shim is a no-op and the original
+  // require is preserved.
+  const adminAssetKeysJs = JSON.stringify(adminAssets.map(f => 'admin/' + f.split(/\\|\//).join('/')));
+
+  const SEA_BOOTSTRAP_SHIM = `
+// === WAIaaS SEA bootstrap shim (issue 486) ===
+(function __waiaasSeaBootstrap() {
+  // Always set an import.meta.url equivalent. esbuild's CJS output replaces
+  // \`import.meta.url\` with undefined, which breaks \`createRequire(import.meta.url)\`
+  // call sites sprinkled across the codebase (keystore, wc-signing-bridge,
+  // version-check-service, etc.). See esbuild \`define\` in build-sea.mjs.
+  try {
+    globalThis.__waiaasImportMetaUrl = require('node:url').pathToFileURL(process.execPath).href;
+  } catch (_) {}
+
+  var sea;
+  try { sea = require('node:sea'); } catch (_) { return; }
+  if (!sea || !sea.isSea || !sea.isSea()) return;
+
+  var fs = require('node:fs');
+  var os = require('node:os');
+  var path = require('node:path');
+  var Module = require('node:module');
+
+  function dlopenAsset(assetName) {
+    var buf = Buffer.from(sea.getRawAsset(assetName));
+    var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waiaas-sea-'));
+    var p = path.join(dir, assetName);
+    fs.writeFileSync(p, buf);
+    var m = { exports: {} };
+    process.dlopen(m, p);
+    return m.exports;
+  }
+
+  // Load all embedded native addons up front.
+  var addons = Object.create(null);
+  var addonFiles = ['better_sqlite3.node', 'sodium-native.node', 'argon2.node'];
+  for (var i = 0; i < addonFiles.length; i++) {
+    try { addons[addonFiles[i]] = dlopenAsset(addonFiles[i]); }
+    catch (e) { console.error('[SEA] failed to load ' + addonFiles[i] + ': ' + e.message); }
+  }
+
+  // Extract Admin UI static assets (issue 489) so Hono's serveStatic can
+  // read them from the filesystem. Asset keys are injected by build-sea.mjs.
+  var adminAssetKeys = ${adminAssetKeysJs};
+  if (adminAssetKeys.length > 0) {
+    try {
+      var adminRoot = path.join(os.tmpdir(), 'waiaas-sea-admin-' + process.pid);
+      fs.mkdirSync(adminRoot, { recursive: true });
+      for (var j = 0; j < adminAssetKeys.length; j++) {
+        var key = adminAssetKeys[j];
+        var rel = key.slice('admin/'.length);
+        var dest = path.join(adminRoot, rel);
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        var aBuf = Buffer.from(sea.getRawAsset(key));
+        fs.writeFileSync(dest, aBuf);
+      }
+      process.env.WAIAAS_ADMIN_STATIC_ROOT = adminRoot;
+      // Best-effort cleanup on process exit
+      process.on('exit', function () {
+        try { fs.rmSync(adminRoot, { recursive: true, force: true }); } catch (_) {}
+      });
+    } catch (e) {
+      console.error('[SEA] failed to extract admin assets: ' + e.message);
+    }
+  }
+
+  // Stub the three native addon loader packages so the bundled JS wrappers
+  // (better-sqlite3/lib/database.js, sodium-native/index.js, argon2.cjs)
+  // receive the dlopened addon exports instead of trying to walk the disk.
+  function bindingsStub(name) {
+    var key = String(name);
+    if (!/\\.node$/.test(key)) key += '.node';
+    if (addons[key]) return addons[key];
+    throw new Error("SEA: bindings('" + name + "') not found in embedded assets");
+  }
+  // sodium-native is the only consumer of require-addon in our deps
+  var requireAddonStub = function () { return addons['sodium-native.node']; };
+  // argon2 is the only consumer of node-gyp-build in our deps
+  var nodeGypBuildStub = function () { return addons['argon2.node']; };
+
+  var natives = Object.create(null);
+  natives['bindings'] = bindingsStub;
+  natives['require-addon'] = requireAddonStub;
+  natives['node-gyp-build'] = nodeGypBuildStub;
+  natives['node-gyp-build-optional-packages'] = nodeGypBuildStub;
+
+  var diskRequire;
+  try { diskRequire = Module.createRequire(process.execPath); } catch (_) {}
+
+  globalThis.__waiaasSeaRequire = function (id) {
+    if (Object.prototype.hasOwnProperty.call(natives, id)) return natives[id];
+    if (diskRequire) { try { return diskRequire(id); } catch (_) {} }
+    throw new Error("SEA require('" + id + "') failed: not a bundled native addon loader and not resolvable from disk");
+  };
+})();
+// Shadow the outer \`require\` parameter so the rest of this CJS wrapper routes
+// through the SEA interceptor. In dev mode __waiaasSeaRequire is undefined so
+// the original require is preserved.
+var require = globalThis.__waiaasSeaRequire || require;
+// === end SEA bootstrap shim ===
+`;
+
+  // esbuild plugin: inline relative `require('*/package.json')` at build time.
+  // Several files use `const require = createRequire(import.meta.url);` + a
+  // dynamic require to read the package version. In SEA that runtime require
+  // fails because process.execPath has no sibling package.json. Rewrite the
+  // source text so the literal version object is inlined.
+  const inlinePackageJsonPlugin = {
+    name: 'inline-package-json',
+    setup(build) {
+      const pkgCache = new Map();
+      // Match .ts (cli entrypoint source) and .js (daemon compiled dist/).
+      // The @waiaas/daemon package is consumed via its `main: dist/index.js`
+      // so esbuild reads compiled JS where the pattern survives.
+      build.onLoad({ filter: /\.(ts|js)$/ }, (args) => {
+        // Skip node_modules to avoid touching third-party code
+        if (args.path.includes('/node_modules/')) return null;
+        let source;
+        try {
+          source = readFileSync(args.path, 'utf8');
+        } catch {
+          return null;
+        }
+        // Match require(...) and any createRequire-alias identifier like
+        // esmRequire(...) that reads a relative package.json.
+        if (!/\b(?:require|esmRequire)\(['"][^'"]*package\.json['"]\)/.test(source)) {
+          return null;
+        }
+        const rewritten = source.replace(
+          /\b(?:require|esmRequire)\((['"])([^'"]*package\.json)\1\)/g,
+          (match, _quote, relPath) => {
+            const absPath = resolve(dirname(args.path), relPath);
+            if (!existsSync(absPath)) return match;
+            let pkg = pkgCache.get(absPath);
+            if (!pkg) {
+              try {
+                pkg = JSON.parse(readFileSync(absPath, 'utf8'));
+              } catch {
+                return match;
+              }
+              pkgCache.set(absPath, pkg);
+            }
+            // Keep only fields actually consumed by callers (version field is
+            // the only one used across all 6 call sites in daemon + cli).
+            return JSON.stringify({ version: pkg.version ?? '0.0.0' });
+          },
+        );
+        if (rewritten === source) return null;
+        const loader = args.path.endsWith('.ts') ? 'ts' : 'js';
+        return { contents: rewritten, loader };
+      });
+    },
+  };
+
   // 2. esbuild bundle
   console.log('[1/5] Bundling daemon with esbuild...');
   try {
     const { build } = await import('esbuild');
     await build({
+      plugins: [inlinePackageJsonPlugin],
       entryPoints: [join(MONOREPO_ROOT, 'packages/cli/src/index.ts')],
       bundle: true,
       format: 'cjs',
       platform: 'node',
       target: 'node22',
       outfile: BUNDLE_OUTPUT,
+      banner: {
+        js: SEA_BOOTSTRAP_SHIM,
+      },
+      define: {
+        // esbuild's CJS output defaults \`import.meta.url\` to undefined which
+        // breaks createRequire(). Redirect to the shim-set globalThis value
+        // (pathToFileURL(process.execPath).href in SEA, or fallback env).
+        'import.meta.url': 'globalThis.__waiaasImportMetaUrl',
+      },
       external: [
-        // Native addon modules (loaded via dlopen at runtime)
-        'sodium-native',
-        'better-sqlite3',
-        'argon2',
+        // Native addon LOADER packages -- externalized so the SEA bootstrap
+        // shim can intercept require('bindings'), require('require-addon'),
+        // and require('node-gyp-build') and return the dlopened addon exports.
+        // The native modules themselves (better-sqlite3, sodium-native, argon2)
+        // are now BUNDLED so their JS wrappers are available, and the native
+        // .node files are extracted from SEA assets at runtime. See issue 486.
+        'bindings',
+        'require-addon',
+        'node-gyp-build',
+        'node-gyp-build-optional-packages',
         'fsevents',
         // Legacy @solana/web3.js dependency tree — transitive deps from @solana/spl-token etc.
         // Our codebase uses @solana/kit; these are optional peer deps not needed at runtime.
@@ -185,15 +405,24 @@ async function main() {
       name: 'sodium-native',
       assetName: 'sodium-native.node',
       patterns: [
+        // sodium-native v4+ ships prebuilds as <name>.node, not node.napi.node
+        `node_modules/sodium-native/prebuilds/${prebuildPlatform}/sodium-native.node`,
         `node_modules/sodium-native/prebuilds/${prebuildPlatform}/node.napi.node`,
+        `packages/daemon/node_modules/sodium-native/prebuilds/${prebuildPlatform}/sodium-native.node`,
       ],
+      // Never fall back to recursive search -- would pick wrong arch (e.g. android-arm)
+      strict: true,
     },
     {
       name: 'better-sqlite3',
       assetName: 'better_sqlite3.node',
       patterns: [
         `node_modules/better-sqlite3/prebuilds/${prebuildPlatform}/node.napi.node`,
+        `node_modules/better-sqlite3/build/Release/better_sqlite3.node`,
+        `packages/daemon/node_modules/better-sqlite3/prebuilds/${prebuildPlatform}/node.napi.node`,
+        `packages/daemon/node_modules/better-sqlite3/build/Release/better_sqlite3.node`,
       ],
+      strict: true,
     },
     {
       name: 'argon2',
@@ -206,7 +435,7 @@ async function main() {
   ];
 
   for (const mod of nativeModules) {
-    const srcPath = findPrebuild(mod.name, mod.patterns);
+    const srcPath = findPrebuild(mod.name, mod.patterns, { strict: mod.strict });
     if (srcPath) {
       const destPath = join(NATIVE_ADDONS_DIR, mod.assetName);
       copyFileSync(srcPath, destPath);
@@ -216,9 +445,26 @@ async function main() {
     }
   }
 
-  // 4. Generate SEA blob
+  // 4. Generate SEA blob (rewrite sea-config.json to include admin assets)
   console.log('[3/5] Generating SEA blob...');
   try {
+    const seaConfigObj = {
+      main: 'dist/daemon-bundle.cjs',
+      output: 'dist/sea-prep.blob',
+      disableExperimentalSEAWarning: true,
+      useCodeCache: true,
+      assets: {
+        'sodium-native.node': 'native-addons/sodium-native.node',
+        'better_sqlite3.node': 'native-addons/better_sqlite3.node',
+        'argon2.node': 'native-addons/argon2.node',
+      },
+    };
+    for (const rel of adminAssets) {
+      const key = 'admin/' + rel.split(/\\|\//).join('/');
+      // Path is relative to SEA_CONFIG directory (ROOT = packages/daemon)
+      seaConfigObj.assets[key] = resolve(adminDistDir, rel);
+    }
+    writeFileSync(SEA_CONFIG, JSON.stringify(seaConfigObj, null, 2));
     run(`node --experimental-sea-config ${SEA_CONFIG}`);
     console.log(`  Blob: ${SEA_BLOB}`);
   } catch (err) {

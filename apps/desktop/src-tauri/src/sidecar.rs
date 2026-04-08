@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use rand::RngCore;
 use regex::Regex;
 use serde_json::json;
 use tauri::Emitter;
@@ -81,12 +83,20 @@ impl SidecarManager {
         // Check PID lockfile (SIDE-05)
         lockfile::create_lockfile(&data_dir)?;
 
-        // Spawn the sidecar binary via tauri-plugin-shell (Tauri 2.x pattern)
+        // Ensure the sidecar daemon has a master password to boot with on first
+        // launch (issue 488). The CLI's resolvePassword() reads this file via
+        // its auto-provision recovery key path, so the daemon can start
+        // non-interactively without a TTY.
+        ensure_recovery_key(&data_dir)?;
+
+        // Spawn the sidecar binary via tauri-plugin-shell (Tauri 2.x pattern).
+        // CLI contract (issue 487): `waiaas-daemon start --data-dir=<path>`.
+        // Port comes from config.toml default (3100) via daemon config schema.
         let shell = app.shell();
         let command = shell
             .sidecar("waiaas-daemon")
             .map_err(|e| format!("SpawnFailed: {}", e))?
-            .args(["--port=3100", &format!("--data-dir={}", data_dir)]);
+            .args(["start", &format!("--data-dir={}", data_dir)]);
 
         let (mut rx, child) = command
             .spawn()
@@ -434,6 +444,55 @@ impl SidecarManager {
 
         false
     }
+}
+
+/// Ensure a master password exists for the sidecar daemon's first boot
+/// (issue 488). The daemon's CLI auto-provision path reads
+/// `{data_dir}/recovery.key` when no env/file override is provided, so we just
+/// generate a high-entropy value there on first launch.
+///
+/// - 32 random bytes -> hex (64 chars)
+/// - Unix: file mode 0600
+/// - Windows: inherited NTFS ACL from the user profile directory (data-dir
+///   already lives under AppData/Roaming which is per-user by default)
+fn ensure_recovery_key(data_dir: &str) -> Result<(), String> {
+    let dir = Path::new(data_dir);
+    if !dir.exists() {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("RecoveryKeyDirFailed: {}", e))?;
+    }
+    let key_path = dir.join("recovery.key");
+    if key_path.exists() {
+        return Ok(());
+    }
+
+    let mut bytes = [0u8; 32];
+    rand::thread_rng()
+        .try_fill_bytes(&mut bytes)
+        .map_err(|e| format!("RecoveryKeyRngFailed: {}", e))?;
+    let hex: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
+
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+        let mut f = std::fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .mode(0o600)
+            .open(&key_path)
+            .map_err(|e| format!("RecoveryKeyCreateFailed: {}", e))?;
+        f.write_all(hex.as_bytes())
+            .map_err(|e| format!("RecoveryKeyWriteFailed: {}", e))?;
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(&key_path, hex.as_bytes())
+            .map_err(|e| format!("RecoveryKeyWriteFailed: {}", e))?;
+    }
+
+    log::info!("Generated initial recovery.key for sidecar daemon bootstrap");
+    Ok(())
 }
 
 /// Set up Windows Job Object for zombie process prevention (SIDE-06)

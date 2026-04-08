@@ -35,7 +35,11 @@ const { version: DAEMON_VERSION } = require('../../package.json') as { version: 
 // Compute absolute path to admin static files (from dist/api/server.js -> ../../public/admin)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const ADMIN_STATIC_ROOT = join(__dirname, '..', '..', 'public', 'admin');
+// In SEA/Desktop mode the bootstrap shim (build-sea.mjs) extracts admin UI
+// assets to a tmp dir and exposes the path via WAIAAS_ADMIN_STATIC_ROOT.
+// Falls back to the monorepo dev path when the env var is absent.
+const ADMIN_STATIC_ROOT = process.env['WAIAAS_ADMIN_STATIC_ROOT']
+  ?? join(__dirname, '..', '..', 'public', 'admin');
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
