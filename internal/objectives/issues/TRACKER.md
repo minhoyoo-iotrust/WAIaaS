@@ -29,6 +29,12 @@
 | 482 | MISSING | MEDIUM | XRPL 토큰 레지스트리 지원 (드롭다운/빌트인/API) | — | FIXED | 2026-04-07 |
 | 483 | BUG | CRITICAL | XRPL Price Oracle가 ETH 가격 반환 — USD 표시/정책 ~1600배 과대 | — | FIXED | 2026-04-07 |
 | 484 | BUG | CRITICAL | XRPL 서명 주소 불일치 — fromEntropy vs sodium-native 키 파생 불일치 | — | FIXED | 2026-04-07 |
+| 485 | BUG | CRITICAL | Desktop 앱 데몬 사이드카 V8 JIT 엔타이틀먼트 누락으로 즉시 크래시 | — | OPEN | — |
+| 486 | BUG | CRITICAL | SEA 번들의 외부 네이티브 모듈 require가 embedderRequire에서 실패 | — | OPEN | — |
+| 487 | BUG | CRITICAL | Desktop 사이드카가 daemon CLI에 잘못된 인자 전달 (start 누락 + --port) | — | OPEN | — |
+| 488 | BUG | CRITICAL | Desktop 사이드카 첫 실행 master password bootstrap 누락 | — | OPEN | — |
+| 489 | BUG | CRITICAL | SEA 데몬이 Admin UI 정적 파일을 찾지 못함 (ADMIN_STATIC_ROOT) | — | OPEN | — |
+| 490 | BUG | CRITICAL | Desktop 사이드카 lockfile이 daemon CLI의 PID 파일과 충돌 | — | OPEN | — |
 
 ## Type Legend
 
@@ -40,9 +46,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 6
 - **PLANNED:** 0
 - **FIXED:** 476
 - **WONTFIX:** 1
-- **Total:** 479
+- **Total:** 485
 - **Archived:** 468 (001–468)
