@@ -481,6 +481,8 @@ jobs:
 
       - name: Restore prerelease mode (stable release only)
         if: ${{ !contains(github.event.release.tag_name, '-rc') }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           git fetch origin main
           git checkout main
@@ -488,12 +490,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add release-please-config.json
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: restore prerelease mode"
-            git push
-          else
+          if git diff --cached --quiet; then
             echo "Prerelease mode already active, no changes needed"
+            exit 0
           fi
+          BRANCH="chore/restore-prerelease-$(date +%s)"
+          git checkout -b "$BRANCH"
+          git commit -m "chore: restore prerelease mode"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "chore: restore prerelease mode" \
+            --body "Automated restore of prerelease mode after ${{ github.event.release.tag_name }} stable release deployment." \
+            --base main \
+            --head "$BRANCH"
 
   # Desktop app build (after deploy completes)
   trigger-desktop:

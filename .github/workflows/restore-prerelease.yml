@@ -23,21 +23,29 @@ jobs:
       - name: Restore prerelease settings
         run: node scripts/promote-release.js --restore
 
-      - name: Commit and push
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add release-please-config.json
-          # Check if there are changes to commit
           if git diff --cached --quiet; then
             echo "No changes needed -- prerelease mode already active"
             exit 0
           fi
+          BRANCH="chore/restore-prerelease-$(date +%s)"
+          git checkout -b "$BRANCH"
           git commit -m "chore: restore prerelease mode"
-          git push
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "chore: restore prerelease mode" \
+            --body "Automated restore of prerelease mode after stable release deployment." \
+            --base main \
+            --head "$BRANCH"
 
       - name: Summary
         run: |
           echo "## Restore Prerelease Mode" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Prerelease settings restored. Next commits will produce RC versions." >> $GITHUB_STEP_SUMMARY
+          echo "A PR has been created to restore prerelease mode. Merge it to return to RC versioning." >> $GITHUB_STEP_SUMMARY

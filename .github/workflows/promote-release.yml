@@ -67,13 +67,24 @@ jobs:
       - name: Update release-please-config.json
         run: node scripts/promote-release.js "${{ steps.rc.outputs.rc_version }}"
 
-      - name: Commit and push
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          RC_VERSION: ${{ steps.rc.outputs.rc_version }}
+          STABLE_VERSION: ${{ steps.rc.outputs.stable_version }}
         run: |
+          BRANCH="promote/${STABLE_VERSION}-$(date +%s)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add release-please-config.json
-          git commit -m "fix: promote ${{ steps.rc.outputs.rc_version }} to stable ${{ steps.rc.outputs.stable_version }}"
-          git push
+          git commit -m "fix: promote ${RC_VERSION} to stable ${STABLE_VERSION}"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "fix: promote ${RC_VERSION} to stable ${STABLE_VERSION}" \
+            --body "Automated promotion of ${RC_VERSION} to stable ${STABLE_VERSION}. Merging this PR will trigger release-please to create a stable Release PR." \
+            --base main \
+            --head "$BRANCH"
 
       - name: Summary
         run: |
@@ -82,7 +93,6 @@ jobs:
           echo "- **RC Version:** ${{ steps.rc.outputs.rc_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Stable Version:** ${{ steps.rc.outputs.stable_version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "release-please will now create a stable Release PR on the next push to main." >> $GITHUB_STEP_SUMMARY
+          echo "A PR has been created to update release-please-config.json. Merge it to proceed with the stable release." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Prerelease mode will be **automatically restored** after the stable release deploys." >> $GITHUB_STEP_SUMMARY
-          echo "If auto-restore fails, run the **Restore Prerelease Mode** workflow manually." >> $GITHUB_STEP_SUMMARY
+          echo "After the stable release deploys, run the **Restore Prerelease Mode** workflow to return to RC mode." >> $GITHUB_STEP_SUMMARY
