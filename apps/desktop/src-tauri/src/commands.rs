@@ -70,6 +70,48 @@ pub async fn send_notification(
     Ok(())
 }
 
+/// Read the bootstrap recovery.key (issue 491).
+///
+/// Returns the contents of `{data_dir}/recovery.key` if present. The desktop
+/// Admin UI uses this to auto-login on boot so the user doesn't have to
+/// remember the random value sidecar.rs generated for them on first launch.
+///
+/// Returns `Ok(None)` if the file doesn't exist, which is the signal for the
+/// UI to fall through to the manual Login page (e.g. after the user has
+/// changed the master password via the Security page, which clears this file).
+#[tauri::command]
+pub async fn get_recovery_key(
+    state: State<'_, SidecarManager>,
+) -> Result<Option<String>, String> {
+    let data_dir = state.get_data_dir().await;
+    let key_path = std::path::Path::new(&data_dir).join("recovery.key");
+    if !key_path.exists() {
+        return Ok(None);
+    }
+    std::fs::read_to_string(&key_path)
+        .map(|s| Some(s.trim().to_string()))
+        .map_err(|e| format!("RecoveryKeyReadFailed: {}", e))
+}
+
+/// Delete the bootstrap recovery.key (issue 491).
+///
+/// Called by the Admin UI after the user successfully changes their master
+/// password via the Security page. Without this, the next app launch would
+/// try to auto-login with the stale bootstrap value and the daemon would
+/// reject it.
+#[tauri::command]
+pub async fn clear_recovery_key(
+    state: State<'_, SidecarManager>,
+) -> Result<(), String> {
+    let data_dir = state.get_data_dir().await;
+    let key_path = std::path::Path::new(&data_dir).join("recovery.key");
+    if !key_path.exists() {
+        return Ok(());
+    }
+    std::fs::remove_file(&key_path)
+        .map_err(|e| format!("RecoveryKeyRemoveFailed: {}", e))
+}
+
 /// Quit the WAIaaS Desktop app: gracefully stop daemon, then exit
 #[tauri::command]
 pub async fn quit_app(

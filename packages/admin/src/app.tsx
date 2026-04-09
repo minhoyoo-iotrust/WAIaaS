@@ -1,11 +1,12 @@
 import { useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import type { ComponentType } from 'preact';
-import { isAuthenticated, daemonShutdown } from './auth/store';
+import { isAuthenticated, daemonShutdown, login } from './auth/store';
 import { Login } from './auth/login';
 import { Layout } from './components/layout';
 import { ToastContainer } from './components/toast';
-import { isDesktop } from './utils/platform';
+import { isDesktop, getDesktopRecoveryKey } from './utils/platform';
+import { API } from './api/endpoints';
 
 /** Desktop wizard active flag -- set true when isDesktop() && isFirstRun() */
 const desktopWizardActive = signal(false);
@@ -63,6 +64,37 @@ export function App() {
     if (!isDesktop()) return;
 
     (async () => {
+      // Issue 491: Desktop bootstrap auto-login.
+      //
+      // sidecar.rs generates a random recovery.key on first launch and the
+      // daemon initializes its master_password_hash from it. The user never
+      // sees this value, so we can't ask them for it via the Login page.
+      // Instead, pull the key via Tauri IPC and hand it to the auth store so
+      // every subsequent API call gets the X-Master-Password header for free.
+      //
+      // If the user later changes their master password via the Security
+      // page, that handler calls clearDesktopRecoveryKey() which deletes the
+      // file; the IPC returns null here and we fall through to the normal
+      // Login page.
+      const recoveryKey = await getDesktopRecoveryKey();
+      if (recoveryKey) {
+        try {
+          const res = await fetch(API.ADMIN_STATUS, {
+            headers: { 'X-Master-Password': recoveryKey },
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            login(recoveryKey, (data as { adminTimeout?: number }).adminTimeout);
+          }
+          // On 401 we silently fall through to the Login page. The most
+          // likely cause is a stale recovery.key after a password change we
+          // failed to mop up; the user can log in with their chosen password.
+        } catch {
+          // Daemon unreachable -- let the Login page handle retries.
+        }
+      }
+
       // Dynamic import to avoid bundling wizard code in browser builds
       const { isFirstRun, wizardComplete } = await import('./desktop/wizard/wizard-store');
 

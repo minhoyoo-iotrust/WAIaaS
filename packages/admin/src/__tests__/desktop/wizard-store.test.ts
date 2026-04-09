@@ -1,5 +1,10 @@
 /**
  * Tests for desktop/wizard/wizard-store.ts -- setup wizard state management.
+ *
+ * Issue 491: the wizard no longer owns authentication. Desktop first-run
+ * auto-logs in via the bootstrap recovery.key (in app.tsx), so the wizard
+ * only covers Chain/Wallet/Owner/Complete. completeWizard() no longer calls
+ * login().
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -7,12 +12,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const mockIsDesktop = vi.fn<() => boolean>();
 vi.mock('../../utils/platform', () => ({
   isDesktop: () => mockIsDesktop(),
-}));
-
-// Mock login from auth store
-const mockLogin = vi.fn();
-vi.mock('../../auth/store', () => ({
-  login: (...args: any[]) => mockLogin(...args),
 }));
 
 import {
@@ -39,7 +38,6 @@ describe('wizard-store', () => {
       skipOwner: false,
     };
     mockIsDesktop.mockReset();
-    mockLogin.mockReset();
     localStorage.clear();
   });
 
@@ -81,16 +79,16 @@ describe('wizard-store', () => {
       expect(wizardStep.value).toBe(2);
     });
 
-    it('should advance step up to 5', () => {
-      wizardStep.value = 4;
+    it('should advance step up to 4', () => {
+      wizardStep.value = 3;
       nextStep();
-      expect(wizardStep.value).toBe(5);
+      expect(wizardStep.value).toBe(4);
     });
 
-    it('should not advance past step 5', () => {
-      wizardStep.value = 5;
+    it('should not advance past step 4', () => {
+      wizardStep.value = 4;
       nextStep();
-      expect(wizardStep.value).toBe(5);
+      expect(wizardStep.value).toBe(4);
     });
   });
 
@@ -109,24 +107,20 @@ describe('wizard-store', () => {
   });
 
   describe('completeWizard', () => {
-    it('should persist setup flag, mark complete, and login', () => {
-      wizardData.value = { ...wizardData.value, password: 'test-pass' };
+    it('should persist setup flag and mark complete', () => {
       completeWizard();
 
       expect(localStorage.getItem('waiaas_setup_complete')).toBe('true');
       expect(wizardComplete.value).toBe(true);
-      expect(mockLogin).toHaveBeenCalledWith('test-pass');
     });
 
     it('should still complete even when localStorage throws', () => {
-      wizardData.value = { ...wizardData.value, password: 'test-pass' };
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('QuotaExceeded');
       });
 
       completeWizard();
       expect(wizardComplete.value).toBe(true);
-      expect(mockLogin).toHaveBeenCalledWith('test-pass');
 
       vi.restoreAllMocks();
     });
@@ -134,10 +128,10 @@ describe('wizard-store', () => {
 
   describe('skipOwnerStep', () => {
     it('should set skipOwner to true and advance step', () => {
-      wizardStep.value = 4;
+      wizardStep.value = 3;
       skipOwnerStep();
       expect(wizardData.value.skipOwner).toBe(true);
-      expect(wizardStep.value).toBe(5);
+      expect(wizardStep.value).toBe(4);
     });
   });
 

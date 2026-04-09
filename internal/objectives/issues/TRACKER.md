@@ -35,6 +35,7 @@
 | 488 | BUG | CRITICAL | Desktop 사이드카 첫 실행 master password bootstrap 누락 | — | OPEN | — |
 | 489 | BUG | CRITICAL | SEA 데몬이 Admin UI 정적 파일을 찾지 못함 (ADMIN_STATIC_ROOT) | — | OPEN | — |
 | 490 | BUG | CRITICAL | Desktop 사이드카 lockfile이 daemon CLI의 PID 파일과 충돌 | — | OPEN | — |
+| 491 | BUG | HIGH | Desktop Setup Wizard가 bootstrap recovery.key와 충돌해 master password 설정 불가 | — | OPEN | — |
 
 ## Type Legend
 
@@ -46,9 +47,9 @@
 
 ## Summary
 
-- **OPEN:** 6
+- **OPEN:** 7
 - **PLANNED:** 0
 - **FIXED:** 476
 - **WONTFIX:** 1
-- **Total:** 485
+- **Total:** 486
 - **Archived:** 468 (001–468)

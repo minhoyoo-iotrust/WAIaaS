@@ -58,6 +58,11 @@ impl SidecarManager {
         *data_dir = dir;
     }
 
+    /// Get the current data directory
+    pub async fn get_data_dir(&self) -> String {
+        self.data_dir.lock().await.clone()
+    }
+
     /// Start the sidecar daemon process
     /// Returns the DaemonStatus with the discovered port
     pub async fn start(&self, app: &tauri::AppHandle) -> Result<DaemonStatus, String> {
@@ -455,6 +460,13 @@ impl SidecarManager {
 /// - Unix: file mode 0600
 /// - Windows: inherited NTFS ACL from the user profile directory (data-dir
 ///   already lives under AppData/Roaming which is per-user by default)
+///
+/// Issue 491: once the user has initialized the daemon (DB exists), we must
+/// NOT regenerate a random key if `recovery.key` is absent -- that indicates
+/// the user changed their master password via the Security page (which
+/// deletes the bootstrap key) and is now managing auth themselves. Creating a
+/// fresh random key here would mint a value that doesn't match the DB's
+/// `master_password_hash` and the daemon would refuse to start.
 fn ensure_recovery_key(data_dir: &str) -> Result<(), String> {
     let dir = Path::new(data_dir);
     if !dir.exists() {
@@ -464,6 +476,24 @@ fn ensure_recovery_key(data_dir: &str) -> Result<(), String> {
     let key_path = dir.join("recovery.key");
     if key_path.exists() {
         return Ok(());
+    }
+
+    // Detect an existing installation: if the SQLite DB or keystore dir is
+    // present, the daemon has already provisioned a master_password_hash. If
+    // we mint a fresh random key here it will not match the stored hash and
+    // the daemon will hang on an interactive password prompt (sidecar has no
+    // TTY). Fail fast with a clear error so the splash screen surfaces a
+    // recoverable message instead of a 10-second timeout.
+    let db_path = dir.join("data").join("waiaas.db");
+    let keystore_dir = dir.join("keystore");
+    if db_path.exists() || keystore_dir.exists() {
+        return Err(format!(
+            "RecoveryKeyMissing: The WAIaaS daemon is already initialized but the bootstrap \
+             recovery key is missing from '{}'. The desktop app cannot authenticate without \
+             it. To recover, either restore the recovery.key file from a backup, manage this \
+             data directory with the `waiaas` CLI, or delete the directory to start over.",
+            dir.display()
+        ));
     }
 
     let mut bytes = [0u8; 32];
