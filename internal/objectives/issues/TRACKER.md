@@ -37,6 +37,7 @@
 | 490 | BUG | CRITICAL | Desktop 사이드카 lockfile이 daemon CLI의 PID 파일과 충돌 | — | FIXED | 2026-04-08 |
 | 491 | BUG | HIGH | Desktop Setup Wizard가 bootstrap recovery.key와 충돌해 master password 설정 불가 | — | FIXED | 2026-04-09 |
 | 492 | BUG | HIGH | Desktop Setup Wizard: 지갑 생성 auth 누락 + 체인 목록 불완전 | — | FIXED | 2026-04-09 |
+| 493 | BUG | CRITICAL | SEA 데몬에서 sodium-native 직접 require가 지갑 생성 시 MODULE_NOT_FOUND | — | FIXED | 2026-04-09 |
 
 ## Type Legend
 
@@ -50,7 +51,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 0
-- **FIXED:** 484
+- **FIXED:** 485
 - **WONTFIX:** 1
-- **Total:** 487
+- **Total:** 488
 - **Archived:** 468 (001–468)
