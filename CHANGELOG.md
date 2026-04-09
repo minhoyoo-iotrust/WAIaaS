@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.14.1-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.2...v2.14.1-rc.3) (2026-04-09)
+
+
+### Bug Fixes
+
+* **desktop:** add sodium-native direct require intercept in SEA shim (issue 493) ([9d29a35](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9d29a3544b8f308be81168e75f2c4a95116f644e))
+* **desktop:** add sodium-native direct require intercept in SEA shim (issue 493) ([a6e3689](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a6e3689ab9000c9852fab50279b4f519ec2c5ded))
+* **desktop:** sodium-native SEA shim intercept (issue 493) ([7f5a03b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7f5a03b9e2eafc5889811ca038ba3710e1430bd0))
+
 ## [2.14.1-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.1...v2.14.1-rc.2) (2026-04-09)
 
 
