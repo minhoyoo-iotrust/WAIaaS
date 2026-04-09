@@ -7,11 +7,14 @@
 
 import { signal } from '@preact/signals';
 import { isDesktop } from '../../utils/platform';
-import { login } from '../../auth/store';
 
 const SETUP_COMPLETE_KEY = 'waiaas_setup_complete';
 
 export interface WizardData {
+  // Kept for backward compatibility with tests and any lingering callers,
+  // but no longer populated or consumed by the wizard flow after issue 491
+  // removed the password step. Auth is handled by the bootstrap recovery.key
+  // auto-login in app.tsx.
   password: string;
   chain: 'solana' | 'ethereum' | 'base' | 'polygon' | 'arbitrum';
   walletName: string;
@@ -47,9 +50,9 @@ export function isFirstRun(): boolean {
   }
 }
 
-/** Advance to the next step (max 5) */
+/** Advance to the next step (max 4) */
 export function nextStep(): void {
-  if (wizardStep.value < 5) {
+  if (wizardStep.value < 4) {
     wizardStep.value = wizardStep.value + 1;
   }
 }
@@ -61,7 +64,12 @@ export function prevStep(): void {
   }
 }
 
-/** Complete the wizard: persist flag, auto-login, mark done */
+/** Complete the wizard: persist flag, mark done.
+ *
+ * Authentication is already established via the bootstrap recovery.key
+ * auto-login in app.tsx (issue 491), so no login() call is needed here.
+ * Just navigate to the dashboard.
+ */
 export function completeWizard(): void {
   try {
     localStorage.setItem(SETUP_COMPLETE_KEY, 'true');
@@ -69,7 +77,11 @@ export function completeWizard(): void {
     // localStorage unavailable -- wizard will re-show on next launch
   }
   wizardComplete.value = true;
-  login(wizardData.value.password);
+  try {
+    location.hash = '#/dashboard';
+  } catch {
+    // non-browser env (tests) -- ignore
+  }
 }
 
 /** Skip the Owner connection step (Step 4) */

@@ -2,6 +2,7 @@ import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { api, ApiError } from '../api/typed-client';
 import { logout } from '../auth/store';
+import { isDesktop } from '../utils/platform';
 import { FormField, Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
 import { TabNav } from '../components/tab-nav';
@@ -24,12 +25,23 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 // Tab definitions
 // ---------------------------------------------------------------------------
 
-const SECURITY_TABS = [
-  { key: 'killswitch', label: 'Kill Switch' },
-  { key: 'autostop', label: 'AutoStop Rules' },
-  { key: 'jwt', label: 'Invalidate Sessions' },
-  { key: 'password', label: 'Master Password' },
-];
+// Issue 491: the Master Password tab is hidden in Desktop mode because we
+// don't have a way to persist the user-chosen password for the sidecar
+// auto-login to pick up on the next launch (no OS Keychain integration yet).
+// Users who need to manage the master password should use the `waiaas`
+// CLI against the same data directory.
+const SECURITY_TABS = isDesktop()
+  ? [
+      { key: 'killswitch', label: 'Kill Switch' },
+      { key: 'autostop', label: 'AutoStop Rules' },
+      { key: 'jwt', label: 'Invalidate Sessions' },
+    ]
+  : [
+      { key: 'killswitch', label: 'Kill Switch' },
+      { key: 'autostop', label: 'AutoStop Rules' },
+      { key: 'jwt', label: 'Invalidate Sessions' },
+      { key: 'password', label: 'Master Password' },
+    ];
 
 // ---------------------------------------------------------------------------
 // Kill Switch Tab

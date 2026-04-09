@@ -1,5 +1,10 @@
 /**
- * Tests for desktop/wizard/steps/* -- all 5 wizard step components.
+ * Tests for desktop/wizard/steps/* wizard step components.
+ *
+ * Issue 491: the PasswordStep was removed. Desktop first-run auto-logs in via
+ * the bootstrap recovery.key, so the wizard only covers Chain/Wallet/Owner/
+ * Complete now. Master password changes happen from the dashboard Security
+ * page.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/preact';
@@ -34,7 +39,6 @@ vi.mock('../../desktop/wizard/wizard-store', async () => {
 // Mock the API endpoints
 vi.mock('../../api/endpoints', () => ({
   API: {
-    ADMIN_MASTER_PASSWORD: '/v1/admin/master-password',
     WALLET_WC_PAIR: (id: string) => `/v1/wallets/${id}/wc/pair`,
     WALLET_WC_PAIR_STATUS: (id: string) => `/v1/wallets/${id}/wc/pair/status`,
   },
@@ -52,133 +56,10 @@ vi.mock('../../desktop/walletconnect/wc-qr-modal', () => ({
 }));
 
 import { wizardData } from '../../desktop/wizard/wizard-store';
-import { PasswordStep } from '../../desktop/wizard/steps/password-step';
 import { ChainStep } from '../../desktop/wizard/steps/chain-step';
 import { WalletStep } from '../../desktop/wizard/steps/wallet-step';
 import { OwnerStep } from '../../desktop/wizard/steps/owner-step';
 import { CompleteStep } from '../../desktop/wizard/steps/complete-step';
-
-describe('PasswordStep', () => {
-  beforeEach(() => {
-    mockFetch.mockReset();
-    mockNextStep.mockReset();
-  });
-
-  it('should render password form', () => {
-    render(<PasswordStep />);
-    expect(screen.getByText('Master Password')).toBeTruthy();
-    expect(screen.getByText('Confirm Password')).toBeTruthy();
-    expect(screen.getByText(/Set Password & Continue/)).toBeTruthy();
-    expect(screen.getByText(/Choose a master password/)).toBeTruthy();
-  });
-
-  it('should show error for short password', async () => {
-    render(<PasswordStep />);
-    const pwInput = screen.getByPlaceholderText('Enter password (min 8 chars)');
-    const confirmInput = screen.getByPlaceholderText('Re-enter password');
-    fireEvent.input(pwInput, { target: { value: 'short' } });
-    fireEvent.input(confirmInput, { target: { value: 'short' } });
-    fireEvent.submit(screen.getByText(/Set Password & Continue/).closest('form')!);
-
-    await waitFor(() => {
-      expect(screen.getByText('Password must be at least 8 characters')).toBeTruthy();
-    });
-  });
-
-  it('should show error for mismatched passwords', async () => {
-    render(<PasswordStep />);
-    const pwInput = screen.getByPlaceholderText('Enter password (min 8 chars)');
-    const confirmInput = screen.getByPlaceholderText('Re-enter password');
-    fireEvent.input(pwInput, { target: { value: 'password123' } });
-    fireEvent.input(confirmInput, { target: { value: 'different123' } });
-    fireEvent.submit(screen.getByText(/Set Password & Continue/).closest('form')!);
-
-    await waitFor(() => {
-      expect(screen.getByText('Passwords do not match')).toBeTruthy();
-    });
-  });
-
-  it('should call API and advance on success', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({}),
-    });
-
-    render(<PasswordStep />);
-    const pwInput = screen.getByPlaceholderText('Enter password (min 8 chars)');
-    const confirmInput = screen.getByPlaceholderText('Re-enter password');
-    fireEvent.input(pwInput, { target: { value: 'validpass123' } });
-    fireEvent.input(confirmInput, { target: { value: 'validpass123' } });
-
-    await act(async () => {
-      fireEvent.submit(screen.getByText(/Set Password & Continue/).closest('form')!);
-    });
-
-    await waitFor(() => {
-      expect(mockNextStep).toHaveBeenCalled();
-    });
-  });
-
-  it('should show error on API failure', async () => {
-    mockFetch.mockResolvedValue({
-      ok: false,
-      json: () => Promise.resolve({ message: 'Password too weak' }),
-    });
-
-    render(<PasswordStep />);
-    const pwInput = screen.getByPlaceholderText('Enter password (min 8 chars)');
-    const confirmInput = screen.getByPlaceholderText('Re-enter password');
-    fireEvent.input(pwInput, { target: { value: 'validpass123' } });
-    fireEvent.input(confirmInput, { target: { value: 'validpass123' } });
-
-    await act(async () => {
-      fireEvent.submit(screen.getByText(/Set Password & Continue/).closest('form')!);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Password too weak')).toBeTruthy();
-    });
-  });
-
-  it('should show default error when API returns non-JSON', async () => {
-    mockFetch.mockResolvedValue({
-      ok: false,
-      json: () => Promise.reject(new Error('not json')),
-    });
-
-    render(<PasswordStep />);
-    const pwInput = screen.getByPlaceholderText('Enter password (min 8 chars)');
-    const confirmInput = screen.getByPlaceholderText('Re-enter password');
-    fireEvent.input(pwInput, { target: { value: 'validpass123' } });
-    fireEvent.input(confirmInput, { target: { value: 'validpass123' } });
-
-    await act(async () => {
-      fireEvent.submit(screen.getByText(/Set Password & Continue/).closest('form')!);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to set password')).toBeTruthy();
-    });
-  });
-
-  it('should show network error', async () => {
-    mockFetch.mockRejectedValue(new Error('Network error'));
-
-    render(<PasswordStep />);
-    const pwInput = screen.getByPlaceholderText('Enter password (min 8 chars)');
-    const confirmInput = screen.getByPlaceholderText('Re-enter password');
-    fireEvent.input(pwInput, { target: { value: 'validpass123' } });
-    fireEvent.input(confirmInput, { target: { value: 'validpass123' } });
-
-    await act(async () => {
-      fireEvent.submit(screen.getByText(/Set Password & Continue/).closest('form')!);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Cannot connect to daemon')).toBeTruthy();
-    });
-  });
-});
 
 describe('ChainStep', () => {
   beforeEach(() => {
