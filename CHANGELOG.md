@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.14.1-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc...v2.14.1-rc.1) (2026-04-09)
+
+
+### Bug Fixes
+
+* **desktop:** auto-login with bootstrap recovery.key (issue 491) ([0e1da94](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0e1da94705bff9cbb2ec57da92c3b90125f34805))
+* **desktop:** auto-login with bootstrap recovery.key (issue 491) ([8dd5bec](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8dd5bec42d15e1c9725c5e79494cc9e1da54f7ea))
+* **desktop:** auto-login with bootstrap recovery.key (issue 491) ([b0cd47f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b0cd47f723a81d411ef44a9520daa5812ca00d1e))
+
 ## [2.14.1-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.0...v2.14.1-rc) (2026-04-08)
 
 
