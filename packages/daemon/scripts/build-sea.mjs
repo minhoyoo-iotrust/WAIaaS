@@ -256,10 +256,22 @@ async function main() {
   var nodeGypBuildStub = function () { return addons['argon2.node']; };
 
   var natives = Object.create(null);
+  // Loader package stubs (intercept the mechanism used by bundled JS wrappers)
   natives['bindings'] = bindingsStub;
   natives['require-addon'] = requireAddonStub;
   natives['node-gyp-build'] = nodeGypBuildStub;
   natives['node-gyp-build-optional-packages'] = nodeGypBuildStub;
+
+  // Direct module name intercepts (issue 493). Several daemon source files
+  // use \`createRequire(import.meta.url)('sodium-native')\` instead of going
+  // through the bundled JS wrapper. These calls resolve via the shim's
+  // diskRequire which can't find the module next to the SEA binary. Map the
+  // module names directly to the dlopened exports so both code paths work.
+  // For sodium-native the raw .node export IS the full module API (the JS
+  // wrapper at index.js just re-exports it). For better-sqlite3 and argon2
+  // the situation is different (JS wrappers add constructors/helpers), but
+  // no direct requires exist today so we only add sodium-native for now.
+  natives['sodium-native'] = addons['sodium-native.node'];
 
   var diskRequire;
   try { diskRequire = Module.createRequire(process.execPath); } catch (_) {}
