@@ -273,6 +273,17 @@ async function main() {
   // no direct requires exist today so we only add sodium-native for now.
   natives['sodium-native'] = addons['sodium-native.node'];
 
+  // Issue 494: patch Module._load globally so ALL require code paths
+  // (including createRequire-generated loaders) hit our native map. The
+  // per-wrapper \`var require = __waiaasSeaRequire\` shadow only covers
+  // the outer CJS wrapper parameter; createRequire() creates an independent
+  // loader that goes through Module._load instead.
+  var origLoad = Module._load;
+  Module._load = function __waiaasModuleLoad(request, parent, isMain) {
+    if (Object.prototype.hasOwnProperty.call(natives, request)) return natives[request];
+    return origLoad.call(this, request, parent, isMain);
+  };
+
   var diskRequire;
   try { diskRequire = Module.createRequire(process.execPath); } catch (_) {}
 
@@ -289,20 +300,30 @@ var require = globalThis.__waiaasSeaRequire || require;
 // === end SEA bootstrap shim ===
 `;
 
-  // esbuild plugin: inline relative `require('*/package.json')` at build time.
-  // Several files use `const require = createRequire(import.meta.url);` + a
-  // dynamic require to read the package version. In SEA that runtime require
-  // fails because process.execPath has no sibling package.json. Rewrite the
-  // source text so the literal version object is inlined.
-  const inlinePackageJsonPlugin = {
-    name: 'inline-package-json',
+  // esbuild plugin: SEA source compatibility transforms (issues 486, 492, 494).
+  //
+  // Several daemon/CLI source files use `createRequire(import.meta.url)` to get
+  // a CJS `require` function in ESM context. This creates a SEPARATE loader
+  // that resolves from disk relative to process.execPath — completely bypassing
+  // both esbuild's bundling and our SEA bootstrap shim. In SEA mode these calls
+  // fail with MODULE_NOT_FOUND because there's no node_modules next to the
+  // binary.
+  //
+  // Fix: strip the createRequire pattern at build time so that:
+  //   `const require = createRequire(import.meta.url)` → removed
+  //     → subsequent `require('sodium-native')` uses the outer CJS require
+  //     → esbuild statically resolves and bundles it (or externalizes it)
+  //   `const esmRequire = createRequire(import.meta.url)` → `const esmRequire = require`
+  //     → aliased to outer CJS require for existing `esmRequire(...)` call sites
+  //   `import { createRequire } from 'node:module'` → removed (unused after above)
+  //
+  // Also inlines relative `require('*/package.json')` as literal JSON objects
+  // since those resolve relative to source location, not the SEA binary.
+  const seaSourcePlugin = {
+    name: 'sea-source-compat',
     setup(build) {
       const pkgCache = new Map();
-      // Match .ts (cli entrypoint source) and .js (daemon compiled dist/).
-      // The @waiaas/daemon package is consumed via its `main: dist/index.js`
-      // so esbuild reads compiled JS where the pattern survives.
       build.onLoad({ filter: /\.(ts|js)$/ }, (args) => {
-        // Skip node_modules to avoid touching third-party code
         if (args.path.includes('/node_modules/')) return null;
         let source;
         try {
@@ -310,12 +331,34 @@ var require = globalThis.__waiaasSeaRequire || require;
         } catch {
           return null;
         }
-        // Match require(...) and any createRequire-alias identifier like
-        // esmRequire(...) that reads a relative package.json.
-        if (!/\b(?:require|esmRequire)\(['"][^'"]*package\.json['"]\)/.test(source)) {
-          return null;
-        }
-        const rewritten = source.replace(
+
+        // Quick bail: file has no createRequire or package.json patterns
+        if (!/createRequire|package\.json/.test(source)) return null;
+
+        let modified = source;
+
+        // 1. Strip `const require = createRequire(import.meta.url);`
+        //    This lets the outer CJS require take over, enabling esbuild to
+        //    statically resolve require('sodium-native'), require('ripple-keypairs') etc.
+        modified = modified.replace(
+          /(?:const|let|var)\s+require\s*=\s*createRequire\([^)]*\);?\s*\n?/g,
+          '/* [SEA] createRequire stripped — using outer CJS require */\n',
+        );
+
+        // 2. Alias `const esmRequire = createRequire(...)` → `const esmRequire = require`
+        modified = modified.replace(
+          /(?:const|let|var)\s+(esmRequire|require_)\s*=\s*createRequire\([^)]*\);?/g,
+          'const $1 = require; /* [SEA] aliased to outer CJS require */',
+        );
+
+        // 3. Strip the now-unused createRequire import
+        modified = modified.replace(
+          /import\s*\{\s*createRequire\s*\}\s*from\s*['"]node:module['"];?\s*\n?/g,
+          '/* [SEA] createRequire import stripped */\n',
+        );
+
+        // 4. Inline relative package.json requires (unchanged from original plugin)
+        modified = modified.replace(
           /\b(?:require|esmRequire)\((['"])([^'"]*package\.json)\1\)/g,
           (match, _quote, relPath) => {
             const absPath = resolve(dirname(args.path), relPath);
@@ -329,14 +372,13 @@ var require = globalThis.__waiaasSeaRequire || require;
               }
               pkgCache.set(absPath, pkg);
             }
-            // Keep only fields actually consumed by callers (version field is
-            // the only one used across all 6 call sites in daemon + cli).
             return JSON.stringify({ version: pkg.version ?? '0.0.0' });
           },
         );
-        if (rewritten === source) return null;
+
+        if (modified === source) return null;
         const loader = args.path.endsWith('.ts') ? 'ts' : 'js';
-        return { contents: rewritten, loader };
+        return { contents: modified, loader };
       });
     },
   };
@@ -346,7 +388,7 @@ var require = globalThis.__waiaasSeaRequire || require;
   try {
     const { build } = await import('esbuild');
     await build({
-      plugins: [inlinePackageJsonPlugin],
+      plugins: [seaSourcePlugin],
       entryPoints: [join(MONOREPO_ROOT, 'packages/cli/src/index.ts')],
       bundle: true,
       format: 'cjs',
