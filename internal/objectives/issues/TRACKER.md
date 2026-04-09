@@ -38,6 +38,7 @@
 | 491 | BUG | HIGH | Desktop Setup Wizard가 bootstrap recovery.key와 충돌해 master password 설정 불가 | — | FIXED | 2026-04-09 |
 | 492 | BUG | HIGH | Desktop Setup Wizard: 지갑 생성 auth 누락 + 체인 목록 불완전 | — | FIXED | 2026-04-09 |
 | 493 | BUG | CRITICAL | SEA 데몬에서 sodium-native 직접 require가 지갑 생성 시 MODULE_NOT_FOUND | — | FIXED | 2026-04-09 |
+| 494 | BUG | CRITICAL | SEA shim의 sodium-native intercept가 createRequire 경유 호출을 잡지 못함 | — | FIXED | 2026-04-10 |
 
 ## Type Legend
 
@@ -51,7 +52,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 0
-- **FIXED:** 485
+- **FIXED:** 486
 - **WONTFIX:** 1
-- **Total:** 488
+- **Total:** 489
 - **Archived:** 468 (001–468)
