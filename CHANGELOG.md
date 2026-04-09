@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.14.1-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.3...v2.14.1-rc.4) (2026-04-09)
+
+
+### Bug Fixes
+
+* **desktop:** SEA createRequire strip + Module._load intercept (issue 494) ([7cf66d0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7cf66d0961bd4b5ecedd0bebd7f12efd1b0743ec))
+* **desktop:** strip createRequire in SEA bundle + Module._load intercept (issue 494) ([4b3f93d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4b3f93d462aeaf278411f403a6adccbb964bd07a))
+* **desktop:** strip createRequire in SEA bundle + Module._load intercept (issue 494) ([f43a3fa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f43a3fa1e6362ab71cc1a028b72ab539650a7f71))
+
 ## [2.14.1-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.2...v2.14.1-rc.3) (2026-04-09)
 
 
