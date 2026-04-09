@@ -115,7 +115,7 @@ const styles = {
  * Dynamically imports wc-connector and wc-qr-modal to maintain tree-shaking.
  */
 async function handleConnect() {
-  if (!wizardData.value.walletId) return;
+  if (wizardData.value.walletIds.length === 0) return;
   error.value = null;
   loading.value = true;
 
@@ -131,7 +131,7 @@ async function handleConnect() {
 
     // Start WC pairing -- result comes via onConnected callback from modal
     connectorMod.connectViaWalletConnect(
-      wizardData.value.walletId!,
+      wizardData.value.walletIds[0]!,
       wizardData.value.password,
     ).catch(() => {
       // Errors are reflected through pairingState in the modal
@@ -162,7 +162,7 @@ async function handleWcClose() {
 }
 
 export function OwnerStep() {
-  const hasWallet = wizardData.value.walletId !== null;
+  const hasWallet = wizardData.value.walletIds.length > 0;
   const ModalComp = WcModalComponent.value;
 
   return (

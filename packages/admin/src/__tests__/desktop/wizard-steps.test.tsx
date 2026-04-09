@@ -23,9 +23,9 @@ vi.mock('../../desktop/wizard/wizard-store', async () => {
   return {
     wizardData: signal({
       password: 'test-password',
-      chain: 'ethereum',
+      chains: ['ethereum', 'solana', 'ripple'],
       walletName: 'My Wallet',
-      walletId: 'wallet-123',
+      walletIds: ['wallet-123'],
       skipOwner: false,
     }),
     wizardStep: signal(1),
@@ -33,6 +33,14 @@ vi.mock('../../desktop/wizard/wizard-store', async () => {
     prevStep: () => mockPrevStep(),
     completeWizard: () => mockCompleteWizard(),
     skipOwnerStep: () => mockSkipOwnerStep(),
+  };
+});
+
+// Mock auth store -- auto-login sets masterPassword via recovery.key
+vi.mock('../../auth/store', async () => {
+  const { signal } = await import('@preact/signals');
+  return {
+    masterPassword: signal('test-recovery-key'),
   };
 });
 
@@ -64,49 +72,50 @@ import { CompleteStep } from '../../desktop/wizard/steps/complete-step';
 describe('ChainStep', () => {
   beforeEach(() => {
     mockNextStep.mockReset();
-    mockPrevStep.mockReset();
   });
 
-  it('should render chain selection grid', () => {
+  it('should render 3 SSoT chain cards', () => {
     render(<ChainStep />);
-    expect(screen.getByText('Ethereum')).toBeTruthy();
+    expect(screen.getByText('EVM')).toBeTruthy();
     expect(screen.getByText('Solana')).toBeTruthy();
-    expect(screen.getByText('Base')).toBeTruthy();
-    expect(screen.getByText('Polygon')).toBeTruthy();
-    expect(screen.getByText('Arbitrum')).toBeTruthy();
-    expect(screen.getByText(/Select the blockchain network/)).toBeTruthy();
+    expect(screen.getByText('XRP Ledger')).toBeTruthy();
+    expect(screen.getByText(/Select the blockchain networks/)).toBeTruthy();
   });
 
-  it('should have Back and Continue buttons', () => {
+  it('should have Continue button with selection count', () => {
     render(<ChainStep />);
-    expect(screen.getByText('Back')).toBeTruthy();
-    expect(screen.getByText('Continue')).toBeTruthy();
-  });
-
-  it('should call prevStep when Back is clicked', () => {
-    render(<ChainStep />);
-    fireEvent.click(screen.getByText('Back'));
-    expect(mockPrevStep).toHaveBeenCalled();
+    // Default: all 3 selected
+    expect(screen.getByText(/Continue \(3 selected\)/)).toBeTruthy();
   });
 
   it('should call nextStep when Continue is clicked', () => {
     render(<ChainStep />);
-    fireEvent.click(screen.getByText('Continue'));
+    fireEvent.click(screen.getByText(/Continue/));
     expect(mockNextStep).toHaveBeenCalled();
   });
 
   it('should render chain descriptions', () => {
     render(<ChainStep />);
-    expect(screen.getByText('EVM mainnet')).toBeTruthy();
+    expect(screen.getByText(/Ethereum, Base, Polygon/)).toBeTruthy();
     expect(screen.getByText('High throughput')).toBeTruthy();
-    expect(screen.getByText('Coinbase L2')).toBeTruthy();
+    expect(screen.getByText('Cross-border payments')).toBeTruthy();
   });
 
-  it('should allow selecting a chain by clicking', () => {
+  it('should toggle chain selection by clicking', () => {
     render(<ChainStep />);
+    // Deselect Solana (3 → 2)
     fireEvent.click(screen.getByText('Solana'));
-    fireEvent.click(screen.getByText('Continue'));
-    expect(mockNextStep).toHaveBeenCalled();
+    expect(screen.getByText(/Continue \(2 selected\)/)).toBeTruthy();
+  });
+
+  it('should disable Continue when no chains selected', () => {
+    render(<ChainStep />);
+    // Deselect all
+    fireEvent.click(screen.getByText('EVM'));
+    fireEvent.click(screen.getByText('Solana'));
+    fireEvent.click(screen.getByText('XRP Ledger'));
+    const btn = screen.getByText(/Continue \(0 selected\)/);
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 });
 
@@ -120,10 +129,9 @@ describe('WalletStep', () => {
   it('should render wallet creation form', () => {
     render(<WalletStep />);
     expect(screen.getByText('Wallet Name')).toBeTruthy();
-    expect(screen.getByText('Create Wallet')).toBeTruthy();
-    expect(screen.getByText(/Create your first wallet/)).toBeTruthy();
-    // The chain badge text contains "Chain:" and the chain name as separate text nodes
-    expect(screen.getByText(/Chain:/)).toBeTruthy();
+    expect(screen.getByText('Create Wallets')).toBeTruthy();
+    expect(screen.getByText(/Create wallets on 3 chains/)).toBeTruthy();
+    expect(screen.getByText(/Chains:/)).toBeTruthy();
   });
 
   it('should call prevStep when Back is clicked', () => {
@@ -138,7 +146,7 @@ describe('WalletStep', () => {
     fireEvent.input(input, { target: { value: '   ' } });
 
     await act(async () => {
-      fireEvent.submit(screen.getByText('Create Wallet').closest('form')!);
+      fireEvent.submit(screen.getByText('Create Wallets').closest('form')!);
     });
 
     await waitFor(() => {
@@ -158,7 +166,7 @@ describe('WalletStep', () => {
     fireEvent.input(input, { target: { value: 'Test Wallet' } });
 
     await act(async () => {
-      fireEvent.submit(screen.getByText('Create Wallet').closest('form')!);
+      fireEvent.submit(screen.getByText('Create Wallets').closest('form')!);
     });
 
     await waitFor(() => {
@@ -181,7 +189,7 @@ describe('WalletStep', () => {
     fireEvent.input(input, { target: { value: 'Test Wallet' } });
 
     await act(async () => {
-      fireEvent.submit(screen.getByText('Create Wallet').closest('form')!);
+      fireEvent.submit(screen.getByText('Create Wallets').closest('form')!);
     });
 
     await waitFor(() => {
@@ -200,11 +208,11 @@ describe('WalletStep', () => {
     fireEvent.input(input, { target: { value: 'Test Wallet' } });
 
     await act(async () => {
-      fireEvent.submit(screen.getByText('Create Wallet').closest('form')!);
+      fireEvent.submit(screen.getByText('Create Wallets').closest('form')!);
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to create wallet')).toBeTruthy();
+      expect(screen.getByText(/Failed to create.*wallet/)).toBeTruthy();
     });
   });
 
@@ -216,7 +224,7 @@ describe('WalletStep', () => {
     fireEvent.input(input, { target: { value: 'Test Wallet' } });
 
     await act(async () => {
-      fireEvent.submit(screen.getByText('Create Wallet').closest('form')!);
+      fireEvent.submit(screen.getByText('Create Wallets').closest('form')!);
     });
 
     await waitFor(() => {
@@ -230,7 +238,7 @@ describe('OwnerStep', () => {
     mockNextStep.mockReset();
     mockPrevStep.mockReset();
     mockSkipOwnerStep.mockReset();
-    wizardData.value = { ...wizardData.value, walletId: 'wallet-123' };
+    wizardData.value = { ...wizardData.value, walletIds: ['wallet-123'] };
   });
 
   it('should render owner connection form', () => {
@@ -242,7 +250,7 @@ describe('OwnerStep', () => {
   });
 
   it('should show warning when no wallet is created', () => {
-    wizardData.value = { ...wizardData.value, walletId: null };
+    wizardData.value = { ...wizardData.value, walletIds: [] };
     render(<OwnerStep />);
     expect(screen.getByText(/Wallet not created/)).toBeTruthy();
     const connectBtn = screen.getByText('Connect via WalletConnect');
@@ -267,9 +275,9 @@ describe('CompleteStep', () => {
     mockCompleteWizard.mockReset();
     wizardData.value = {
       password: 'test-pass',
-      chain: 'ethereum',
+      chains: ['ethereum', 'solana', 'ripple'],
       walletName: 'My Wallet',
-      walletId: 'wallet-123',
+      walletIds: ['wallet-123'],
       skipOwner: false,
     };
   });
@@ -278,9 +286,7 @@ describe('CompleteStep', () => {
     render(<CompleteStep />);
     expect(screen.getByText('Setup Complete!')).toBeTruthy();
     expect(screen.getByText(/Your WAIaaS desktop app is ready/)).toBeTruthy();
-    expect(screen.getByText('ethereum')).toBeTruthy();
     expect(screen.getByText('My Wallet')).toBeTruthy();
-    expect(screen.getByText('Connected')).toBeTruthy();
     expect(screen.getByText('Go to Dashboard')).toBeTruthy();
   });
 
@@ -294,11 +300,5 @@ describe('CompleteStep', () => {
     render(<CompleteStep />);
     fireEvent.click(screen.getByText('Go to Dashboard'));
     expect(mockCompleteWizard).toHaveBeenCalled();
-  });
-
-  it('should show correct chain name', () => {
-    wizardData.value = { ...wizardData.value, chain: 'solana' };
-    render(<CompleteStep />);
-    expect(screen.getByText('solana')).toBeTruthy();
   });
 });

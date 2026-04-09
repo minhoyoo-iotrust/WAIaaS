@@ -32,9 +32,9 @@ describe('wizard-store', () => {
     wizardComplete.value = false;
     wizardData.value = {
       password: '',
-      chain: 'ethereum',
+      chains: ['ethereum', 'solana', 'ripple'],
       walletName: 'My Wallet',
-      walletId: null,
+      walletIds: [],
       skipOwner: false,
     };
     mockIsDesktop.mockReset();
@@ -138,9 +138,9 @@ describe('wizard-store', () => {
   describe('wizardData defaults', () => {
     it('should have correct initial values', () => {
       expect(wizardData.value.password).toBe('');
-      expect(wizardData.value.chain).toBe('ethereum');
+      expect(wizardData.value.chains).toEqual(['ethereum', 'solana', 'ripple']);
       expect(wizardData.value.walletName).toBe('My Wallet');
-      expect(wizardData.value.walletId).toBeNull();
+      expect(wizardData.value.walletIds).toEqual([]);
       expect(wizardData.value.skipOwner).toBe(false);
     });
   });
