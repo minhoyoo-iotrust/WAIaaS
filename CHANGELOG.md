@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.14.1-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.1...v2.14.1-rc.2) (2026-04-09)
+
+
+### Bug Fixes
+
+* **desktop:** wizard wallet auth + SSoT chain multi-select (issue 492) ([aad812e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/aad812ef0922a4bae05f3f32f31b1f33b7e31504))
+* **desktop:** wizard wallet auth + SSoT chain multi-select (issue 492) ([eab69ef](https://github.com/minhoyoo-iotrust/WAIaaS/commit/eab69efcce442e3bd9b2f11b24a5b7fa197fc750))
+
 ## [2.14.1-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc...v2.14.1-rc.1) (2026-04-09)
 
 
