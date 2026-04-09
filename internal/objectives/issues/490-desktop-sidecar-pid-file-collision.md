@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** CRITICAL
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-04-08
 - **발견 경위:** 이슈 485-489 수정 후 Tauri desktop 앱에서 사이드카를 띄우면 sub-second 안에 `Daemon already running (PID: <tauri-desktop-pid>)` 로 데몬이 거부됨. 실제로는 아무 데몬도 뜨지 않은 상태
 

@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** CRITICAL
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-04-08
 - **발견 경위:** 이슈 485 (JIT 엔타이틀먼트) 수정 검증 중, 프로덕션 `waiaas-daemon` 바이너리에 JIT 엔타이틀먼트만 붙여 재서명하여 실행했을 때 V8 초기화는 통과하지만 곧바로 `ERR_UNKNOWN_BUILTIN_MODULE: better-sqlite3`로 즉사
 

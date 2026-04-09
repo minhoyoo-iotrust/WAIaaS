@@ -70,8 +70,8 @@ export function CompleteStep() {
 
       <div style={styles.summary}>
         <div style={styles.summaryRow}>
-          <span style={styles.summaryLabel}>Chain</span>
-          <span style={styles.summaryValue}>{data.chain}</span>
+          <span style={styles.summaryLabel}>Chains</span>
+          <span style={styles.summaryValue}>{data.chains.join(', ')}</span>
         </div>
         <div style={styles.summaryRow}>
           <span style={styles.summaryLabel}>Wallet</span>

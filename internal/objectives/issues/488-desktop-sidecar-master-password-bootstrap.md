@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** CRITICAL
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-04-08
 - **발견 경위:** 이슈 487 수정 후 `waiaas-daemon start --data-dir=<X>`가 정상 파싱되면 CLI의 `resolvePassword()`가 TTY 대화형 입력을 요청 → 사이드카는 TTY가 없어 무한 대기 또는 에러
 

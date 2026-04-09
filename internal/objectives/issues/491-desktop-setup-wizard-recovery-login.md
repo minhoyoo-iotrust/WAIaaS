@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** HIGH
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-04-09
 - **발견 경위:** v2.14.1-rc DMG 설치·실행 검증 중. 스플래시 → Setup Wizard Step 1/5 (Set Password) 진입 → 사용자가 임의의 비밀번호 입력·확인 → **"Invalid master password"** 에러로 진행 불가
 

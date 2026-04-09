@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** CRITICAL
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-04-08
 - **발견 경위:** 정식 배포된 Desktop 앱 v2.14.0 (DMG 설치본) 첫 실행 시 `PortDiscoveryFailed: no port from stdout or file` 에러 화면이 뜨고 아무 기능도 사용 불가
 

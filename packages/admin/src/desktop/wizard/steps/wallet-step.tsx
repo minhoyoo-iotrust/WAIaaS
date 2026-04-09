@@ -4,10 +4,12 @@
 
 import { signal } from '@preact/signals';
 import { wizardData, nextStep, prevStep } from '../wizard-store';
+import { masterPassword } from '../../../auth/store';
 
 const walletName = signal(wizardData.value.walletName);
 const error = signal<string | null>(null);
 const loading = signal(false);
+const progress = signal('');
 
 const styles = {
   form: {
@@ -80,6 +82,12 @@ const styles = {
   },
 } as const;
 
+const CHAIN_LABELS: Record<string, string> = {
+  ethereum: 'EVM',
+  solana: 'Solana',
+  ripple: 'XRP Ledger',
+};
+
 async function handleCreate(e: Event) {
   e.preventDefault();
   error.value = null;
@@ -90,49 +98,77 @@ async function handleCreate(e: Event) {
     return;
   }
 
-  loading.value = true;
-  try {
-    const res = await fetch('/v1/wallets', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Password': wizardData.value.password,
-      },
-      body: JSON.stringify({
-        name,
-        chain: wizardData.value.chain,
-      }),
-    });
+  const chains = wizardData.value.chains;
+  if (chains.length === 0) {
+    error.value = 'No chains selected';
+    return;
+  }
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      error.value = (body as { message?: string }).message || 'Failed to create wallet';
-      return;
+  const authHeader = masterPassword.value ?? '';
+  if (!authHeader) {
+    error.value = 'Not authenticated — please restart the app';
+    return;
+  }
+
+  loading.value = true;
+  const createdIds: string[] = [];
+  try {
+    for (const chain of chains) {
+      const label = CHAIN_LABELS[chain] ?? chain;
+      progress.value = chains.length > 1
+        ? `Creating ${label} wallet (${createdIds.length + 1}/${chains.length})...`
+        : 'Creating wallet...';
+
+      const res = await fetch('/v1/wallets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Password': authHeader,
+        },
+        body: JSON.stringify({
+          name: chains.length > 1 ? `${name} (${label})` : name,
+          chain,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        error.value = (body as { message?: string }).message || `Failed to create ${label} wallet`;
+        return;
+      }
+
+      const data = await res.json() as { id: string };
+      createdIds.push(data.id);
     }
 
-    const data = await res.json() as { id: string };
     wizardData.value = {
       ...wizardData.value,
       walletName: name,
-      walletId: data.id,
+      walletIds: createdIds,
     };
     nextStep();
   } catch {
     error.value = 'Cannot connect to daemon';
   } finally {
     loading.value = false;
+    progress.value = '';
   }
 }
 
 export function WalletStep() {
+  const chains = wizardData.value.chains;
+  const chainLabels = chains.map(c => CHAIN_LABELS[c] ?? c).join(', ');
+
   return (
     <form style={styles.form} onSubmit={handleCreate}>
       <p style={styles.description}>
-        Create your first wallet. A new key pair will be generated on the selected chain.
+        {chains.length > 1
+          ? `Create wallets on ${chains.length} chains. A new key pair will be generated for each.`
+          : 'Create your first wallet. A new key pair will be generated on the selected chain.'}
       </p>
 
       <div style={styles.chainBadge}>
-        Chain: {wizardData.value.chain}
+        {chains.length > 1 ? `Chains: ${chainLabels}` : `Chain: ${chainLabels}`}
       </div>
 
       <div>
@@ -157,7 +193,7 @@ export function WalletStep() {
             ...(loading.value ? styles.buttonDisabled : {}),
           }}
         >
-          {loading.value ? 'Creating...' : 'Create Wallet'}
+          {loading.value ? (progress.value || 'Creating...') : (chains.length > 1 ? 'Create Wallets' : 'Create Wallet')}
         </button>
       </div>
 

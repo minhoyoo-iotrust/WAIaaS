@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** CRITICAL
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-04-08
 - **발견 경위:** 이슈 485-488 수정 후 SEA 데몬이 모든 startup 단계를 통과하고 HTTP 서버가 기동되었으나, 다음 경고 발생: `serveStatic: root path '/Users/.../packages/public/admin' is not found`
 

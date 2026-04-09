@@ -10,19 +10,20 @@ import { isDesktop } from '../../utils/platform';
 
 const SETUP_COMPLETE_KEY = 'waiaas_setup_complete';
 
+/** SSoT chain identifiers matching CHAIN_TYPES from packages/shared/src/networks.ts */
+export type ChainId = 'solana' | 'ethereum' | 'ripple';
+
 export interface WizardData {
-  // Kept for backward compatibility with tests and any lingering callers,
-  // but no longer populated or consumed by the wizard flow after issue 491
-  // removed the password step. Auth is handled by the bootstrap recovery.key
-  // auto-login in app.tsx.
   password: string;
-  chain: 'solana' | 'ethereum' | 'base' | 'polygon' | 'arbitrum';
+  /** Selected chains for initial wallet creation (multi-select, issue 492) */
+  chains: ChainId[];
   walletName: string;
-  walletId: string | null;
+  /** Created wallet IDs (one per selected chain, issue 492) */
+  walletIds: string[];
   skipOwner: boolean;
 }
 
-/** Current wizard step (1-5) */
+/** Current wizard step (1-4) */
 export const wizardStep = signal<number>(1);
 
 /** Whether the wizard has been completed */
@@ -31,9 +32,9 @@ export const wizardComplete = signal<boolean>(false);
 /** Accumulated wizard user choices */
 export const wizardData = signal<WizardData>({
   password: '',
-  chain: 'ethereum',
+  chains: ['ethereum', 'solana', 'ripple'],
   walletName: 'My Wallet',
-  walletId: null,
+  walletIds: [],
   skipOwner: false,
 });
 
