@@ -6,21 +6,24 @@
  */
 
 import { wizardStep } from './wizard-store';
-import { PasswordStep } from './steps/password-step';
 import { ChainStep } from './steps/chain-step';
 import { WalletStep } from './steps/wallet-step';
 import { OwnerStep } from './steps/owner-step';
 import { CompleteStep } from './steps/complete-step';
 
+// Issue 491: the "Set Password" step was removed. On first launch, sidecar.rs
+// generates a bootstrap recovery.key and the daemon initializes its hash from
+// it, so the user is already authenticated by the time the wizard loads (see
+// auto-login in app.tsx). Users who want a custom master password change it
+// from the dashboard Security page instead.
 const STEP_NAMES = [
-  'Set Password',
   'Select Chain',
   'Create Wallet',
   'Connect Owner',
   'Complete',
 ] as const;
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 const styles = {
   wrapper: {
@@ -62,12 +65,11 @@ const styles = {
 
 function StepContent({ step }: { step: number }) {
   switch (step) {
-    case 1: return <PasswordStep />;
-    case 2: return <ChainStep />;
-    case 3: return <WalletStep />;
-    case 4: return <OwnerStep />;
-    case 5: return <CompleteStep />;
-    default: return <PasswordStep />;
+    case 1: return <ChainStep />;
+    case 2: return <WalletStep />;
+    case 3: return <OwnerStep />;
+    case 4: return <CompleteStep />;
+    default: return <ChainStep />;
   }
 }
 

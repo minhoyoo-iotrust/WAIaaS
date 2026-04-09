@@ -11,8 +11,8 @@ use serde_json::json;
 use tauri::{Emitter, Manager};
 
 use crate::commands::{
-    get_daemon_logs, get_daemon_status, quit_app, restart_daemon, send_notification, start_daemon,
-    stop_daemon,
+    clear_recovery_key, get_daemon_logs, get_daemon_status, get_recovery_key, quit_app,
+    restart_daemon, send_notification, start_daemon, stop_daemon,
 };
 use crate::sidecar::SidecarManager;
 
@@ -36,6 +36,8 @@ fn main() {
             get_daemon_logs,
             send_notification,
             quit_app,
+            get_recovery_key,
+            clear_recovery_key,
         ])
         .setup(|app| {
             // Initialize system tray with 3-color status icon and context menu
