@@ -35,19 +35,14 @@ recovery.key auto-login으로 인증이 이미 완료된 상태에서 wizard가 
 
 `wizard-store.ts`의 `isFirstRun()` 과 `SETUP_COMPLETE_KEY` localStorage flag는 유지 (향후 재사용 가능성), 하지만 wizard UI 자체는 로드하지 않음.
 
-### B. 환경 기본값 mainnet
+### B. 환경 기본값 mainnet (타겟 접근)
 
-`packages/core/src/schemas/wallet.schema.ts:35`:
-```diff
-- environment: EnvironmentTypeEnum.default('testnet'),
-+ environment: EnvironmentTypeEnum.default('mainnet'),
-```
+**API 스키마 default는 testnet 유지** (기존 daemon 테스트 다수가 testnet default에 의존, blast radius 과대).
 
-이렇게 하면:
-- `POST /v1/wallets` 호출 시 `environment` 생략 → mainnet
-- CLI `quickset` — 이미 `mainnet` 명시하므로 영향 없음
-- SDK/MCP — 환경 미지정 시 mainnet (비개발자 기본 경험 개선)
-- 개발자가 testnet 원할 때는 `environment: 'testnet'` 명시
+대신 **Desktop 경로에서만 mainnet이 기본**:
+- CLI `waiaas quickset`은 이미 `mode ?? 'mainnet'` 사용 → 영향 없음
+- wizard 제거로 testnet 지갑이 자동 생성될 경로 자체가 사라짐
+- Admin UI 대시보드의 Create Wallet 폼은 후속 개선으로 Desktop에서 mainnet 선택을 기본화 (이번 스코프 외)
 
 ## 테스트 항목
 

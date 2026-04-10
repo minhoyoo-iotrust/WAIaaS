@@ -32,7 +32,7 @@ export type Wallet = z.infer<typeof WalletSchema>;
 const CreateWalletRequestBaseSchema = z.object({
   name: z.string().min(1).max(100),
   chain: ChainTypeEnum.default('solana'),
-  environment: EnvironmentTypeEnum.default('mainnet'),
+  environment: EnvironmentTypeEnum.default('testnet'),
   createSession: z.boolean().default(true),
   accountType: AccountTypeEnum.default('eoa'),
   aaProvider: AaProviderNameEnum.optional(),
