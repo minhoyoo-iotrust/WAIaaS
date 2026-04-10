@@ -1,6 +1,6 @@
 {
   "name": "@waiaas/actions",
-  "version": "2.14.1-rc.4",
+  "version": "2.14.1-rc.5",
   "description": "WAIaaS built-in DeFi Action Provider implementations",
   "license": "MIT",
   "type": "module",

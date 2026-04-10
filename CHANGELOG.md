@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.14.1-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.4...v2.14.1-rc.5) (2026-04-10)
+
+
+### Bug Fixes
+
+* **desktop:** remove Owner step from Setup Wizard (issue 495) ([cdbbcb9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cdbbcb9689aa9b426391f0bde8032822ce1058e1))
+* **desktop:** remove Owner step from Setup Wizard (issue 495) ([1d6ef56](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1d6ef56eb429acbacf1572995359df933eda7e8c))
+* **desktop:** remove Owner step from wizard (issue 495) ([1ab299f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1ab299fae38f8a74f59bc0da2002206c691485d0))
+
 ## [2.14.1-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.3...v2.14.1-rc.4) (2026-04-09)
 
 
