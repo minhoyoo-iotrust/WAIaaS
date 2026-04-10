@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.14.1-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.5...v2.14.1-rc.6) (2026-04-10)
+
+
+### Bug Fixes
+
+* **desktop:** skip wizard + default environment mainnet (issue 496) ([23b2f17](https://github.com/minhoyoo-iotrust/WAIaaS/commit/23b2f176e8f7d1d0ffd097009771c08962d29ce5))
+* **desktop:** skip wizard entirely + default environment mainnet (issue 496) ([d7afc89](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d7afc89ccd6d50c74b48dc5e7360089192df34a5))
+* **desktop:** skip wizard entirely on Desktop (issue 496) ([3cdcba7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3cdcba7903f7e4f3604ce76e47e7afa495e5e554))
+* **desktop:** skip wizard entirely on Desktop (issue 496) ([1629951](https://github.com/minhoyoo-iotrust/WAIaaS/commit/16299518c826cdbdf2f842debe5cfb13b72121d9))
+
 ## [2.14.1-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.4...v2.14.1-rc.5) (2026-04-10)
 
 
