@@ -2,9 +2,8 @@
  * Tests for desktop/wizard/steps/* wizard step components.
  *
  * Issue 491: the PasswordStep was removed. Desktop first-run auto-logs in via
- * the bootstrap recovery.key, so the wizard only covers Chain/Wallet/Owner/
- * Complete now. Master password changes happen from the dashboard Security
- * page.
+ * the bootstrap recovery.key, so the wizard only covers Chain/Wallet/Complete
+ * now. Master password changes happen from the dashboard Security page.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/preact';
@@ -16,7 +15,6 @@ const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
 const mockNextStep = vi.fn();
 const mockPrevStep = vi.fn();
 const mockCompleteWizard = vi.fn();
-const mockSkipOwnerStep = vi.fn();
 
 vi.mock('../../desktop/wizard/wizard-store', async () => {
   const { signal } = await import('@preact/signals');
@@ -26,13 +24,11 @@ vi.mock('../../desktop/wizard/wizard-store', async () => {
       chains: ['ethereum', 'solana', 'ripple'],
       walletName: 'My Wallet',
       walletIds: ['wallet-123'],
-      skipOwner: false,
     }),
     wizardStep: signal(1),
     nextStep: () => mockNextStep(),
     prevStep: () => mockPrevStep(),
     completeWizard: () => mockCompleteWizard(),
-    skipOwnerStep: () => mockSkipOwnerStep(),
   };
 });
 
@@ -52,21 +48,9 @@ vi.mock('../../api/endpoints', () => ({
   },
 }));
 
-// Mock wc-connector and wc-qr-modal for OwnerStep dynamic imports
-vi.mock('../../desktop/walletconnect/wc-connector', () => ({
-  connectViaWalletConnect: vi.fn().mockResolvedValue({ success: true }),
-  cancelPairing: vi.fn(),
-}));
-
-vi.mock('../../desktop/walletconnect/wc-qr-modal', () => ({
-  WcQrModal: ({ open, onClose, onConnected }: any) =>
-    open ? <div data-testid="wc-modal">WcModal</div> : null,
-}));
-
 import { wizardData } from '../../desktop/wizard/wizard-store';
 import { ChainStep } from '../../desktop/wizard/steps/chain-step';
 import { WalletStep } from '../../desktop/wizard/steps/wallet-step';
-import { OwnerStep } from '../../desktop/wizard/steps/owner-step';
 import { CompleteStep } from '../../desktop/wizard/steps/complete-step';
 
 describe('ChainStep', () => {
@@ -233,43 +217,6 @@ describe('WalletStep', () => {
   });
 });
 
-describe('OwnerStep', () => {
-  beforeEach(() => {
-    mockNextStep.mockReset();
-    mockPrevStep.mockReset();
-    mockSkipOwnerStep.mockReset();
-    wizardData.value = { ...wizardData.value, walletIds: ['wallet-123'] };
-  });
-
-  it('should render owner connection form', () => {
-    render(<OwnerStep />);
-    expect(screen.getByText(/Connect an external wallet/)).toBeTruthy();
-    expect(screen.getByText('Connect via WalletConnect')).toBeTruthy();
-    expect(screen.getByText('Skip for now')).toBeTruthy();
-    expect(screen.getByText('Back')).toBeTruthy();
-  });
-
-  it('should show warning when no wallet is created', () => {
-    wizardData.value = { ...wizardData.value, walletIds: [] };
-    render(<OwnerStep />);
-    expect(screen.getByText(/Wallet not created/)).toBeTruthy();
-    const connectBtn = screen.getByText('Connect via WalletConnect');
-    expect((connectBtn as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('should call skipOwnerStep when Skip is clicked', () => {
-    render(<OwnerStep />);
-    fireEvent.click(screen.getByText('Skip for now'));
-    expect(mockSkipOwnerStep).toHaveBeenCalled();
-  });
-
-  it('should call prevStep when Back is clicked', () => {
-    render(<OwnerStep />);
-    fireEvent.click(screen.getByText('Back'));
-    expect(mockPrevStep).toHaveBeenCalled();
-  });
-});
-
 describe('CompleteStep', () => {
   beforeEach(() => {
     mockCompleteWizard.mockReset();
@@ -278,7 +225,6 @@ describe('CompleteStep', () => {
       chains: ['ethereum', 'solana', 'ripple'],
       walletName: 'My Wallet',
       walletIds: ['wallet-123'],
-      skipOwner: false,
     };
   });
 
@@ -288,12 +234,6 @@ describe('CompleteStep', () => {
     expect(screen.getByText(/Your WAIaaS desktop app is ready/)).toBeTruthy();
     expect(screen.getByText('My Wallet')).toBeTruthy();
     expect(screen.getByText('Go to Dashboard')).toBeTruthy();
-  });
-
-  it('should show "Skipped" when owner was skipped', () => {
-    wizardData.value = { ...wizardData.value, skipOwner: true };
-    render(<CompleteStep />);
-    expect(screen.getByText('Skipped (can set later)')).toBeTruthy();
   });
 
   it('should call completeWizard when Go to Dashboard is clicked', () => {

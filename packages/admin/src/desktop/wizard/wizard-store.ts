@@ -20,7 +20,6 @@ export interface WizardData {
   walletName: string;
   /** Created wallet IDs (one per selected chain, issue 492) */
   walletIds: string[];
-  skipOwner: boolean;
 }
 
 /** Current wizard step (1-4) */
@@ -35,7 +34,6 @@ export const wizardData = signal<WizardData>({
   chains: ['ethereum', 'solana', 'ripple'],
   walletName: 'My Wallet',
   walletIds: [],
-  skipOwner: false,
 });
 
 /**
@@ -51,9 +49,9 @@ export function isFirstRun(): boolean {
   }
 }
 
-/** Advance to the next step (max 4) */
+/** Advance to the next step (max 3) */
 export function nextStep(): void {
-  if (wizardStep.value < 4) {
+  if (wizardStep.value < 3) {
     wizardStep.value = wizardStep.value + 1;
   }
 }
@@ -85,8 +83,3 @@ export function completeWizard(): void {
   }
 }
 
-/** Skip the Owner connection step (Step 4) */
-export function skipOwnerStep(): void {
-  wizardData.value = { ...wizardData.value, skipOwner: true };
-  nextStep();
-}
