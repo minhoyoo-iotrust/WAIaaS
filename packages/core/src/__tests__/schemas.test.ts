@@ -19,18 +19,18 @@ import {
 
 describe('Zod SSoT Schemas', () => {
   describe('CreateWalletRequestSchema', () => {
-    it('parses with minimal fields (environment defaults to testnet)', () => {
+    it('parses with minimal fields (environment defaults to mainnet)', () => {
       const result = CreateWalletRequestSchema.parse({ name: 'test-agent' });
       expect(result.name).toBe('test-agent');
       expect(result.chain).toBe('solana');
-      expect(result.environment).toBe('testnet');
+      expect(result.environment).toBe('mainnet');
     });
 
     it('parses with explicit environment', () => {
-      const result = CreateWalletRequestSchema.parse({ name: 'test-agent', environment: 'mainnet' });
+      const result = CreateWalletRequestSchema.parse({ name: 'test-agent', environment: 'testnet' });
       expect(result.name).toBe('test-agent');
       expect(result.chain).toBe('solana');
-      expect(result.environment).toBe('mainnet');
+      expect(result.environment).toBe('testnet');
     });
 
     it('parses with chain=ethereum and mainnet environment', () => {
