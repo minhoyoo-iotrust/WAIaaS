@@ -95,22 +95,11 @@ export function App() {
         }
       }
 
-      // Dynamic import to avoid bundling wizard code in browser builds
-      const { isFirstRun, wizardComplete } = await import('./desktop/wizard/wizard-store');
+      // Issue 496: Setup Wizard removed entirely. Desktop users land on the
+      // dashboard immediately after auto-login. Wallet creation is handled
+      // by `waiaas quickset` or from the dashboard Wallets page.
 
-      if (isFirstRun()) {
-        const { SetupWizard } = await import('./desktop/wizard/setup-wizard');
-        WizardComponent.value = SetupWizard;
-        desktopWizardActive.value = true;
-
-        // Subscribe to wizardComplete changes
-        const dispose = wizardComplete.subscribe((complete) => {
-          wizardCompleteValue.value = complete;
-          if (complete) dispose();
-        });
-      }
-
-      // Load UpdateBanner for auto-update notifications (independent of wizard)
+      // Load UpdateBanner for auto-update notifications
       const { UpdateBanner } = await import('./desktop/UpdateBanner');
       UpdateBannerComponent.value = UpdateBanner;
     })();
