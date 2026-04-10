@@ -77,12 +77,6 @@ export function CompleteStep() {
           <span style={styles.summaryLabel}>Wallet</span>
           <span style={styles.summaryValue}>{data.walletName}</span>
         </div>
-        <div style={styles.summaryRow}>
-          <span style={styles.summaryLabel}>Owner</span>
-          <span style={styles.summaryValue}>
-            {data.skipOwner ? 'Skipped (can set later)' : 'Connected'}
-          </span>
-        </div>
       </div>
 
       <button style={styles.button} onClick={completeWizard}>

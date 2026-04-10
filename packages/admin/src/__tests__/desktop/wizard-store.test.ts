@@ -3,7 +3,7 @@
  *
  * Issue 491: the wizard no longer owns authentication. Desktop first-run
  * auto-logs in via the bootstrap recovery.key (in app.tsx), so the wizard
- * only covers Chain/Wallet/Owner/Complete. completeWizard() no longer calls
+ * only covers Chain/Wallet/Complete. completeWizard() no longer calls
  * login().
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -22,7 +22,6 @@ import {
   nextStep,
   prevStep,
   completeWizard,
-  skipOwnerStep,
 } from '../../desktop/wizard/wizard-store';
 
 describe('wizard-store', () => {
@@ -35,7 +34,6 @@ describe('wizard-store', () => {
       chains: ['ethereum', 'solana', 'ripple'],
       walletName: 'My Wallet',
       walletIds: [],
-      skipOwner: false,
     };
     mockIsDesktop.mockReset();
     localStorage.clear();
@@ -79,16 +77,16 @@ describe('wizard-store', () => {
       expect(wizardStep.value).toBe(2);
     });
 
-    it('should advance step up to 4', () => {
-      wizardStep.value = 3;
+    it('should advance step up to 3', () => {
+      wizardStep.value = 2;
       nextStep();
-      expect(wizardStep.value).toBe(4);
+      expect(wizardStep.value).toBe(3);
     });
 
-    it('should not advance past step 4', () => {
-      wizardStep.value = 4;
+    it('should not advance past step 3', () => {
+      wizardStep.value = 3;
       nextStep();
-      expect(wizardStep.value).toBe(4);
+      expect(wizardStep.value).toBe(3);
     });
   });
 
@@ -126,22 +124,12 @@ describe('wizard-store', () => {
     });
   });
 
-  describe('skipOwnerStep', () => {
-    it('should set skipOwner to true and advance step', () => {
-      wizardStep.value = 3;
-      skipOwnerStep();
-      expect(wizardData.value.skipOwner).toBe(true);
-      expect(wizardStep.value).toBe(4);
-    });
-  });
-
   describe('wizardData defaults', () => {
     it('should have correct initial values', () => {
       expect(wizardData.value.password).toBe('');
       expect(wizardData.value.chains).toEqual(['ethereum', 'solana', 'ripple']);
       expect(wizardData.value.walletName).toBe('My Wallet');
       expect(wizardData.value.walletIds).toEqual([]);
-      expect(wizardData.value.skipOwner).toBe(false);
     });
   });
 });

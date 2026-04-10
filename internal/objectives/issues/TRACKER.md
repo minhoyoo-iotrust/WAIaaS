@@ -39,6 +39,7 @@
 | 492 | BUG | HIGH | Desktop Setup Wizard: 지갑 생성 auth 누락 + 체인 목록 불완전 | — | FIXED | 2026-04-09 |
 | 493 | BUG | CRITICAL | SEA 데몬에서 sodium-native 직접 require가 지갑 생성 시 MODULE_NOT_FOUND | — | FIXED | 2026-04-09 |
 | 494 | BUG | CRITICAL | SEA shim의 sodium-native intercept가 createRequire 경유 호출을 잡지 못함 | — | FIXED | 2026-04-10 |
+| 495 | ENHANCEMENT | MEDIUM | Desktop Setup Wizard에서 Owner 지갑 연결 단계 제거 | — | FIXED | 2026-04-10 |
 
 ## Type Legend
 
@@ -52,7 +53,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 0
-- **FIXED:** 486
+- **FIXED:** 487
 - **WONTFIX:** 1
-- **Total:** 489
+- **Total:** 491
 - **Archived:** 468 (001–468)
