@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.15.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.6...v2.15.0-rc.6) (2026-04-12)
+
+
+### Features
+
+* **desktop:** auto-provision 3 mainnet wallets on first boot (issue 497) ([babf10e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/babf10ec592144aeb93a59190691700288da054e))
+* **desktop:** auto-provision 3 mainnet wallets on first boot (issue 497) ([1852c62](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1852c6262a5f2a41c2f1f15d4911df1d592e9c93))
+* **desktop:** auto-provision mainnet wallets (issue 497) ([ce1d2e3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ce1d2e3bc3e7bd1f131de0748b20c8b2d6e7687c))
+
 ## [2.14.1-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.5...v2.14.1-rc.6) (2026-04-10)
 
 
