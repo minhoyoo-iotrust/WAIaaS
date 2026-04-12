@@ -84,8 +84,36 @@ export function App() {
             signal: AbortSignal.timeout(10_000),
           });
           if (res.ok) {
-            const data = await res.json().catch(() => ({}));
-            login(recoveryKey, (data as { adminTimeout?: number }).adminTimeout);
+            const data = await res.json().catch(() => ({})) as {
+              adminTimeout?: number;
+              walletCount?: number;
+            };
+            login(recoveryKey, data.adminTimeout);
+
+            // Issue 497: auto-provision mainnet wallets on first Desktop boot.
+            // If the daemon has no wallets yet, create one for each supported
+            // chain (EVM, Solana, XRPL) so the user has a ready-to-use setup.
+            if (data.walletCount === 0) {
+              const CHAINS = [
+                { chain: 'ethereum', name: 'EVM Wallet' },
+                { chain: 'solana', name: 'Solana Wallet' },
+                { chain: 'ripple', name: 'XRP Wallet' },
+              ];
+              for (const { chain, name } of CHAINS) {
+                try {
+                  await fetch(API.WALLETS, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-Master-Password': recoveryKey,
+                    },
+                    body: JSON.stringify({ name, chain, environment: 'mainnet' }),
+                  });
+                } catch {
+                  // Best-effort: continue with remaining chains
+                }
+              }
+            }
           }
           // On 401 we silently fall through to the Login page. The most
           // likely cause is a stale recovery.key after a password change we
@@ -94,10 +122,6 @@ export function App() {
           // Daemon unreachable -- let the Login page handle retries.
         }
       }
-
-      // Issue 496: Setup Wizard removed entirely. Desktop users land on the
-      // dashboard immediately after auto-login. Wallet creation is handled
-      // by `waiaas quickset` or from the dashboard Wallets page.
 
       // Load UpdateBanner for auto-update notifications
       const { UpdateBanner } = await import('./desktop/UpdateBanner');

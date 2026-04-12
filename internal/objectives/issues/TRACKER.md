@@ -41,6 +41,7 @@
 | 494 | BUG | CRITICAL | SEA shim의 sodium-native intercept가 createRequire 경유 호출을 잡지 못함 | — | FIXED | 2026-04-10 |
 | 495 | ENHANCEMENT | MEDIUM | Desktop Setup Wizard에서 Owner 지갑 연결 단계 제거 | — | FIXED | 2026-04-10 |
 | 496 | ENHANCEMENT | MEDIUM | Desktop Setup Wizard 지갑 생성 단계 제거 + 환경 기본값 mainnet | — | FIXED | 2026-04-10 |
+| 497 | ENHANCEMENT | MEDIUM | quickset에 XRPL 누락 + Desktop 첫 부팅 mainnet 지갑 자동 생성 | — | FIXED | 2026-04-12 |
 
 ## Type Legend
 
@@ -54,7 +55,7 @@
 
 - **OPEN:** 0
 - **PLANNED:** 0
-- **FIXED:** 488
+- **FIXED:** 489
 - **WONTFIX:** 1
 - **Total:** 492
 - **Archived:** 468 (001–468)

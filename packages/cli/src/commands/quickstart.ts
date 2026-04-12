@@ -78,10 +78,11 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   // Step 2: Resolve master password
   const password = opts.masterPassword ?? await resolvePassword(opts.dataDir);
 
-  // Step 3: Create Solana + EVM wallets
+  // Step 3: Create wallets for all supported chains (SSoT: CHAIN_TYPES)
   const chains = [
     { chain: 'solana', name: `solana-${mode}` },
     { chain: 'ethereum', name: `evm-${mode}` },
+    { chain: 'ripple', name: `xrpl-${mode}` },
   ] as const;
 
   const createdWallets: CreatedWallet[] = [];
@@ -206,7 +207,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   console.log(`Mode: ${mode}`);
 
   for (const wallet of createdWallets) {
-    const chainLabel = wallet.chain === 'solana' ? 'Solana' : 'EVM';
+    const chainLabel = wallet.chain === 'solana' ? 'Solana' : wallet.chain === 'ripple' ? 'XRPL' : 'EVM';
     console.log('');
     console.log(`${chainLabel} Wallet:`);
     console.log(`  Name: ${wallet.name}`);

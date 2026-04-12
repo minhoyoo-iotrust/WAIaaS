@@ -83,6 +83,20 @@ const EVM_NETWORKS = {
   ],
 };
 
+const XRPL_WALLET = {
+  id: 'xrpl-wallet-1',
+  name: 'xrpl-testnet',
+  chain: 'ripple',
+  environment: 'testnet',
+  publicKey: 'rExampleXRPLAddress123456789',
+};
+
+const XRPL_NETWORKS = {
+  availableNetworks: [
+    { network: 'xrpl-testnet' },
+  ],
+};
+
 /** Create a full success fetch mock for quickstart flow. */
 function createQuickstartFetchMock(mode = 'testnet') {
   let sessionCallCount = 0;
@@ -106,6 +120,15 @@ function createQuickstartFetchMock(mode = 'testnet') {
         };
         return Promise.resolve(mockResponse(200, wallet));
       }
+      if (body.chain === 'ripple') {
+        const wallet = {
+          ...XRPL_WALLET,
+          environment: mode,
+          name: `xrpl-${mode}`,
+          session: { id: 'session-3', token: 'jwt.token.3', expiresAt: SESSION_EXPIRES_AT },
+        };
+        return Promise.resolve(mockResponse(200, wallet));
+      }
       const wallet = {
         ...EVM_WALLET,
         environment: mode,
@@ -119,6 +142,9 @@ function createQuickstartFetchMock(mode = 'testnet') {
     if (urlStr.includes('/networks')) {
       if (urlStr.includes('sol-wallet')) {
         return Promise.resolve(mockResponse(200, SOLANA_NETWORKS));
+      }
+      if (urlStr.includes('xrpl-wallet')) {
+        return Promise.resolve(mockResponse(200, XRPL_NETWORKS));
       }
       return Promise.resolve(mockResponse(200, EVM_NETWORKS));
     }
@@ -161,7 +187,7 @@ describe('quicksetCommand (formerly quickstart)', () => {
     vi.doUnmock('../utils/password.js');
   });
 
-  it('testnet mode: creates 2 wallets, fetches networks, writes tokens', async () => {
+  it('testnet mode: creates 3 wallets, fetches networks, writes tokens', async () => {
     const fetchMock = createQuickstartFetchMock('testnet');
     vi.stubGlobal('fetch', fetchMock);
 
@@ -177,13 +203,13 @@ describe('quicksetCommand (formerly quickstart)', () => {
     const calls = fetchMock.mock.calls;
     const urls = calls.map((c: unknown[]) => String(c[0]));
 
-    // 1 health + 2 wallet POST + 2 networks GET + 1 session POST = 6
-    expect(calls.length).toBe(6);
+    // 1 health + 3 wallet POST + 3 networks GET + 1 session POST = 8
+    expect(calls.length).toBe(8);
 
     // Health check
     expect(urls[0]).toContain('/health');
 
-    // POST wallets (solana first, then ethereum)
+    // POST wallets (solana first, then ethereum, then ripple)
     expect(urls[1]).toContain('/v1/wallets');
     const solanaBody = JSON.parse((calls[1] as [string, RequestInit])[1].body as string) as Record<string, string>;
     expect(solanaBody.chain).toBe('solana');
@@ -201,16 +227,27 @@ describe('quicksetCommand (formerly quickstart)', () => {
     // Networks for evm
     expect(urls[4]).toContain('/networks');
 
+    // POST wallets (ripple)
+    expect(urls[5]).toContain('/v1/wallets');
+    const xrplBody = JSON.parse((calls[5] as [string, RequestInit])[1].body as string) as Record<string, string>;
+    expect(xrplBody.chain).toBe('ripple');
+    expect(xrplBody.environment).toBe('testnet');
+
+    // Networks for xrpl
+    expect(urls[6]).toContain('/networks');
+
     // POST /v1/sessions (multi-wallet)
-    expect(urls[5]).toContain('/v1/sessions');
+    expect(urls[7]).toContain('/v1/sessions');
 
     // Output checks
     expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickset Complete!');
     expect(mockStdout).toHaveBeenCalledWith('Mode: testnet');
     expect(mockStdout).toHaveBeenCalledWith('Solana Wallet:');
     expect(mockStdout).toHaveBeenCalledWith('EVM Wallet:');
+    expect(mockStdout).toHaveBeenCalledWith('XRPL Wallet:');
     expect(mockStdout).toHaveBeenCalledWith('  Available Networks: devnet, testnet');
     expect(mockStdout).toHaveBeenCalledWith('  Available Networks: ethereum-sepolia, polygon-amoy, arbitrum-sepolia, optimism-sepolia, base-sepolia');
+    expect(mockStdout).toHaveBeenCalledWith('  Available Networks: xrpl-testnet');
 
     // Single "Expires at:" line (one multi-wallet session)
     const expiresCalls = mockStdout.mock.calls.filter(
@@ -252,7 +289,7 @@ describe('quicksetCommand (formerly quickstart)', () => {
     const walletCalls = fetchMock.mock.calls.filter(
       (c: unknown[]) => String(c[0]).endsWith('/v1/wallets') && (c[1] as RequestInit | undefined)?.method === 'POST',
     );
-    expect(walletCalls.length).toBe(2);
+    expect(walletCalls.length).toBe(3);
 
     for (const call of walletCalls) {
       const body = JSON.parse((call as [string, RequestInit])[1].body as string) as { environment: string };
@@ -503,6 +540,7 @@ describe('quicksetCommand (formerly quickstart)', () => {
           wallets: [
             { ...SOLANA_WALLET, name: 'solana-mainnet', environment: 'mainnet' },
             { ...EVM_WALLET, name: 'evm-mainnet', environment: 'mainnet' },
+            { ...XRPL_WALLET, name: 'xrpl-mainnet', environment: 'mainnet' },
           ],
         }));
       }
@@ -511,6 +549,9 @@ describe('quicksetCommand (formerly quickstart)', () => {
       if (urlStr.includes('/networks')) {
         if (urlStr.includes('sol-wallet')) {
           return Promise.resolve(mockResponse(200, SOLANA_NETWORKS));
+        }
+        if (urlStr.includes('xrpl-wallet')) {
+          return Promise.resolve(mockResponse(200, XRPL_NETWORKS));
         }
         return Promise.resolve(mockResponse(200, EVM_NETWORKS));
       }
@@ -539,7 +580,7 @@ describe('quicksetCommand (formerly quickstart)', () => {
     const reuseCalls = mockStdout.mock.calls.filter(
       (c: unknown[]) => String(c[0]).includes('Reusing existing wallet:'),
     );
-    expect(reuseCalls.length).toBe(2);
+    expect(reuseCalls.length).toBe(3);
     expect(String(reuseCalls[0]![0])).toContain('solana-mainnet');
     expect(String(reuseCalls[1]![0])).toContain('evm-mainnet');
 
@@ -550,7 +591,7 @@ describe('quicksetCommand (formerly quickstart)', () => {
     const listCalls = fetchMock.mock.calls.filter(
       (c: unknown[]) => String(c[0]).endsWith('/v1/wallets') && (!(c[1] as RequestInit | undefined)?.method || (c[1] as RequestInit | undefined)?.method === 'GET'),
     );
-    expect(listCalls.length).toBe(2);
+    expect(listCalls.length).toBe(3);
 
     // Single MCP token file should be created
     expect(existsSync(join(testDir, 'mcp-token'))).toBe(true);
