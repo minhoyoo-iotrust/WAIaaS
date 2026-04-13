@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.15.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.15.0-rc.6...v2.15.0) (2026-04-13)
+
+
+### Bug Fixes
+
+* promote v2.15.0-rc.6 to stable 2.15.0 ([71591f2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/71591f2bba9b56618b0fbff522b7f332b5fb05d9))
+* promote v2.15.0-rc.6 to stable 2.15.0 ([4db14b2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4db14b25c52b37049f2416f3850a95aeaec23bb4))
+
 ## [2.15.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.14.1-rc.6...v2.15.0-rc.6) (2026-04-12)
 
 
