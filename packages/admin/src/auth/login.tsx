@@ -1,10 +1,15 @@
+import { useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { login } from './store';
 import { API } from '../api/endpoints';
+import { isDesktop, getDesktopRecoveryKey } from '../utils/platform';
 
 const password = signal('');
 const error = signal<string | null>(null);
 const loading = signal(false);
+
+/** True while Desktop recovery.key auto-login is in progress */
+const desktopAutoLogin = signal(false);
 
 const styles = {
   wrapper: {
@@ -94,6 +99,52 @@ const handleSubmit = async (e: Event) => {
 };
 
 export function Login() {
+  // Issue 498: Desktop recovery.key re-authentication on session timeout.
+  // When the inactivity timer expires, masterPassword is cleared and this
+  // component renders. If running inside Tauri, try the on-disk recovery.key
+  // before showing the password form — the user never set a password so they
+  // can't type one.
+  useEffect(() => {
+    if (!isDesktop()) return;
+
+    desktopAutoLogin.value = true;
+    (async () => {
+      try {
+        const recoveryKey = await getDesktopRecoveryKey();
+        if (!recoveryKey) return;
+
+        const res = await fetch(API.ADMIN_STATUS, {
+          headers: { 'X-Master-Password': recoveryKey },
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({})) as {
+            adminTimeout?: number;
+          };
+          login(recoveryKey, data.adminTimeout);
+          return;
+        }
+        // 401 or other — fall through to password form
+      } catch {
+        // Daemon unreachable — show password form
+      } finally {
+        desktopAutoLogin.value = false;
+      }
+    })();
+  }, []);
+
+  // While Desktop auto-login is in progress, show a brief loading state
+  if (desktopAutoLogin.value) {
+    return (
+      <div style={styles.wrapper}>
+        <div style={styles.card}>
+          <h1 style={styles.title}>WAIaaS Admin</h1>
+          <p style={styles.subtitle}>Reconnecting...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.wrapper}>
       <form style={styles.card} onSubmit={handleSubmit}>
