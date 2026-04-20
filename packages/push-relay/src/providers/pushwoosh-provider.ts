@@ -10,7 +10,7 @@ export class PushwooshProvider implements IPushProvider {
   private readonly apiUrl: string;
   private readonly extraFields: Record<string, unknown>;
 
-  constructor(config: PushwooshConfig) {
+  constructor(config: Omit<PushwooshConfig, 'extra_fields'> & { extra_fields?: Record<string, unknown> }) {
     this.apiToken = config.api_token;
     this.applicationCode = config.application_code;
     this.apiUrl = config.api_url;
