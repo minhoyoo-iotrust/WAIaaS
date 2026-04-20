@@ -3,7 +3,7 @@
 - **유형:** ENHANCEMENT
 - **심각도:** MEDIUM
 - **발견일:** 2026-04-20
-- **상태:** OPEN
+- **상태:** FIXED
 - **관련 패키지:** @waiaas/push-relay
 
 ## 현상
