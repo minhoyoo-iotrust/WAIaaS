@@ -12,6 +12,11 @@ api_token = "XXXXXX-XXXXXX"
 application_code = "ABCDE-12345"
 # api_url = "https://api.pushwoosh.com/json/1.3/createMessage"  # default; override for Private Cloud
 
+# Extra fields injected into the Pushwoosh notification object
+# [relay.push.pushwoosh.extra_fields]
+# link = "/waiaas"
+# campaign = "onboarding"
+
 # Or use FCM:
 # [relay.push.fcm]
 # project_id = "my-wallet-app"

@@ -145,6 +145,47 @@ describe('PushwooshProvider', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('includes extra_fields in notification payload', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status_code: 200, status_message: 'OK' }),
+    });
+
+    const provider = new PushwooshProvider({
+      api_token: 'test-token',
+      application_code: 'APP-123',
+      api_url: DEFAULT_API_URL,
+      extra_fields: { link: '/waiaas', campaign: 'onboarding' },
+    });
+
+    await provider.send(['device-1'], mockPayload);
+    const fetchCall = vi.mocked(globalThis.fetch).mock.calls[0]!;
+    const body = JSON.parse(fetchCall[1]!.body as string);
+    const notification = body.request.notifications[0];
+    expect(notification.link).toBe('/waiaas');
+    expect(notification.campaign).toBe('onboarding');
+  });
+
+  it('works without extra_fields (backwards compatible)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status_code: 200, status_message: 'OK' }),
+    });
+
+    const provider = new PushwooshProvider({
+      api_token: 'test-token',
+      application_code: 'APP-123',
+      api_url: DEFAULT_API_URL,
+    });
+
+    await provider.send(['device-1'], mockPayload);
+    const fetchCall = vi.mocked(globalThis.fetch).mock.calls[0]!;
+    const body = JSON.parse(fetchCall[1]!.body as string);
+    const notification = body.request.notifications[0];
+    expect(notification.link).toBeUndefined();
+    expect(notification.content).toBe('TRANSFER 1 SOL');
+  });
+
   it('validates config checks token and code length', async () => {
     const valid = new PushwooshProvider({ api_token: 'tok', application_code: 'code', api_url: DEFAULT_API_URL });
     expect(await valid.validateConfig()).toBe(true);

@@ -6,6 +6,7 @@ const PushwooshConfigSchema = z.object({
   api_token: z.string().min(1),
   application_code: z.string().min(1),
   api_url: z.string().url().default('https://api.pushwoosh.com/json/1.3/createMessage'),
+  extra_fields: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
 const FcmConfigSchema = z.object({
