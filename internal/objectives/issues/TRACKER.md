@@ -43,6 +43,7 @@
 | 496 | ENHANCEMENT | MEDIUM | Desktop Setup Wizard 지갑 생성 단계 제거 + 환경 기본값 mainnet | — | FIXED | 2026-04-10 |
 | 497 | ENHANCEMENT | MEDIUM | quickset에 XRPL 누락 + Desktop 첫 부팅 mainnet 지갑 자동 생성 | — | FIXED | 2026-04-12 |
 | 498 | BUG | HIGH | Desktop 세션 타임아웃 후 recovery.key 재인증 불가 | — | FIXED | 2026-04-17 |
+| 499 | ENHANCEMENT | MEDIUM | Pushwoosh notification extra_fields 설정 지원 | — | OPEN | — |
 
 ## Type Legend
 
@@ -54,7 +55,7 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **PLANNED:** 0
 - **FIXED:** 490
 - **WONTFIX:** 1

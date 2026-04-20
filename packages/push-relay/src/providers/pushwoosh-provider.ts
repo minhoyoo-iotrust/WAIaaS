@@ -8,11 +8,13 @@ export class PushwooshProvider implements IPushProvider {
   private readonly apiToken: string;
   private readonly applicationCode: string;
   private readonly apiUrl: string;
+  private readonly extraFields: Record<string, unknown>;
 
   constructor(config: PushwooshConfig) {
     this.apiToken = config.api_token;
     this.applicationCode = config.application_code;
     this.apiUrl = config.api_url;
+    this.extraFields = config.extra_fields ?? {};
   }
 
   async send(tokens: string[], payload: PushPayload): Promise<PushResult> {
@@ -31,6 +33,7 @@ export class PushwooshProvider implements IPushProvider {
             send_date: 'now',
             content: payload.body,
             data: payload.data,
+            ...this.extraFields,
             devices: tokens,
             ios_root_params: {
               aps: {
