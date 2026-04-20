@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.15.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.15.0...v2.15.0) (2026-04-20)
+
+
+### Features
+
+* **push-relay:** add Pushwoosh extra_fields config (issue 499) ([105e561](https://github.com/minhoyoo-iotrust/WAIaaS/commit/105e561973532e1949b69a96af0ca92e6c566ba8))
+* **push-relay:** add Pushwoosh extra_fields config for notification payload (issue 499) ([e3a30d1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e3a30d1fcb6fa4fbea9f4f0b37480ae9cfb160e2))
+
+
+### Bug Fixes
+
+* **desktop:** re-authenticate via recovery.key after session timeout (issue 498) ([7f6841b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7f6841bf4133cf692fb9b419f5a98ff82915b8f0))
+* **desktop:** re-authenticate via recovery.key after session timeout (issue 498) ([bd3f7d6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bd3f7d6d31d598ecccf6985c626ab7d9915ef4ae))
+* **desktop:** re-authenticate via recovery.key after session timeout (issue 498) ([19f3c0f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/19f3c0ff7adf6ab318879128f94bef8f611ca139))
+* **push-relay:** make extra_fields optional in constructor ([c7f9ead](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c7f9eadb9da3f96ca35b472310ebf3dedc35c5e6))
+* **push-relay:** make extra_fields optional in PushwooshProvider constructor ([5c3309e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5c3309e334e14f06586cd5bf2cc05756b35adf84))
+
 ## [2.15.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.15.0-rc.6...v2.15.0) (2026-04-13)
 
 
