@@ -87,7 +87,7 @@ import { readFile, access } from 'node:fs/promises';
 
 const mockedExecSync = vi.mocked(execSync);
 const mockedSpawn = vi.mocked(spawn);
-const mockedReadFile = vi.mocked(readFile);
+const _mockedReadFile = vi.mocked(readFile);
 const mockedAccess = vi.mocked(access);
 
 describe('WAIaaSClient.connect() — runCliSync error path', () => {
