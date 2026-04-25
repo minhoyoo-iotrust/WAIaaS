@@ -20,7 +20,6 @@ import { createDatabase, pushSchema } from '../infrastructure/database/index.js'
 import { generateId } from '../infrastructure/database/id.js';
 import * as schema from '../infrastructure/database/schema.js';
 import { eq } from 'drizzle-orm';
-import { WAIaaSError } from '@waiaas/core';
 import { stageGasCondition } from '../pipeline/stage3-policy.js';
 
 let sqlite: DatabaseType;

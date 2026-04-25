@@ -827,7 +827,7 @@ describe('Route branches coverage sweep 3', () => {
   it('GET /v1/nonce with session auth', async () => {
     const app = makeApp();
     const walletId = await createWallet(app, 'ethereum', 'mainnet');
-    const token = await createSessionToken(walletId);
+    const _token = await createSessionToken(walletId);
     const res = await app.request(u(`/v1/nonce?walletId=${walletId}&network=ethereum-mainnet`), { method: 'GET', headers: { Host: HOST } });
     expect(res.status).toBeLessThanOrEqual(500);
   });

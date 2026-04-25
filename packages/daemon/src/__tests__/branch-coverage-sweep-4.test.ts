@@ -266,7 +266,7 @@ describe('resolveContractFields branch coverage', () => {
   it('returns contract name from registry', async () => {
     const { resolveContractFields } = await import('../api/routes/admin-monitoring.js');
     const mockRegistry = {
-      resolve: (addr: string, network: string) => ({
+      resolve: (_addr: string, _network: string) => ({
         name: 'Uniswap V3 Router',
         label: 'uniswap',
       }),
@@ -436,7 +436,7 @@ describe('setting-keys branch coverage', () => {
     expect(getSettingDefinition('nonexistent.key')).toBeUndefined();
 
     // Dynamic key pattern
-    const tierDef = getSettingDefinition('actions.swap_tier');
+    const _tierDef = getSettingDefinition('actions.swap_tier');
     // May or may not be defined depending on dynamic pattern matching
 
     // Verify SETTING_DEFINITIONS is non-empty

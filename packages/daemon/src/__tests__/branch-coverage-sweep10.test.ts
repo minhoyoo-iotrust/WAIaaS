@@ -317,7 +317,7 @@ describe('Branch coverage sweep 10', () => {
   it('GET /admin/agent-prompt returns prompt text', async () => {
     const app = makeApp();
     const walletId = await createWallet(app, 'ethereum', 'mainnet');
-    const token = await createSessionToken(walletId);
+    const _token = await createSessionToken(walletId);
 
     const res = await app.request(u(`/v1/admin/agent-prompt?walletId=${walletId}`), {
       method: 'GET', headers: masterHeaders(),

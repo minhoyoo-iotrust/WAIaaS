@@ -11,7 +11,7 @@
  * - sessionId null -> 'system' fallback in audit logs
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';

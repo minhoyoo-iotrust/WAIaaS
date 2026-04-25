@@ -13,13 +13,11 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from 'vite
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import argon2 from 'argon2';
-import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { createApp } from '../api/server.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { JwtSecretManager, type JwtPayload } from '../infrastructure/jwt/index.js';
 import type * as schema from '../infrastructure/database/schema.js';
-import * as sch from '../infrastructure/database/schema.js';
 import { KillSwitchService } from '../services/kill-switch-service.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
@@ -231,7 +229,7 @@ describe('Routes branch coverage deep', () => {
   it('DELETE /v1/wallets/:id auto-revokes session when last wallet', async () => {
     const app = makeApp();
     const walletId = await createWallet(app);
-    const authToken = await createSessionToken(walletId);
+    const _authToken = await createSessionToken(walletId);
 
     const res = await app.request(`/v1/wallets/${walletId}`, {
       method: 'DELETE',

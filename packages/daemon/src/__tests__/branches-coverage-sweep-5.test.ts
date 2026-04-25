@@ -20,8 +20,8 @@
  * - erc8128.ts: network resolution branch
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { WAIaaSError, ChainError } from '@waiaas/core';
+import { describe, it, expect, vi } from 'vitest';
+import { WAIaaSError } from '@waiaas/core';
 
 // ===========================================================================
 // 1. buildByType -- all transaction type branches in stage5-execute.ts
@@ -88,7 +88,7 @@ describe('buildByType branch coverage', () => {
         accounts: [{ pubkey: 'xyz', isSigner: false, isWritable: false }],
       }],
     };
-    const result = await buildByType(mockAdapter, request, '0xmykey');
+    await buildByType(mockAdapter, request, '0xmykey');
     expect(mockAdapter.buildContractCall).toHaveBeenCalled();
     const args = mockAdapter.buildContractCall.mock.calls[0][0];
     expect(args.preInstructions).toHaveLength(1);
@@ -123,7 +123,7 @@ describe('buildByType branch coverage', () => {
       amount: '0',
       nft: { tokenId: '42', standard: 'ERC-721' },
     };
-    const result = await buildByType(mockAdapter, request, '0xmykey');
+    await buildByType(mockAdapter, request, '0xmykey');
     expect(mockAdapter.approveNft).toHaveBeenCalled();
     const args = mockAdapter.approveNft.mock.calls[0][0];
     expect(args.approvalType).toBe('single');
@@ -141,7 +141,7 @@ describe('buildByType branch coverage', () => {
       amount: '100',
       nft: { tokenId: '42', standard: 'ERC-721' },
     };
-    const result = await buildByType(mockAdapter, request, '0xmykey');
+    await buildByType(mockAdapter, request, '0xmykey');
     expect(mockAdapter.approveNft).toHaveBeenCalled();
     const args = mockAdapter.approveNft.mock.calls[0][0];
     expect(args.approvalType).toBe('all');
@@ -158,7 +158,7 @@ describe('buildByType branch coverage', () => {
       token: { address: '0xnft', tokenId: '1', standard: 'ERC-721' },
       amount: '1',
     };
-    const result = await buildByType(mockAdapter, request, '0xmykey');
+    await buildByType(mockAdapter, request, '0xmykey');
     expect(mockAdapter.buildNftTransferTx).toHaveBeenCalled();
   });
 
@@ -172,7 +172,7 @@ describe('buildByType branch coverage', () => {
       to: '0xrecipient',
       token: { address: '0xnft', tokenId: '2', standard: 'ERC-1155' },
     };
-    const result = await buildByType(mockAdapter, request, '0xmykey');
+    await buildByType(mockAdapter, request, '0xmykey');
     const args = mockAdapter.buildNftTransferTx.mock.calls[0][0];
     expect(args.amount).toBe(1n);
   });
@@ -187,7 +187,7 @@ describe('buildByType branch coverage', () => {
       bytecode: '0x60806040',
       value: '0',
     };
-    const result = await buildByType(mockAdapter, request, '0xmykey');
+    await buildByType(mockAdapter, request, '0xmykey');
     expect(mockAdapter.buildContractCall).toHaveBeenCalled();
     const args = mockAdapter.buildContractCall.mock.calls[0][0];
     expect(args.to).toBe('');
@@ -203,7 +203,7 @@ describe('buildByType branch coverage', () => {
       bytecode: '0x60806040',
       constructorArgs: '0xabcdef',
     };
-    const result = await buildByType(mockAdapter, request, '0xmykey');
+    await buildByType(mockAdapter, request, '0xmykey');
     const args = mockAdapter.buildContractCall.mock.calls[0][0];
     expect(args.calldata).toBe('0x60806040abcdef');
   });

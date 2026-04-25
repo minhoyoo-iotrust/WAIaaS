@@ -28,7 +28,7 @@
  * - notification channels (80% branch)
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
 import type { Database as DatabaseType } from 'better-sqlite3';
 
@@ -366,7 +366,7 @@ describe('buildByType branch coverage', () => {
     const mockAdapter = {
       buildContractCall: vi.fn().mockResolvedValue({ raw: '0x' }),
     };
-    const result = await buildByType(
+    const _result = await buildByType(
       mockAdapter as any,
       {
         type: 'CONTRACT_DEPLOY',
@@ -990,7 +990,7 @@ describe('InMemoryCounter branch coverage', () => {
 
 describe('migrate.ts branch coverage', () => {
   it('pushSchema on already-migrated DB is idempotent', () => {
-    const { db, sqlite } = createTestDb();
+    const { sqlite } = createTestDb();
     // pushSchema was already called in createTestDb -- call again to exercise "already at version" path
     pushSchema(sqlite);
     // Should not error
@@ -1177,7 +1177,7 @@ describe('RPC passthrough branch coverage', () => {
 
 describe('admin-monitoring session token recovery', () => {
   it('exercises session token re-sign path', async () => {
-    const { db, sqlite } = createTestDb();
+    const { sqlite } = createTestDb();
     const sessionId = generateId();
     const futureTs = Math.floor(Date.now() / 1000) + 3600;
     insertSession(sqlite, sessionId, futureTs);
@@ -1190,7 +1190,7 @@ describe('admin-monitoring session token recovery', () => {
   });
 
   it('exercises revoked session path', async () => {
-    const { db, sqlite } = createTestDb();
+    const { sqlite } = createTestDb();
     const sessionId = generateId();
     const now = Math.floor(Date.now() / 1000);
     insertSession(sqlite, sessionId, now + 3600);
@@ -1203,7 +1203,7 @@ describe('admin-monitoring session token recovery', () => {
   });
 
   it('exercises expired session path', async () => {
-    const { db, sqlite } = createTestDb();
+    const { sqlite } = createTestDb();
     const sessionId = generateId();
     const pastTs = Math.floor(Date.now() / 1000) - 3600;
     insertSession(sqlite, sessionId, pastTs);
@@ -1414,7 +1414,7 @@ describe('pipeline-helpers additional branches', () => {
 
 describe('stage1-validate branches', () => {
   it('handles request with both amount and token', async () => {
-    const { db, sqlite } = createTestDb();
+    const { sqlite } = createTestDb();
     const walletId = generateId();
     insertWallet(sqlite, walletId, 'ethereum');
 
@@ -1431,7 +1431,7 @@ describe('stage1-validate branches', () => {
 
 describe('stage6-confirm branches', () => {
   it('exercises confirm path DB structure', async () => {
-    const { db, sqlite } = createTestDb();
+    const { sqlite } = createTestDb();
     const walletId = generateId();
     insertWallet(sqlite, walletId);
     const txId = generateId();

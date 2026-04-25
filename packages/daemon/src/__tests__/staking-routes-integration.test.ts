@@ -121,7 +121,7 @@ describe('Staking Routes Integration', () => {
     return token;
   }
 
-  function insertStakingTx(walletId: string, protocol: string, amount: string, status = 'CONFIRMED') {
+  function _insertStakingTx(walletId: string, protocol: string, amount: string, status = 'CONFIRMED') {
     const txId = generateId();
     // Insert a staking tx using CONTRACT_CALL type to match what aggregateStakingBalance reads
     db.insert(schema.transactions).values({

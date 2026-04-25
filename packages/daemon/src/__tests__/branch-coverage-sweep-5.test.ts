@@ -598,7 +598,7 @@ describe('Wallet route coverage (/wallet/* session-scoped)', () => {
       headers: { ...masterHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'addr-w', createSession: true }),
     });
-    const { id, session } = await walletRes.json();
+    const { id: _id, session } = await walletRes.json();
     const auth = `Bearer ${session.token}`;
 
     const res = await app.request('/v1/wallet/address', {

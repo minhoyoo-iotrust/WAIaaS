@@ -22,7 +22,6 @@ import { createDatabase, pushSchema } from '../infrastructure/database/index.js'
 import { generateId } from '../infrastructure/database/id.js';
 import * as schema from '../infrastructure/database/schema.js';
 import { eq } from 'drizzle-orm';
-import { WAIaaSError } from '@waiaas/core';
 import { executeDryRun } from '../pipeline/dry-run.js';
 
 let sqlite: DatabaseType;

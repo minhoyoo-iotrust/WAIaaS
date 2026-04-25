@@ -7,7 +7,7 @@
  * wallet.ts, x402.ts, userop.ts, nfts.ts, erc8128.ts, external-actions.ts.
  */
 
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import argon2 from 'argon2';
 import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
@@ -32,11 +32,11 @@ function seedWallet(sqlite: DatabaseType, walletId: string, chain = 'ethereum', 
   ).run(walletId, 'Test Wallet', chain, env, `pk-${walletId}`, 'ACTIVE', 0, ts, ts, 'eoa');
 }
 
-function seedSolanaWallet(sqlite: DatabaseType, walletId: string) {
+function _seedSolanaWallet(sqlite: DatabaseType, walletId: string) {
   seedWallet(sqlite, walletId, 'solana', 'mainnet');
 }
 
-function seedRippleWallet(sqlite: DatabaseType, walletId: string) {
+function _seedRippleWallet(sqlite: DatabaseType, walletId: string) {
   seedWallet(sqlite, walletId, 'ripple', 'mainnet');
 }
 

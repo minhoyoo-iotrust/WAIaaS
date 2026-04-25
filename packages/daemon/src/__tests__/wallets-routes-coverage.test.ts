@@ -355,7 +355,7 @@ describe('Wallet routes coverage integration', () => {
     });
 
     // Check session was revoked
-    const session = sqlite.prepare('SELECT revoked_at FROM sessions').get() as any;
+    const _session = sqlite.prepare('SELECT revoked_at FROM sessions').get() as any;
     // Auto-created session + our test session -- check that at least one has revoked_at set
     const sessions = sqlite.prepare('SELECT revoked_at FROM sessions').all() as any[];
     const revokedCount = sessions.filter((s: any) => s.revoked_at !== null).length;
@@ -569,7 +569,7 @@ describe('Wallet routes coverage integration', () => {
   it('GET /v1/wallets with session auth returns only session-linked wallets', async () => {
     const app = makeApp();
     const walletId1 = await createWallet(app);
-    const walletId2 = await createWallet(app);
+    const _walletId2 = await createWallet(app);
 
     // Create session linked to only wallet1
     const authHeader = await createSessionToken(walletId1);
